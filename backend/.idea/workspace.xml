@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="AutoImportSettings">
+    <option name="autoReloadType" value="SELECTIVE" />
+  </component>
+  <component name="ChangeListManager">
+    <list default="true" id="84e1b316-fbfe-4cab-9d6e-aba8af7e1945" name="Changes" comment="" />
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="CompilerWorkspaceConfiguration">
+    <option name="MAKE_PROJECT_ON_SAVE" value="true" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Interface" />
+        <option value="Class" />
+      </list>
+    </option>
+  </component>
+  <component name="KubernetesApiPersistence">{}</component>
+  <component name="KubernetesApiProvider">{
+  &quot;isMigrated&quot;: true
+}</component>
+  <component name="MavenImportPreferences">
+    <option name="generalSettings">
+      <MavenGeneralSettings>
+        <option name="mavenHomeTypeForPersistence" value="WRAPPER" />
+      </MavenGeneralSettings>
+    </option>
+  </component>
+  <component name="ProjectColorInfo">{
+  &quot;associatedIndex&quot;: 2
+}</component>
+  <component name="ProjectId" id="38ufeGPgCHKezgxTon46jVXLawA" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">{
+  &quot;keyToString&quot;: {
+    &quot;ModuleVcsDetector.initialDetectionPerformed&quot;: &quot;true&quot;,
+    &quot;RequestMappingsPanelOrder0&quot;: &quot;0&quot;,
+    &quot;RequestMappingsPanelOrder1&quot;: &quot;1&quot;,
+    &quot;RequestMappingsPanelWidth0&quot;: &quot;75&quot;,
+    &quot;RequestMappingsPanelWidth1&quot;: &quot;75&quot;,
+    &quot;RunOnceActivity.ShowReadmeOnStart&quot;: &quot;true&quot;,
+    &quot;RunOnceActivity.TerminalTabsStorage.copyFrom.TerminalArrangementManager.252&quot;: &quot;true&quot;,
+    &quot;Spring Boot.AuthenticationSystemApplication.executor&quot;: &quot;Run&quot;,
+    &quot;ignore.virus.scanning.warn.message&quot;: &quot;true&quot;,
+    &quot;kotlin-language-version-configured&quot;: &quot;true&quot;,
+    &quot;last_opened_file_path&quot;: &quot;D:/hands-on-spring/AuthenticationSystem&quot;,
+    &quot;node.js.detected.package.eslint&quot;: &quot;true&quot;,
+    &quot;node.js.detected.package.tslint&quot;: &quot;true&quot;,
+    &quot;node.js.selected.package.eslint&quot;: &quot;(autodetect)&quot;,
+    &quot;node.js.selected.package.tslint&quot;: &quot;(autodetect)&quot;,
+    &quot;nodejs_package_manager_path&quot;: &quot;npm&quot;,
+    &quot;settings.editor.selected.configurable&quot;: &quot;editor.preferences.fonts.default&quot;,
+    &quot;vue.rearranger.settings.migration&quot;: &quot;true&quot;
+  }
+}</component>
+  <component name="RunAnythingCache">
+    <option name="myCommands">
+      <command value="You are not allowed to access this resource" />
+    </option>
+  </component>
+  <component name="RunManager">
+    <configuration name="AuthenticationSystemApplication" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot" nameIsGenerated="true">
+      <option name="FRAME_DEACTIVATION_UPDATE_POLICY" value="UpdateClassesAndResources" />
+      <module name="AuthenticationSystem" />
+      <option name="SPRING_BOOT_MAIN_CLASS" value="com.datdt.authenticationsystem.AuthenticationSystemApplication" />
+      <method v="2">
+        <option name="Make" enabled="true" />
+      </method>
+    </configuration>
+  </component>
+  <component name="SharedIndexes">
+    <attachedChunks>
+      <set>
+        <option value="bundled-jdk-9823dce3aa75-bf35d07a577b-intellij.indexing.shared.core-IU-252.25557.131" />
+        <option value="bundled-js-predefined-d6986cc7102b-b598e85cdad2-JavaScript-IU-252.25557.131" />
+      </set>
+    </attachedChunks>
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="84e1b316-fbfe-4cab-9d6e-aba8af7e1945" name="Changes" comment="" />
+      <created>1769654656582</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1769654656582</updated>
+      <workItem from="1769654657620" duration="6190000" />
+      <workItem from="1769667602749" duration="14000" />
+      <workItem from="1769668280303" duration="8857000" />
+      <workItem from="1769679763219" duration="640000" />
+      <workItem from="1769680756977" duration="692000" />
+      <workItem from="1769682781073" duration="2400000" />
+      <workItem from="1769738324206" duration="8814000" />
+      <workItem from="1769753539820" duration="7354000" />
+      <workItem from="1769998031823" duration="512000" />
+      <workItem from="1770013122416" duration="6071000" />
+      <workItem from="1770111762486" duration="1542000" />
+      <workItem from="1770171513118" duration="5000" />
+      <workItem from="1770173629210" duration="1932000" />
+      <workItem from="1770176897036" duration="2124000" />
+      <workItem from="1770187215502" duration="4379000" />
+      <workItem from="1770258167811" duration="4096000" />
+      <workItem from="1770272845734" duration="38000" />
+      <workItem from="1770345127337" duration="5024000" />
+      <workItem from="1770601739075" duration="6000" />
+      <workItem from="1770604429124" duration="1962000" />
+      <workItem from="1770610089548" duration="664000" />
+      <workItem from="1770626562730" duration="337000" />
+      <workItem from="1770627180559" duration="658000" />
+      <workItem from="1770629313057" duration="306000" />
+      <workItem from="1772521401924" duration="1169000" />
+      <workItem from="1772525307920" duration="47000" />
+      <workItem from="1772525598390" duration="1062000" />
+      <workItem from="1772596050036" duration="1137000" />
+    </task>
+    <servers />
+  </component>
+  <component name="TypeScriptGeneratedFilesManager">
+    <option name="version" value="3" />
+  </component>
+  <component name="XSLT-Support.FileAssociations.UIState">
+    <expand />
+    <select />
+  </component>
+</project>
