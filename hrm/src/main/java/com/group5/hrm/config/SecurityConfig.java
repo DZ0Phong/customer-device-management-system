@@ -1,5 +1,6 @@
 package com.group5.hrm.config;
 
+import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -10,7 +11,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 @Configuration
+@RequiredArgsConstructor
 public class SecurityConfig {
+
+    private final CustomeLoginSuccessHandler customeLoginSuccessHandler;
 
     @Bean
     SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -25,8 +29,7 @@ public class SecurityConfig {
                 .anyRequest().authenticated()
         ).formLogin(form -> form
                         .loginPage("/login")
-                        .defaultSuccessUrl("/", true)
-
+                        .successHandler(customeLoginSuccessHandler).permitAll()
                 );
 //                .logout(logout -> logout
 //                        .logoutUrl("/logout")

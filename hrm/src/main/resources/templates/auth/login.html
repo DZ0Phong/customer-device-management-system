@@ -54,7 +54,7 @@
                     <span class="material-symbols-outlined text-red-600 dark:text-red-400 text-sm">error</span>
                     <p class="text-red-600 dark:text-red-400 text-xs font-medium">Invalid credentials. Please try again.</p>
                 </div>
-                <form class="flex flex-col gap-5" th:action="@{/login}" th:method="POST">
+                <form class="flex flex-col gap-5" th:action="@{/login}" method="post">
                     <!-- Username Input -->
                     <div class="flex flex-col gap-2">
                         <label class="text-slate-700 dark:text-slate-300 text-sm font-semibold">Username</label>
@@ -76,7 +76,7 @@
                         </div>
                         <div class="relative">
                             <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">lock</span>
-                            <input class="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="••••••••" type="password"/>
+                            <input name="password" class="w-full pl-10 pr-12 py-3 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" placeholder="••••••••" type="password"/>
                             <button class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200" type="button">
                                 <span class="material-symbols-outlined text-xl">visibility</span>
                             </button>
@@ -84,7 +84,7 @@
                     </div>
                     <!-- Remember Me -->
                     <div class="flex items-center gap-2">
-                        <input class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary transition-all cursor-pointer" id="remember" type="checkbox"/>
+                        <input name="remember-me" class="w-4 h-4 rounded border-slate-300 dark:border-slate-700 text-primary focus:ring-primary transition-all cursor-pointer" id="remember" type="checkbox"/>
                         <label class="text-slate-600 dark:text-slate-400 text-sm cursor-pointer select-none" for="remember">Remember me for 30 days</label>
                     </div>
                     <!-- Login Button -->
