@@ -1,8 +1,11 @@
 package com.group5.hrm.repository;
 
+import com.group5.hrm.entity.Role;
 import com.group5.hrm.entity.UserRole;
 import com.group5.hrm.entity.UserRoleId;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -15,5 +18,8 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> 
     void deleteByUserId(Long userId);
 
     void deleteByUserIdAndRoleId(Long userId, Long roleId);
+    //lay role
+    @Query("select r from UserRole ur join ur.role r where ur.userId = :userId ")
+    List<Role> getRolesByUserId(@Param("userId") Long userId);
 }
 

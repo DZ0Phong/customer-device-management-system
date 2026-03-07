@@ -1,6 +1,8 @@
 package com.group5.hrm.entity;
 
 import jakarta.persistence.*;
+import lombok.Builder;
+
 import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
