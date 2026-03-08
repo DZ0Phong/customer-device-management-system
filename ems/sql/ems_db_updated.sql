@@ -544,3 +544,31 @@ INSERT INTO roles (code, name, description) VALUES
 INSERT INTO request_types (code, name, description) VALUES
 ('LEAVE', 'Đơn xin nghỉ', 'Nghỉ phép, nghỉ ốm, nghỉ việc riêng...'),
 ('PERSONAL', 'Đơn yêu cầu cá nhân', 'Yêu cầu cá nhân khác');
+
+
+-- Chèn user admin (role ADMIN đã có sẵn id=1 từ INSERT roles)
+INSERT INTO users (username, email, password_hash, full_name, status)
+VALUES (
+           'admin',
+           'admin@hrm.local',
+           '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG',
+           'Administrator',
+           'ACTIVE'
+       );
+
+-- Gán role ADMIN cho user vừa tạo (user_id = LAST_INSERT_ID(), role_id = 1)
+INSERT INTO user_roles (user_id, role_id)
+SELECT LAST_INSERT_ID(), id FROM roles WHERE code = 'ADMIN' LIMIT 1;
+
+-- -------- User EMPLOYEE để test 3.3 (mật khẩu: password) --------
+INSERT INTO users (username, email, password_hash, full_name, status)
+VALUES (
+           'employee',
+           'employee@hrm.local',
+           '$2a$10$dXJ3SW6G7P50lGmMkkmwe.20cQQubK3.HZWzG3YB1tlRy.fqvM/BG',
+           'Test Employee',
+           'ACTIVE'
+       );
+
+INSERT INTO user_roles (user_id, role_id)
+SELECT LAST_INSERT_ID(), id FROM roles WHERE code = 'EMPLOYEE' LIMIT 1;
