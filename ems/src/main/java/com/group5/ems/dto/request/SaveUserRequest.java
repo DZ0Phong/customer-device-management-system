@@ -15,4 +15,6 @@ public class SaveUserRequest {
     private String fullName;
     private String phone;
     private String status;
+    /** Role code được chọn trên form (VD: ADMIN, EMPLOYEE, ...) */
+    private String role;
 }

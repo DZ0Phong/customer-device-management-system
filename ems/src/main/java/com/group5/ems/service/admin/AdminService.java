@@ -5,6 +5,7 @@ import com.group5.ems.dto.response.UserDTO;
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.Role;
 import com.group5.ems.entity.User;
+import com.group5.ems.entity.UserRole;
 import com.group5.ems.repository.*;
 import com.group5.ems.repository.spec.UserSpecification;
 import lombok.RequiredArgsConstructor;
@@ -54,13 +55,16 @@ public class AdminService {
             user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
             user.setAvatarUrl(null);
             userRepository.save(user);
+            // Gán role được chọn cho user mới (nếu có)
+            assignRole(user, req.getRole());
         }
+        //edit
         else{
             User existingUser = userRepository.findById(req.getId()).orElseThrow(() -> new IllegalArgumentException("User not found"));
-            if (userRepository.findByEmail(req.getEmail()).isPresent()) {
+            if (userRepository.existsByEmailAndIdNot(req.getEmail(), req.getId())) {
                 throw new IllegalArgumentException("Email is already exist");
             }
-            if (userRepository.findByUsername(req.getUsername()).isPresent()) {
+            if (userRepository.existsByUsernameAndIdNot(req.getUsername(), req.getId())) {
                 throw new IllegalArgumentException("Username is already exist");
             }
             applyCommonFields(existingUser, req);
@@ -68,6 +72,8 @@ public class AdminService {
                 existingUser.setPasswordHash(passwordEncoder.encode(req.getPassword()));
             }
             userRepository.save(existingUser);
+            // Cập nhật lại role cho user (xóa cũ, gán mới nếu có)
+            assignRole(existingUser, req.getRole());
         }
     }
 
@@ -78,6 +84,28 @@ public class AdminService {
         user.setFullName(req.getFullName().trim());
         user.setPhone(isBlank(req.getPhone()) ? null : req.getPhone().trim());
         user.setStatus(mapStatus(req.getStatus())); // Active -> ACTIVE, ...
+    }
+
+    /**
+     * Gán một role (theo roleCode) cho user.
+     * Nếu roleCode rỗng/null -> không làm gì.
+     * Hiện tại mỗi user chỉ giữ 1 role nên sẽ xóa hết role cũ trước khi gán mới.
+     */
+    private void assignRole(User user, String roleCode) {
+        if (isBlank(roleCode)) {
+            return;
+        }
+        Role role = roleRepository.findByCode(roleCode)
+                .orElseThrow(() -> new IllegalArgumentException("Invalid role: " + roleCode));
+
+        // Xóa các mapping role cũ của user (nếu có)
+        userRoleRepository.deleteByUserId(user.getId());
+
+        // Tạo mapping mới
+        UserRole userRole = new UserRole();
+        userRole.setUserId(user.getId());
+        userRole.setRoleId(role.getId());
+        userRoleRepository.save(userRole);
     }
 
     private String mapStatus(String uiStatus) {

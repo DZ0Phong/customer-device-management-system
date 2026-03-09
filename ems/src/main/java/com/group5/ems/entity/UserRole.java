@@ -9,6 +9,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "user_roles")
 @IdClass(UserRoleId.class)
+@Getter
+@Setter
 public class UserRole {
 
     @Id

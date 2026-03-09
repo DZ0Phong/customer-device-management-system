@@ -28,12 +28,12 @@ public class SecurityConfig {
                 .requestMatchers("/hr/**").hasRole("HR")
                 .anyRequest().authenticated()).formLogin(form -> form
                         .loginPage("/login")
-                        .successHandler(customeLoginSuccessHandler).permitAll());
-        // .logout(logout -> logout
-        // .logoutUrl("/logout")
-        // .logoutSuccessUrl("/")
-        // .permitAll()
-        // );
+                        .successHandler(customeLoginSuccessHandler).permitAll())
+         .logout(logout -> logout
+         .logoutUrl("/logout")
+         .logoutSuccessUrl("/login?logout")
+         .permitAll()
+         );
 
         return http.build();
     }
