@@ -1,9 +1,10 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>EMS Pro - User Accounts</title>
+    <title>HRM Pro - User Accounts</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -27,109 +28,159 @@
         .material-symbols-outlined {
             font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
         }
-
-        /* Modal animation */
         #modal-overlay { transition: opacity 0.2s ease; }
         #modal-overlay.hidden { opacity: 0; pointer-events: none; }
         #modal-box { transition: transform 0.2s ease, opacity 0.2s ease; }
         #modal-overlay.hidden #modal-box { transform: scale(0.95); opacity: 0; }
-
-        /* Row hover */
         tbody tr { transition: background 0.15s; }
-
-        /* Dropdown */
-        .action-menu { display: none; }
-        .action-menu.open { display: block; }
     </style>
 </head>
+
+<!--
+  ════════════════════════════════════════════════════════════════════════
+  CONTROLLER CẦN TRUYỀN VÀO MODEL CÁC BIẾN SAU:
+  ────────────────────────────────────────────────────────────────────────
+  • users          : Page<UserDTO>   — danh sách user đã phân trang
+  • statTotal      : long            — tổng số user
+  • statActive     : long            — số user Active
+  • statInactive   : long            — số user Inactive
+  • statSuspended  : long            — số user Suspended
+  • currentPage    : int             — trang hiện tại (0-based hoặc 1-based tuỳ cấu hình)
+  • totalPages     : int             — tổng số trang
+  • pageSize       : int             — số dòng mỗi trang
+  • totalElements  : long            — tổng số bản ghi sau filter
+  • keyword        : String          — từ khoá search hiện tại (có thể null)
+  • roleFilter     : String          — role đang lọc (có thể null)
+  • statusFilter   : String          — status đang lọc (có thể null)
+  • sortField      : String          — field đang sort (có thể null)
+  • sortDir        : String          — "asc" hoặc "desc"
+  • departments    : List<String>    — danh sách tên department để hiển thị trong dropdown
+  • currentUser    : UserDTO         — user đang đăng nhập (hiển thị ở sidebar)
+  ────────────────────────────────────────────────────────────────────────
+  UserDTO gồm các field:
+    id, fullName (hoặc firstName + lastName), email,
+    role, departmentName, lastLoginDisplay, status, avatarUrl
+  ════════════════════════════════════════════════════════════════════════
+-->
+
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100 min-h-screen">
 <div class="flex h-screen overflow-hidden">
 
-    <!-- Sidebar -->
+    <!-- ── Sidebar ──────────────────────────────────────────────────────── -->
     <aside class="w-72 bg-white dark:bg-slate-900 border-r border-primary/10 flex flex-col shrink-0">
         <div class="p-6 flex items-center gap-3">
             <div class="w-10 h-10 rounded-lg bg-primary flex items-center justify-center text-white">
                 <span class="material-symbols-outlined">corporate_fare</span>
             </div>
             <div>
-                <h1 class="text-lg font-bold tracking-tight">EMS Pro</h1>
+                <h1 class="text-lg font-bold tracking-tight">HRM Pro</h1>
                 <p class="text-xs text-slate-500 dark:text-slate-400">Administrator</p>
             </div>
         </div>
+
         <nav class="flex-1 px-4 py-2 space-y-1 overflow-y-auto">
-            <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+            <a th:href="@{/dashboard}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                 <span class="material-symbols-outlined text-[22px]">dashboard</span>
                 <span class="text-sm font-medium">Dashboard</span>
             </a>
-            <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+            <a th:href="@{/companies}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                 <span class="material-symbols-outlined text-[22px]">domain</span>
                 <span class="text-sm font-medium">Company Management</span>
             </a>
-            <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+            <a th:href="@{/departments}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                 <span class="material-symbols-outlined text-[22px]">account_tree</span>
                 <span class="text-sm font-medium">Department Management</span>
             </a>
-            <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+            <a th:href="@{/roles}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                 <span class="material-symbols-outlined text-[22px]">admin_panel_settings</span>
                 <span class="text-sm font-medium">Role &amp; Permission</span>
             </a>
-            <a class="flex items-center gap-3 px-3 py-2.5 bg-primary text-white rounded-lg shadow-sm shadow-primary/20" href="#">
+            <!-- Active page -->
+            <a th:href="@{/admin/users}"
+               class="flex items-center gap-3 px-3 py-2.5 bg-primary text-white rounded-lg shadow-sm shadow-primary/20">
                 <span class="material-symbols-outlined text-[22px]">group</span>
                 <span class="text-sm font-medium">User Accounts</span>
             </a>
-            <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+            <a th:href="@{/logs}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                 <span class="material-symbols-outlined text-[22px]">receipt_long</span>
                 <span class="text-sm font-medium">System Logs</span>
             </a>
             <div class="pt-4 mt-4 border-t border-slate-100 dark:border-slate-800">
-                <a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors" href="#">
+                <a th:href="@{/settings}"
+                   class="flex items-center gap-3 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-primary/5 rounded-lg transition-colors">
                     <span class="material-symbols-outlined text-[22px]">settings</span>
                     <span class="text-sm font-medium">Settings</span>
                 </a>
             </div>
         </nav>
+
+        <!-- Current logged-in user info -->
         <div class="p-4 bg-slate-50 dark:bg-slate-800/50 m-4 rounded-xl border border-slate-100 dark:border-slate-800">
             <div class="flex items-center gap-3">
                 <div class="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center text-primary overflow-hidden">
-                    <img class="w-full h-full object-cover" src="https://i.pravatar.cc/32?img=3" alt="Admin avatar"/>
+                    <img class="w-full h-full object-cover"
+                         th:src="${currentUser?.avatarUrl}"
+                         th:alt="${currentUser?.fullName}"
+                         onerror="this.style.display='none'"/>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-semibold truncate">Alex Rivera</p>
-                    <p class="text-[10px] text-slate-500">Log out</p>
+                    <p class="text-xs font-semibold truncate" th:text="${currentUser?.fullName}">Alex Rivera</p>
+                    <a th:href="@{/logout}" class="text-[10px] text-slate-500 hover:text-primary transition-colors">Log out</a>
                 </div>
-                <span class="material-symbols-outlined text-slate-400 text-sm">logout</span>
+                <a th:href="@{/logout}">
+                    <span class="material-symbols-outlined text-slate-400 text-sm">logout</span>
+                </a>
             </div>
         </div>
     </aside>
 
-    <!-- Main Content -->
+    <!-- ── Main Content ──────────────────────────────────────────────────── -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-background-light">
 
-        <!-- Header -->
+        <!-- Header: Search & Filters (submit GET form để server filter) -->
         <header class="h-16 bg-white dark:bg-slate-900 border-b border-primary/10 flex items-center justify-between px-8 shrink-0">
-            <div class="flex items-center gap-4">
+            <form th:action="@{/admin/users}" method="get" class="flex items-center gap-4" id="filter-form">
+
+                <!-- Search -->
                 <div class="relative">
                     <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xl">search</span>
-                    <input id="search-input" class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64 transition-all" placeholder="Search users..." type="text"/>
+                    <input name="keyword"
+                           th:value="${keyword}"
+                           class="pl-10 pr-4 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary w-64 transition-all"
+                           placeholder="Search users..."
+                           type="text"
+                           oninput="debounceSubmit()"/>
                 </div>
-                <!-- Filter by role -->
-                <select id="role-filter" class="pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary text-slate-600">
-                    <option value="">All Roles</option>
-                    <option value="Admin">Admin</option>
-                    <option value="Manager">Manager</option>
-                    <option value="Developer">Developer</option>
-                    <option value="Designer">Designer</option>
-                    <option value="Analyst">Analyst</option>
-                    <option value="HR">HR</option>
+
+                <!-- Filter by Role -->
+                <select name="role"
+                        class="pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary text-slate-600"
+                        onchange="this.form.submit()">
+                    <option value="" th:selected="${roleFilter == null or roleFilter == ''}">All Roles</option>
+                    <option th:each="r : ${roles != null ? roles : T(java.util.Collections).emptyList()}" th:text="${r.getCode()}" th:value="${r.getCode()}" th:selected="${roleFilter != null and roleFilter == r.getCode()}">Admin</option>
                 </select>
-                <!-- Filter by status -->
-                <select id="status-filter" class="pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary text-slate-600">
-                    <option value="">All Status</option>
-                    <option value="Active">Active</option>
-                    <option value="Inactive">Inactive</option>
-                    <option value="Suspended">Suspended</option>
+
+                <!-- Filter by Status -->
+                <select name="status"
+                        class="pl-3 pr-8 py-1.5 bg-slate-100 dark:bg-slate-800 border-none rounded-lg text-sm focus:ring-2 focus:ring-primary text-slate-600"
+                        onchange="this.form.submit()">
+                    <option value="" th:selected="${statusFilter == null or statusFilter == ''}">All Status</option>
+                    <option value="Active"    th:selected="${statusFilter == 'Active'}">Active</option>
+                    <option value="Inactive"  th:selected="${statusFilter == 'Inactive'}">Inactive</option>
+                    <option value="Suspended" th:selected="${statusFilter == 'Suspended'}">Suspended</option>
                 </select>
-            </div>
+
+                <!-- Preserve sort params khi submit filter -->
+                <input type="hidden" name="sort"    th:value="${sortField}"/>
+                <input type="hidden" name="dir"     th:value="${sortDir}"/>
+                <input type="hidden" name="page"    value="0"/>
+            </form>
+
             <div class="flex items-center gap-4">
                 <button class="w-10 h-10 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-600">
                     <span class="material-symbols-outlined">notifications</span>
@@ -150,29 +201,30 @@
                         <h2 class="text-3xl font-black text-slate-900 dark:text-white tracking-tight">User Accounts</h2>
                         <p class="text-slate-500 dark:text-slate-400 mt-1">Manage all system users and their access rights</p>
                     </div>
-                    <button onclick="openModal()" class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all active:scale-95">
+                    <button onclick="openModal()"
+                            class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-lg shadow-lg shadow-primary/30 hover:bg-primary/90 transition-all active:scale-95">
                         <span class="material-symbols-outlined text-xl">person_add</span>
                         <span>Add User</span>
                     </button>
                 </div>
 
-                <!-- Stats Quick View -->
+                <!-- Stats Quick View — bind từ model -->
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-primary/5 shadow-sm">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Users</p>
-                        <h3 class="text-2xl font-bold mt-1" id="stat-total">18</h3>
+                        <h3 class="text-2xl font-bold mt-1" th:text="${statTotal}">0</h3>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-primary/5 shadow-sm">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Users</p>
-                        <h3 class="text-2xl font-bold mt-1 text-emerald-500" id="stat-active">13</h3>
+                        <h3 class="text-2xl font-bold mt-1 text-emerald-500" th:text="${statActive}">0</h3>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-primary/5 shadow-sm">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Inactive</p>
-                        <h3 class="text-2xl font-bold mt-1 text-slate-400" id="stat-inactive">3</h3>
+                        <h3 class="text-2xl font-bold mt-1 text-slate-400" th:text="${statInactive}">0</h3>
                     </div>
                     <div class="bg-white dark:bg-slate-900 p-5 rounded-xl border border-primary/5 shadow-sm">
                         <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Suspended</p>
-                        <h3 class="text-2xl font-bold mt-1 text-rose-500" id="stat-suspended">2</h3>
+                        <h3 class="text-2xl font-bold mt-1 text-rose-500" th:text="${statSuspended}">0</h3>
                     </div>
                 </div>
 
@@ -182,403 +234,430 @@
                         <table class="w-full text-left border-collapse">
                             <thead>
                             <tr class="bg-slate-50 dark:bg-slate-800/50 border-b border-primary/5">
+                                <th class="px-6 py-4">
+                                    <input type="checkbox" id="check-all"
+                                           class="rounded border-slate-300 text-primary focus:ring-primary"/>
+                                </th>
+
+                                <!-- Sortable: User name -->
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                    <input type="checkbox" id="check-all" class="rounded border-slate-300 text-primary focus:ring-primary"/>
+                                    <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort='fullName',dir=${(sortField == 'fullName' and sortDir == 'asc') ? 'desc' : 'asc'},page=0)}"
+                                       class="flex items-center gap-1 hover:text-primary transition-colors">
+                                        User
+                                        <span class="material-symbols-outlined text-base"
+                                              th:text="${sortField=='fullName'?(sortDir=='asc'?'arrow_upward':'arrow_downward'):'unfold_more'}">unfold_more</span>
+                                    </a>
                                 </th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer select-none" onclick="sortTable('name')">
-                                    <div class="flex items-center gap-1">User <span class="material-symbols-outlined text-base">unfold_more</span></div>
-                                </th>
+
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer select-none" onclick="sortTable('role')">
-                                    <div class="flex items-center gap-1">Role <span class="material-symbols-outlined text-base">unfold_more</span></div>
+
+                                <!-- Sortable: Role -->
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort='role',dir=${(sortField == 'role' and sortDir == 'asc') ? 'desc' : 'asc'},page=0)}"
+                                       class="flex items-center gap-1 hover:text-primary transition-colors">
+                                        Role
+                                        <span class="material-symbols-outlined text-base"
+                                              th:text="${sortField=='role'?(sortDir=='asc'?'arrow_upward':'arrow_downward'):'unfold_more'}">unfold_more</span>
+                                    </a>
                                 </th>
+
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Department</th>
-                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider cursor-pointer select-none" onclick="sortTable('lastLogin')">
-                                    <div class="flex items-center gap-1">Last Login <span class="material-symbols-outlined text-base">unfold_more</span></div>
+
+                                <!-- Sortable: Last Login -->
+                                <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">
+                                    <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort='lastLogin',dir=${(sortField == 'lastLogin' and sortDir == 'asc') ? 'desc' : 'asc'},page=0)}"
+                                       class="flex items-center gap-1 hover:text-primary transition-colors">
+                                        Last Login
+                                        <span class="material-symbols-outlined text-base"
+                                              th:text="${sortField=='lastLogin'?(sortDir=='asc'?'arrow_upward':'arrow_downward'):'unfold_more'}">unfold_more</span>
+                                    </a>
                                 </th>
+
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                                 <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-right">Action</th>
                             </tr>
                             </thead>
-                            <tbody id="user-table-body" class="divide-y divide-slate-100 dark:divide-slate-800">
-                            <!-- Rows injected by JS -->
+
+                            <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
+
+                            <!-- Empty state -->
+                            <tr th:if="${users == null or users.isEmpty()}">
+                                <td colspan="8" class="px-6 py-16 text-center">
+                                    <div class="flex flex-col items-center gap-3 text-slate-400">
+                                        <span class="material-symbols-outlined text-5xl">manage_accounts</span>
+                                        <p class="text-sm font-medium">No users found</p>
+                                        <p class="text-xs">Try adjusting your search or filter criteria</p>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Data rows — null-safe: tránh th:each trên null -->
+                            <tr th:each="user : ${users != null ? users : T(java.util.Collections).emptyList()}"
+                                th:data-id="${user.id}"
+                                th:data-first-name="${user.firstName}"
+                                th:data-last-name="${user.lastName}"
+                                th:data-email="${user.email}"
+                                th:data-role="${user.role}"
+                                th:data-department-name="${user.departmentName}"
+                                th:data-status="${user.status}"
+                                th:data-full-name="${user.fullName}"
+                                class="hover:bg-primary/5 transition-colors group">
+
+                                <!-- Checkbox -->
+                                <td class="px-6 py-4">
+                                    <input type="checkbox" class="row-check rounded border-slate-300 text-primary focus:ring-primary"
+                                           th:data-id="${user.id}"/>
+                                </td>
+
+                                <!-- Avatar + Name + UID -->
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <img class="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm"
+                                             th:src="${user.avatarUrl}"
+                                             th:alt="${user.fullName}"
+                                             onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
+                                        <!-- Fallback initials (UserDTO.getInitials() đã xử lý null) -->
+                                        <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs items-center justify-center hidden"
+                                             th:text="${user.initials}">AB</div>
+                                        <div>
+                                            <p class="text-sm font-semibold text-slate-900 dark:text-white leading-tight"
+                                               th:text="${user.fullName}">Full Name</p>
+                                            <p class="text-[11px] text-slate-400 leading-tight"
+                                               th:text="'#UID-' + ${user.id != null ? T(java.lang.String).format('%04d', user.id) : ''}">#UID-0001</p>
+                                        </div>
+                                    </div>
+                                </td>
+
+                                <!-- Email -->
+                                <td class="px-6 py-4 text-sm text-slate-500" th:text="${user.email}">email@company.com</td>
+
+                                <!-- Role badge -->
+                                <td class="px-6 py-4">
+                                    <!--/* Admin */-->
+                                    <span th:if="${user.role == 'Admin'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-primary/10 text-primary"
+                                          th:text="${user.role}">Admin</span>
+                                    <!--/* Manager */-->
+                                    <span th:if="${user.role == 'Manager'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-orange-100 text-orange-600"
+                                          th:text="${user.role}">Manager</span>
+                                    <!--/* Developer */-->
+                                    <span th:if="${user.role == 'Developer'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-sky-100 text-sky-600"
+                                          th:text="${user.role}">Developer</span>
+                                    <!--/* Designer */-->
+                                    <span th:if="${user.role == 'Designer'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-purple-100 text-purple-600"
+                                          th:text="${user.role}">Designer</span>
+                                    <!--/* Analyst */-->
+                                    <span th:if="${user.role == 'Analyst'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-teal-100 text-teal-600"
+                                          th:text="${user.role}">Analyst</span>
+                                    <!--/* HR */-->
+                                    <span th:if="${user.role == 'HR'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-pink-100 text-pink-600"
+                                          th:text="${user.role}">HR</span>
+                                    <!--/* Fallback nếu role khác */-->
+                                    <span th:unless="${user.role == 'Admin' or user.role == 'Manager' or user.role == 'Developer'
+                                       or user.role == 'Designer' or user.role == 'Analyst' or user.role == 'HR'}"
+                                          class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-slate-100 text-slate-600"
+                                          th:text="${user.role}">Other</span>
+                                </td>
+
+                                <!-- Department -->
+                                <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300"
+                                    th:text="${user.departmentName}">Engineering</td>
+
+                                <!-- Last Login -->
+                                <td class="px-6 py-4 text-sm text-slate-500"
+                                    th:text="${user.lastLoginDisplay}">2 min ago</td>
+
+                                <!-- Status badge -->
+                                <td class="px-6 py-4">
+                    <span th:if="${user.status == 'Active'}"
+                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400">Active</span>
+                                    <span th:if="${user.status == 'Inactive'}"
+                                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400">Inactive</span>
+                                    <span th:if="${user.status == 'Suspended'}"
+                                          class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400">Suspended</span>
+                                </td>
+
+                                <!-- Actions -->
+                                <td class="px-6 py-4 text-right">
+                                    <div class="flex items-center justify-end gap-1">
+                                        <!-- Edit: đọc data từ data-* trên <tr>, tránh string trong onclick -->
+                                        <button type="button"
+                                                class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors"
+                                                title="Edit"
+                                                onclick="openEditModalFromRow(this)">
+                                            <span class="material-symbols-outlined text-[18px]">edit</span>
+                                        </button>
+                                        <!-- Delete -->
+                                        <button type="button"
+                                                class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                                                title="Delete"
+                                                onclick="openDeleteModalFromRow(this)">
+                                            <span class="material-symbols-outlined text-[18px]">delete</span>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
                             </tbody>
                         </table>
                     </div>
+
                     <!-- Pagination -->
                     <div class="px-6 py-4 border-t border-primary/5 bg-slate-50/50 dark:bg-slate-800/30 flex items-center justify-between">
-                        <span class="text-sm text-slate-500" id="pagination-info">Showing 1 to 10 of 18 users</span>
-                        <div class="flex items-center gap-2" id="pagination-buttons"></div>
+                        <!-- Info text -->
+                        <span class="text-sm text-slate-500"
+                              th:text="|Showing ${totalElements != null and totalElements == 0 ? 0 : currentPage * pageSize + 1} to ${totalElements != null and totalElements == 0 ? 0 : (totalElements != null and (currentPage + 1) * pageSize <= totalElements ? (currentPage + 1) * pageSize : totalElements)} of ${totalElements != null ? totalElements : 0} users|">
+              Showing 1 to 10 of 0 users
+            </span>
+
+                        <!-- Page buttons -->
+                        <div class="flex items-center gap-2">
+                            <!-- Prev -->
+                            <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort=${sortField ?: 'fullName'},dir=${sortDir ?: 'asc'},page=${currentPage - 1})}"
+                               th:classappend="${currentPage == 0 ? 'opacity-40 pointer-events-none' : ''}"
+                               class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                                <span class="material-symbols-outlined text-lg">chevron_left</span>
+                            </a>
+
+                            <!-- Numbered pages — chỉ render khi totalPages > 0, tránh sequence(0,-1) gây lỗi -->
+                            <th:block th:if="${totalPages > 0}">
+                                <th:block th:each="pageNum : ${#numbers.sequence(
+                    T(java.lang.Math).max(0, currentPage - 2),
+                    T(java.lang.Math).min(T(java.lang.Integer).valueOf(totalPages - 1), T(java.lang.Integer).valueOf(currentPage + 2)))}">
+                                    <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort=${sortField ?: 'fullName'},dir=${sortDir ?: 'asc'},page=${pageNum})}"
+                                       th:text="${pageNum + 1}"
+                                       th:classappend="${pageNum == currentPage ? 'bg-primary text-white font-bold' : 'hover:bg-primary/10 font-medium'}"
+                                       class="w-8 h-8 flex items-center justify-center rounded-lg text-sm transition-colors">
+                                    </a>
+                                </th:block>
+                            </th:block>
+
+                            <!-- Next -->
+                            <a th:href="@{/admin/users(keyword=${keyword ?: ''},role=${roleFilter ?: ''},status=${statusFilter ?: ''},sort=${sortField ?: 'fullName'},dir=${sortDir ?: 'asc'},page=${currentPage + 1})}"
+                               th:classappend="${currentPage + 1 >= totalPages ? 'opacity-40 pointer-events-none' : ''}"
+                               class="w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors">
+                                <span class="material-symbols-outlined text-lg">chevron_right</span>
+                            </a>
+                        </div>
                     </div>
-                </div>
+                </div><!-- /table card -->
 
             </div>
         </div>
     </main>
 </div>
 
-<!-- Add / Edit User Modal -->
-<div id="modal-overlay" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+<!-- ── Add / Edit User Modal ─────────────────────────────────────────────── -->
+<div id="modal-overlay"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
     <div id="modal-box" class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden">
         <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100 dark:border-slate-800">
             <h3 id="modal-title" class="text-lg font-bold">Add New User</h3>
-            <button onclick="closeModal()" class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
+            <button onclick="closeModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500">
                 <span class="material-symbols-outlined text-xl">close</span>
             </button>
         </div>
-        <div class="p-6 space-y-4">
-            <div class="flex items-center gap-4">
-                <div id="modal-avatar" class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl overflow-hidden">
-                    <span class="material-symbols-outlined text-3xl">person</span>
+
+        <!--
+          Form POST → /users/save
+          Controller nhận @ModelAttribute UserDTO userDTO
+          Hidden field "id" = null khi Add, = userId khi Edit
+        -->
+        <form th:action="@{/users/save}" method="post" id="user-form">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" name="id" id="field-id" value=""/>
+
+            <div class="p-6 space-y-4">
+                <div class="flex items-center gap-4">
+                    <div class="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xl overflow-hidden">
+                        <span class="material-symbols-outlined text-3xl">person</span>
+                    </div>
+                    <div>
+                        <p class="text-sm font-semibold text-slate-700">Profile Photo</p>
+                        <p class="text-xs text-slate-400">Avatar URL sẽ được sinh tự động</p>
+                    </div>
                 </div>
-                <div>
-                    <p class="text-sm font-semibold text-slate-700">Profile Photo</p>
-                    <p class="text-xs text-slate-400">Upload or use default avatar</p>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">First Name <span class="text-rose-500">*</span></label>
+                        <input id="field-first" name="firstName" type="text" required
+                               class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                               placeholder="John"/>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Last Name</label>
+                        <input id="field-last" name="lastName" type="text"
+                               class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                               placeholder="Doe"/>
+                    </div>
                 </div>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
+
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">First Name</label>
-                    <input id="field-first" type="text" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="John"/>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Email Address <span class="text-rose-500">*</span></label>
+                    <input id="field-email" name="email" type="email" required
+                           class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent"
+                           placeholder="john.doe@company.com"/>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Last Name</label>
-                    <input id="field-last" type="text" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="Doe"/>
+
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Role</label>
+                        <select id="field-role" name="role"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
+                            <option value="Admin">Admin</option>
+                            <option value="Manager">Manager</option>
+                            <option value="Developer">Developer</option>
+                            <option value="Designer">Designer</option>
+                            <option value="Analyst">Analyst</option>
+                            <option value="HR">HR</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-slate-500 mb-1">Department</label>
+                        <!-- Render dynamic department list từ model -->
+                        <select id="field-dept" name="departmentName"
+                                class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
+                            <option th:each="dept : ${departments != null ? departments : T(java.util.Collections).emptyList()}"
+                                    th:value="${dept}"
+                                    th:text="${dept}">Department</option>
+                        </select>
+                    </div>
                 </div>
-            </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Email Address</label>
-                <input id="field-email" type="email" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary focus:border-transparent" placeholder="john.doe@company.com"/>
-            </div>
-            <div class="grid grid-cols-2 gap-4">
+
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Role</label>
-                    <select id="field-role" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
-                        <option>Admin</option>
-                        <option>Manager</option>
-                        <option>Developer</option>
-                        <option>Designer</option>
-                        <option>Analyst</option>
-                        <option>HR</option>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
+                    <select id="field-status" name="status"
+                            class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
+                        <option value="Active">Active</option>
+                        <option value="Inactive">Inactive</option>
+                        <option value="Suspended">Suspended</option>
                     </select>
                 </div>
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1">Department</label>
-                    <select id="field-dept" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
-                        <option>Engineering</option>
-                        <option>Marketing</option>
-                        <option>Product Design</option>
-                        <option>Sales</option>
-                        <option>QA Testing</option>
-                        <option>Finance</option>
-                        <option>HR</option>
-                    </select>
-                </div>
             </div>
-            <div>
-                <label class="block text-xs font-semibold text-slate-500 mb-1">Status</label>
-                <select id="field-status" class="w-full px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-primary">
-                    <option>Active</option>
-                    <option>Inactive</option>
-                    <option>Suspended</option>
-                </select>
+
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
+                <button type="button" onclick="closeModal()"
+                        class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="px-5 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all active:scale-95">
+                    Save User
+                </button>
             </div>
-        </div>
-        <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/30">
-            <button onclick="closeModal()" class="px-4 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">Cancel</button>
-            <button onclick="saveUser()" class="px-5 py-2 bg-primary text-white text-sm font-bold rounded-lg hover:bg-primary/90 transition-all active:scale-95">Save User</button>
-        </div>
+        </form>
     </div>
 </div>
 
-<!-- Confirm Delete Modal -->
-<div id="delete-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
+<!-- ── Confirm Delete Modal ──────────────────────────────────────────────── -->
+<div id="delete-modal"
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm hidden">
     <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-6 text-center">
         <div class="w-14 h-14 rounded-full bg-rose-100 flex items-center justify-center mx-auto mb-4">
             <span class="material-symbols-outlined text-rose-500 text-3xl">delete_forever</span>
         </div>
         <h3 class="text-lg font-bold mb-1">Delete User</h3>
-        <p class="text-sm text-slate-500 mb-6">Are you sure you want to delete <strong id="delete-name"></strong>? This action cannot be undone.</p>
+        <p class="text-sm text-slate-500 mb-6">
+            Are you sure you want to delete <strong id="delete-name"></strong>? This action cannot be undone.
+        </p>
         <div class="flex gap-3">
-            <button onclick="closeDeleteModal()" class="flex-1 px-4 py-2 text-sm font-semibold border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">Cancel</button>
-            <button onclick="confirmDelete()" class="flex-1 px-4 py-2 bg-rose-500 text-white text-sm font-bold rounded-lg hover:bg-rose-600 transition-all active:scale-95">Delete</button>
+            <button onclick="closeDeleteModal()"
+                    class="flex-1 px-4 py-2 text-sm font-semibold border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                Cancel
+            </button>
+            <!-- POST to /users/delete/{id} -->
+            <form id="delete-form" th:action="@{/users/delete/__${0}__}" method="post" style="flex:1">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                <button type="submit"
+                        class="w-full px-4 py-2 bg-rose-500 text-white text-sm font-bold rounded-lg hover:bg-rose-600 transition-all active:scale-95">
+                    Delete
+                </button>
+            </form>
         </div>
     </div>
 </div>
 
+<!-- ── JavaScript (chỉ UI, không còn data logic) ────────────────────────── -->
 <script>
-    // ─── Data ────────────────────────────────────────────────────────────
-    let users = [
-        { id:1,  name:"Alex Rivera",     email:"alex.r@company.com",     role:"Admin",     dept:"Engineering",    lastLogin:"2 min ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=3"  },
-        { id:2,  name:"Sarah Chen",      email:"sarah.c@company.com",    role:"Manager",   dept:"Marketing",      lastLogin:"1 hr ago",     status:"Active",    avatar:"https://i.pravatar.cc/40?img=5"  },
-        { id:3,  name:"Jordan Smith",    email:"jordan.s@company.com",   role:"Designer",  dept:"Product Design", lastLogin:"3 hrs ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=7"  },
-        { id:4,  name:"Maria Garcia",    email:"maria.g@company.com",    role:"Manager",   dept:"Sales",          lastLogin:"Yesterday",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=9"  },
-        { id:5,  name:"Kevin Lee",       email:"kevin.l@company.com",    role:"Developer", dept:"QA Testing",     lastLogin:"2 days ago",   status:"Inactive",  avatar:"https://i.pravatar.cc/40?img=11" },
-        { id:6,  name:"Emily Nguyen",    email:"emily.n@company.com",    role:"Developer", dept:"Engineering",    lastLogin:"5 hrs ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=20" },
-        { id:7,  name:"Daniel Kim",      email:"daniel.k@company.com",   role:"Analyst",   dept:"Finance",        lastLogin:"1 day ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=15" },
-        { id:8,  name:"Priya Patel",     email:"priya.p@company.com",    role:"HR",        dept:"HR",             lastLogin:"Just now",     status:"Active",    avatar:"https://i.pravatar.cc/40?img=47" },
-        { id:9,  name:"Tom Williams",    email:"tom.w@company.com",      role:"Developer", dept:"Engineering",    lastLogin:"3 days ago",   status:"Suspended", avatar:"https://i.pravatar.cc/40?img=13" },
-        { id:10, name:"Lisa Brown",      email:"lisa.b@company.com",     role:"Designer",  dept:"Product Design", lastLogin:"6 hrs ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=48" },
-        { id:11, name:"Chris Johnson",   email:"chris.j@company.com",    role:"Manager",   dept:"Sales",          lastLogin:"4 hrs ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=17" },
-        { id:12, name:"Nina Suzuki",     email:"nina.s@company.com",     role:"Analyst",   dept:"Marketing",      lastLogin:"2 days ago",   status:"Inactive",  avatar:"https://i.pravatar.cc/40?img=49" },
-        { id:13, name:"Omar Hassan",     email:"omar.h@company.com",     role:"Developer", dept:"Engineering",    lastLogin:"8 hrs ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=57" },
-        { id:14, name:"Lucia Morales",   email:"lucia.m@company.com",    role:"HR",        dept:"HR",             lastLogin:"1 day ago",    status:"Active",    avatar:"https://i.pravatar.cc/40?img=46" },
-        { id:15, name:"James Wu",        email:"james.w@company.com",    role:"Developer", dept:"Engineering",    lastLogin:"5 days ago",   status:"Inactive",  avatar:"https://i.pravatar.cc/40?img=53" },
-        { id:16, name:"Aisha Diallo",    email:"aisha.d@company.com",    role:"Designer",  dept:"Product Design", lastLogin:"10 hrs ago",   status:"Active",    avatar:"https://i.pravatar.cc/40?img=44" },
-        { id:17, name:"Ryan Park",       email:"ryan.p@company.com",     role:"Analyst",   dept:"Finance",        lastLogin:"30 min ago",   status:"Active",    avatar:"https://i.pravatar.cc/40?img=60" },
-        { id:18, name:"Fatima Al-Amin",  email:"fatima.a@company.com",   role:"Developer", dept:"QA Testing",     lastLogin:"7 days ago",   status:"Suspended", avatar:"https://i.pravatar.cc/40?img=45" },
-    ];
-
-    let currentPage = 1;
-    const pageSize = 10;
-    let sortKey = null;
-    let sortDir = 1;
-    let editingId = null;
-    let deletingId = null;
-
-    // ─── Status badge ─────────────────────────────────────────────────────
-    function statusBadge(status) {
-        const map = {
-            Active:    "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-400",
-            Inactive:  "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400",
-            Suspended: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400",
-        };
-        return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${map[status] || map.Inactive}">${status}</span>`;
-    }
-
-    // ─── Role badge ───────────────────────────────────────────────────────
-    function roleBadge(role) {
-        const map = {
-            Admin:     "bg-primary/10 text-primary",
-            Manager:   "bg-orange-100 text-orange-600",
-            Developer: "bg-sky-100 text-sky-600",
-            Designer:  "bg-purple-100 text-purple-600",
-            Analyst:   "bg-teal-100 text-teal-600",
-            HR:        "bg-pink-100 text-pink-600",
-        };
-        return `<span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold ${map[role] || ''}">${role}</span>`;
-    }
-
-    // ─── Initials ─────────────────────────────────────────────────────────
-    function initials(name) {
-        return name.split(' ').map(w => w[0]).join('').slice(0,2).toUpperCase();
-    }
-
-    // ─── Filter + sort + paginate ─────────────────────────────────────────
-    function getFiltered() {
-        const q     = document.getElementById('search-input').value.toLowerCase();
-        const role  = document.getElementById('role-filter').value;
-        const stat  = document.getElementById('status-filter').value;
-        let list = users.filter(u => {
-            return (!q    || u.name.toLowerCase().includes(q) || u.email.toLowerCase().includes(q))
-                && (!role || u.role === role)
-                && (!stat || u.status === stat);
-        });
-        if (sortKey) {
-            list.sort((a,b) => {
-                const av = a[sortKey]||'', bv = b[sortKey]||'';
-                return av.localeCompare(bv) * sortDir;
-            });
-        }
-        return list;
-    }
-
-    function render() {
-        const filtered = getFiltered();
-        const total = filtered.length;
-        const totalPages = Math.ceil(total / pageSize);
-        if (currentPage > totalPages) currentPage = Math.max(1, totalPages);
-        const start = (currentPage-1)*pageSize;
-        const slice = filtered.slice(start, start+pageSize);
-
-        // stats
-        document.getElementById('stat-total').textContent     = users.length;
-        document.getElementById('stat-active').textContent    = users.filter(u=>u.status==='Active').length;
-        document.getElementById('stat-inactive').textContent  = users.filter(u=>u.status==='Inactive').length;
-        document.getElementById('stat-suspended').textContent = users.filter(u=>u.status==='Suspended').length;
-
-        // table
-        const tbody = document.getElementById('user-table-body');
-        tbody.innerHTML = slice.map(u => `
-      <tr class="hover:bg-primary/5 transition-colors group" data-id="${u.id}">
-        <td class="px-6 py-4">
-          <input type="checkbox" class="row-check rounded border-slate-300 text-primary focus:ring-primary" data-id="${u.id}"/>
-        </td>
-        <td class="px-6 py-4">
-          <div class="flex items-center gap-3">
-            <img class="w-8 h-8 rounded-full object-cover border-2 border-white shadow-sm" src="${u.avatar}" alt="${u.name}" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"/>
-            <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs items-center justify-center hidden">${initials(u.name)}</div>
-            <div>
-              <p class="text-sm font-semibold text-slate-900 dark:text-white leading-tight">${u.name}</p>
-              <p class="text-[11px] text-slate-400 leading-tight">#UID-${String(u.id).padStart(4,'0')}</p>
-            </div>
-          </div>
-        </td>
-        <td class="px-6 py-4 text-sm text-slate-500">${u.email}</td>
-        <td class="px-6 py-4">${roleBadge(u.role)}</td>
-        <td class="px-6 py-4 text-sm text-slate-600 dark:text-slate-300">${u.dept}</td>
-        <td class="px-6 py-4 text-sm text-slate-500">${u.lastLogin}</td>
-        <td class="px-6 py-4">${statusBadge(u.status)}</td>
-        <td class="px-6 py-4 text-right">
-          <div class="flex items-center justify-end gap-1">
-            <button onclick="editUser(${u.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary/5 transition-colors" title="Edit">
-              <span class="material-symbols-outlined text-[18px]">edit</span>
-            </button>
-            <button onclick="openDeleteModal(${u.id})" class="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors" title="Delete">
-              <span class="material-symbols-outlined text-[18px]">delete</span>
-            </button>
-          </div>
-        </td>
-      </tr>
-    `).join('');
-
-        // pagination info
-        const endRow = Math.min(start+pageSize, total);
-        document.getElementById('pagination-info').textContent =
-            total === 0 ? 'No results found' : `Showing ${start+1} to ${endRow} of ${total} users`;
-
-        // pagination buttons
-        const pg = document.getElementById('pagination-buttons');
-        pg.innerHTML = '';
-        // prev
-        const prev = document.createElement('button');
-        prev.className = 'w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors' + (currentPage===1?' opacity-40 cursor-not-allowed':'');
-        prev.disabled = currentPage === 1;
-        prev.innerHTML = '<span class="material-symbols-outlined text-lg">chevron_left</span>';
-        prev.onclick = () => { currentPage--; render(); };
-        pg.appendChild(prev);
-
-        for (let p=1; p<=totalPages; p++) {
-            const btn = document.createElement('button');
-            btn.className = p===currentPage
-                ? 'w-8 h-8 flex items-center justify-center rounded-lg bg-primary text-white text-sm font-bold'
-                : 'w-8 h-8 flex items-center justify-center rounded-lg hover:bg-primary/10 transition-colors text-sm font-medium';
-            btn.textContent = p;
-            btn.onclick = () => { currentPage = p; render(); };
-            pg.appendChild(btn);
-        }
-
-        // next
-        const next = document.createElement('button');
-        next.className = 'w-8 h-8 flex items-center justify-center rounded-lg border border-slate-200 dark:border-slate-700 hover:bg-white dark:hover:bg-slate-800 transition-colors' + (currentPage>=totalPages?' opacity-40 cursor-not-allowed':'');
-        next.disabled = currentPage >= totalPages;
-        next.innerHTML = '<span class="material-symbols-outlined text-lg">chevron_right</span>';
-        next.onclick = () => { currentPage++; render(); };
-        pg.appendChild(next);
-
-        // check-all sync
-        document.getElementById('check-all').checked = false;
-    }
-
-    // ─── Sort ─────────────────────────────────────────────────────────────
-    function sortTable(key) {
-        if (sortKey === key) sortDir *= -1;
-        else { sortKey = key; sortDir = 1; }
-        currentPage = 1;
-        render();
-    }
-
-    // ─── Modal helpers ────────────────────────────────────────────────────
+    // ─── Modal: Add ────────────────────────────────────────────────────────
     function openModal() {
-        editingId = null;
         document.getElementById('modal-title').textContent = 'Add New User';
+        document.getElementById('field-id').value    = '';
         document.getElementById('field-first').value = '';
         document.getElementById('field-last').value  = '';
         document.getElementById('field-email').value = '';
         document.getElementById('field-role').value  = 'Developer';
-        document.getElementById('field-dept').value  = 'Engineering';
         document.getElementById('field-status').value= 'Active';
         document.getElementById('modal-overlay').classList.remove('hidden');
     }
 
-    function editUser(id) {
-        const u = users.find(x=>x.id===id);
-        if (!u) return;
-        editingId = id;
-        const [first, ...rest] = u.name.split(' ');
+    // ─── Modal: Edit (data được truyền qua th:onclick inline) ─────────────
+    function openEditModal(id, firstName, lastName, email, role, dept, status) {
         document.getElementById('modal-title').textContent = 'Edit User';
-        document.getElementById('field-first').value  = first;
-        document.getElementById('field-last').value   = rest.join(' ');
-        document.getElementById('field-email').value  = u.email;
-        document.getElementById('field-role').value   = u.role;
-        document.getElementById('field-dept').value   = u.dept;
-        document.getElementById('field-status').value = u.status;
+        document.getElementById('field-id').value    = id;
+        document.getElementById('field-first').value = firstName;
+        document.getElementById('field-last').value  = lastName;
+        document.getElementById('field-email').value = email;
+        document.getElementById('field-role').value  = role;
+        document.getElementById('field-dept').value  = dept;
+        document.getElementById('field-status').value= status;
         document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    function openEditModalFromRow(btn) {
+        var row = btn.closest('tr');
+        var d = row.dataset;
+        openEditModal(d.id || '', d.firstName || '', d.lastName || '', d.email || '', d.role || '', d.departmentName || '', d.status || '');
+    }
+
+    function openDeleteModalFromRow(btn) {
+        var row = btn.closest('tr');
+        openDeleteModal(row.dataset.id || '', row.dataset.fullName || '');
     }
 
     function closeModal() {
         document.getElementById('modal-overlay').classList.add('hidden');
     }
 
-    function saveUser() {
-        const first  = document.getElementById('field-first').value.trim();
-        const last   = document.getElementById('field-last').value.trim();
-        const email  = document.getElementById('field-email').value.trim();
-        const role   = document.getElementById('field-role').value;
-        const dept   = document.getElementById('field-dept').value;
-        const status = document.getElementById('field-status').value;
-        if (!first || !email) {
-            alert('Please fill in at least First Name and Email.');
-            return;
-        }
-        const name = [first, last].filter(Boolean).join(' ');
-        if (editingId) {
-            const u = users.find(x=>x.id===editingId);
-            Object.assign(u, { name, email, role, dept, status });
-        } else {
-            const newId = users.length ? Math.max(...users.map(u=>u.id))+1 : 1;
-            users.unshift({
-                id: newId, name, email, role, dept,
-                lastLogin: 'Just now',
-                status,
-                avatar: `https://i.pravatar.cc/40?img=${newId+20}`
-            });
-        }
-        closeModal();
-        render();
-    }
-
-    // ─── Delete ───────────────────────────────────────────────────────────
-    function openDeleteModal(id) {
-        deletingId = id;
-        const u = users.find(x=>x.id===id);
-        document.getElementById('delete-name').textContent = u ? u.name : '';
+    // ─── Delete modal ──────────────────────────────────────────────────────
+    function openDeleteModal(id, name) {
+        document.getElementById('delete-name').textContent = name;
+        // Cập nhật action của delete form
+        document.getElementById('delete-form').action = '/users/delete/' + id;
         document.getElementById('delete-modal').classList.remove('hidden');
     }
 
     function closeDeleteModal() {
         document.getElementById('delete-modal').classList.add('hidden');
-        deletingId = null;
     }
 
-    function confirmDelete() {
-        users = users.filter(u=>u.id!==deletingId);
-        closeDeleteModal();
-        render();
+    // ─── Check-all checkbox ────────────────────────────────────────────────
+    document.getElementById('check-all').addEventListener('change', function () {
+        document.querySelectorAll('.row-check').forEach(c => c.checked = this.checked);
+    });
+
+    // ─── Đóng modal khi click ngoài overlay ───────────────────────────────
+    document.getElementById('modal-overlay').addEventListener('click', function (e) {
+        if (e.target === this) closeModal();
+    });
+    document.getElementById('delete-modal').addEventListener('click', function (e) {
+        if (e.target === this) closeDeleteModal();
+    });
+
+    // ─── Debounce search (submit form sau 400ms không gõ) ─────────────────
+    let debounceTimer;
+    function debounceSubmit() {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => {
+            document.getElementById('filter-form').submit();
+        }, 400);
     }
-
-    // ─── Check all ────────────────────────────────────────────────────────
-    document.addEventListener('change', e => {
-        if (e.target.id==='check-all') {
-            document.querySelectorAll('.row-check').forEach(c => c.checked = e.target.checked);
-        }
-    });
-
-    // ─── Search / filter listeners ────────────────────────────────────────
-    ['search-input','role-filter','status-filter'].forEach(id => {
-        document.getElementById(id).addEventListener('input', () => { currentPage=1; render(); });
-    });
-
-    // ─── Close modals on overlay click ────────────────────────────────────
-    document.getElementById('modal-overlay').addEventListener('click', e => {
-        if (e.target === document.getElementById('modal-overlay')) closeModal();
-    });
-    document.getElementById('delete-modal').addEventListener('click', e => {
-        if (e.target === document.getElementById('delete-modal')) closeDeleteModal();
-    });
-
-    // ─── Init ─────────────────────────────────────────────────────────────
-    render();
 </script>
 </body>
 </html>
