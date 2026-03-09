@@ -3,7 +3,6 @@ package com.group5.ems.service.admin;
 import com.group5.ems.dto.request.SaveUserRequest;
 import com.group5.ems.dto.response.UserDTO;
 import com.group5.ems.entity.Department;
-import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.Role;
 import com.group5.ems.entity.User;
 import com.group5.ems.repository.*;
@@ -20,7 +19,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.naming.directory.InvalidAttributesException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -37,7 +35,7 @@ public class AdminService {
     private final PasswordEncoder passwordEncoder;
 
     public void saveUser(SaveUserRequest req){
-        if(req.getUsername().isBlank() ||req.getEmail().isBlank() ||req.getFullname().isBlank()){
+        if(req.getUsername().isBlank() ||req.getEmail().isBlank() ||req.getFullName().isBlank()){
             throw new IllegalArgumentException("User name, email and full name are required");
         }
         //add user
@@ -45,11 +43,11 @@ public class AdminService {
             if (req.getPassword().isBlank()) {
                 throw new IllegalArgumentException("Password is required");
             }
-            if (userRoleRepository.existByUserName()) {
-                throw new IllegalArgumentException("Username is already exist");
-            }
-            if (userRoleRepository.existByEmail()) {
+            if (userRepository.findByEmail(req.getEmail()).isPresent()) {
                 throw new IllegalArgumentException("Email is already exist");
+            }
+            if (userRepository.findByUsername(req.getUsername()).isPresent()) {
+                throw new IllegalArgumentException("Username is already exist");
             }
             User user = new User();
             applyCommonFields(user, req);
@@ -59,11 +57,11 @@ public class AdminService {
         }
         else{
             User existingUser = userRepository.findById(req.getId()).orElseThrow(() -> new IllegalArgumentException("User not found"));
-            if (userRoleRepository.existByUserName()) {
-                throw new IllegalArgumentException("Username is already exist");
-            }
-            if (userRoleRepository.existByEmail()) {
+            if (userRepository.findByEmail(req.getEmail()).isPresent()) {
                 throw new IllegalArgumentException("Email is already exist");
+            }
+            if (userRepository.findByUsername(req.getUsername()).isPresent()) {
+                throw new IllegalArgumentException("Username is already exist");
             }
             applyCommonFields(existingUser, req);
             if(!req.getPassword().isBlank()){
@@ -77,7 +75,7 @@ public class AdminService {
     private void applyCommonFields(User user, SaveUserRequest req) {
         user.setUsername(req.getUsername().trim());
         user.setEmail(req.getEmail().trim());
-        user.setFullName(req.getFullname().trim());
+        user.setFullName(req.getFullName().trim());
         user.setPhone(isBlank(req.getPhone()) ? null : req.getPhone().trim());
         user.setStatus(mapStatus(req.getStatus())); // Active -> ACTIVE, ...
     }

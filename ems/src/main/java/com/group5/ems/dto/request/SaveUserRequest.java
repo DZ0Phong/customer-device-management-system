@@ -12,7 +12,7 @@ public class SaveUserRequest {
     private String username;
     private String password;
     private String email;
-    private String fullname;
+    private String fullName;
     private String phone;
     private String status;
 }

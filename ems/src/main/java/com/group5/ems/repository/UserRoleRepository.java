@@ -25,8 +25,6 @@ public interface UserRoleRepository extends JpaRepository<UserRole, UserRoleId> 
     @Query("select r from UserRole ur join ur.role r where ur.userId = :userId ")
     Role getRoleByUserId(@Param("userId") Long userId);
 
-    boolean existByUserName();
 
-    boolean existByEmail();
 }
 
