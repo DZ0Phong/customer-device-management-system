@@ -1,5 +1,6 @@
 package com.group5.ems.service.admin;
 
+import com.group5.ems.dto.request.SaveUserRequest;
 import com.group5.ems.dto.response.UserDTO;
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.Employee;
@@ -15,9 +16,11 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import javax.naming.directory.InvalidAttributesException;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
@@ -31,9 +34,64 @@ public class AdminService {
     private final RoleRepository roleRepository;
     private final DepartmentRepository departmentRepository;
     private final EmployeeRepository employeeRepository;
+    private final PasswordEncoder passwordEncoder;
+
+    public void saveUser(SaveUserRequest req){
+        if(req.getUsername().isBlank() ||req.getEmail().isBlank() ||req.getFullname().isBlank()){
+            throw new IllegalArgumentException("User name, email and full name are required");
+        }
+        //add user
+        if(req.getId() == null) {
+            if (req.getPassword().isBlank()) {
+                throw new IllegalArgumentException("Password is required");
+            }
+            if (userRoleRepository.existByUserName()) {
+                throw new IllegalArgumentException("Username is already exist");
+            }
+            if (userRoleRepository.existByEmail()) {
+                throw new IllegalArgumentException("Email is already exist");
+            }
+            User user = new User();
+            applyCommonFields(user, req);
+            user.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+            user.setAvatarUrl(null);
+            userRepository.save(user);
+        }
+        else{
+            User existingUser = userRepository.findById(req.getId()).orElseThrow(() -> new IllegalArgumentException("User not found"));
+            if (userRoleRepository.existByUserName()) {
+                throw new IllegalArgumentException("Username is already exist");
+            }
+            if (userRoleRepository.existByEmail()) {
+                throw new IllegalArgumentException("Email is already exist");
+            }
+            applyCommonFields(existingUser, req);
+            if(!req.getPassword().isBlank()){
+                existingUser.setPasswordHash(passwordEncoder.encode(req.getPassword()));
+            }
+            userRepository.save(existingUser);
+        }
+    }
 
 
+    private void applyCommonFields(User user, SaveUserRequest req) {
+        user.setUsername(req.getUsername().trim());
+        user.setEmail(req.getEmail().trim());
+        user.setFullName(req.getFullname().trim());
+        user.setPhone(isBlank(req.getPhone()) ? null : req.getPhone().trim());
+        user.setStatus(mapStatus(req.getStatus())); // Active -> ACTIVE, ...
+    }
 
+    private String mapStatus(String uiStatus) {
+        if ("Active".equalsIgnoreCase(uiStatus)) return "ACTIVE";
+        if ("Inactive".equalsIgnoreCase(uiStatus)) return "INACTIVE";
+        if ("Suspended".equalsIgnoreCase(uiStatus)) return "LOCKED";
+        throw new IllegalArgumentException("Invalid status: " + uiStatus);
+    }
+
+    private boolean isBlank(String s) {
+        return s == null || s.trim().isEmpty();
+    }
     public List<User> findAll(){
         return userRepository.findAll();
     }

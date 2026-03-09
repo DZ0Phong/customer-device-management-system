@@ -1,5 +1,6 @@
 package com.group5.ems.controller.admin;
 
+import com.group5.ems.dto.request.SaveUserRequest;
 import com.group5.ems.dto.response.UserDTO;
 import com.group5.ems.entity.Role;
 import com.group5.ems.entity.User;
@@ -14,6 +15,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
 import java.util.Optional;
@@ -77,9 +79,15 @@ public class AdminController {
         return "admin/user-list";
     }
 
-    @PostMapping("/user/save")
-    public String saveUser(@ModelAttribute UserDTO userDTO) {
-
-        return "admin/user-list";
+    @PostMapping("/users/save")
+    public String saveUser(@ModelAttribute SaveUserRequest req, RedirectAttributes  redirectAttributes) {
+        try{
+            adminService.saveUser(req);
+            redirectAttributes.addFlashAttribute("message", "User has been saved successfully");
+        }
+        catch(IllegalArgumentException e){
+            redirectAttributes.addFlashAttribute("message", e.getMessage());
+        }
+        return "redirect:/admin/users";
     }
 }
