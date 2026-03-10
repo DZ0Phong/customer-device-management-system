@@ -882,7 +882,7 @@
         empty.classList.remove('flex');
         list.innerHTML = '';
 
-        fetch(_ctxPath + 'departments/' + deptId + '/members', {
+        fetch(_ctxPath + 'admin/departments/' + deptId + '/members', {
             headers: { 'Accept': 'application/json' }
         })
             .then(function (r) {
