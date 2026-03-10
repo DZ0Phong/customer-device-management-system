@@ -1,6 +1,8 @@
 package com.group5.ems.repository;
 
 import com.group5.ems.entity.Department;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
@@ -15,5 +17,9 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
     List<Department> findByParentId(Long parentId);
 
     List<Department> findByManagerId(Long managerId);
+
+    Page<Department> findByNameContainingIgnoreCaseOrCodeIgnoreCase(String keyword, String code, Pageable pageable);
+
+    Integer countByDepartmentId(Long id);
 }
 

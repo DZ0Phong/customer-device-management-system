@@ -1,11 +1,9 @@
 package com.group5.ems.service.admin;
 
 import com.group5.ems.dto.request.SaveUserRequest;
+import com.group5.ems.dto.response.DepartmentDTO;
 import com.group5.ems.dto.response.UserDTO;
-import com.group5.ems.entity.Department;
-import com.group5.ems.entity.Role;
-import com.group5.ems.entity.User;
-import com.group5.ems.entity.UserRole;
+import com.group5.ems.entity.*;
 import com.group5.ems.repository.*;
 import com.group5.ems.repository.spec.UserSpecification;
 import lombok.RequiredArgsConstructor;
@@ -35,7 +33,74 @@ public class AdminService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final List<String> departmentSortList = List.of("name", "code" ,"createdAt");
 
+    public Page<DepartmentDTO> getDepartments(String keyword,
+                                              String sortField,
+                                              String sortDir,
+                                              int page,
+                                              int pageSize){
+        if(pageSize < 1) pageSize = 10;
+        if(page < 0) page = 0;
+
+        //check sort field
+        if(!departmentSortList.contains(sortField)){
+            sortField = "name";
+        }
+
+        //check sort dỉr
+        if(!sortDir.equals("asc") || !sortDir.equals("desc")){
+            sortDir = "asc";
+        }
+
+
+        Sort sort = Sort.by(sortDir, sortField);
+        Pageable pageable = PageRequest.of(page, pageSize, sort);
+        Page<Department> departmentPage = Page.empty();
+        if(keyword.isEmpty()){
+            departmentPage = departmentRepository.findAll(pageable);
+        }
+        else{
+           departmentPage = departmentRepository.findByNameContainingIgnoreCaseOrCodeIgnoreCase(keyword,keyword,pageable);
+        }
+
+        Page<DepartmentDTO> dept = departmentPage.map(this::to)
+    }
+
+    public DepartmentDTO toDepartmentDTO(Department department){
+        Department parent = department.getParent();
+        String parentName = "";
+        if(parent != null && parent.getName() == null){
+            parentName = parent.getName();
+        }
+
+
+        String managerName = "";
+        String managerImgUrl = "";
+
+        Employee manager = department.getManager();
+        if(manager != null && manager.getUser() != null){
+            User user = manager.getUser();
+            managerName = user.getFullName();
+            managerImgUrl = user.getAvatarUrl();
+        }
+        int staffCount = employeeRepository.countByDepartmentId(department.getId());
+
+
+        return DepartmentDTO
+                .builder()
+                .code(department.getCode())
+                .name(department.getName())
+                .description(department.getDescription())
+                .id(department.getId())
+                .parentId(department.getParentId())
+                .parentName(parentName)
+                .managerId(department.getManagerId())
+                .managerName(managerName)
+                .managerAvatarUrl(managerImgUrl)
+                .staffCount(staffCount)
+        .build();
+    }
 
     @Transactional
     public void saveUser(SaveUserRequest req){
