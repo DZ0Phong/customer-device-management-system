@@ -87,12 +87,17 @@
                         <div class="w-10 h-10 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center text-primary font-bold text-sm"
                              th:text="${currentUser?.initials != null ? currentUser.initials : 'AR'}">AR</div>
                     </th:block>
-                    <div class="overflow-hidden">
+                    <div class="flex-1 overflow-hidden">
                         <p class="text-sm font-bold truncate"
                            th:text="${currentUser?.fullName != null ? currentUser.fullName : 'Alex Rivera'}">Alex Rivera</p>
                         <p class="text-xs text-slate-500 truncate"
                            th:text="${currentUser?.role != null ? currentUser.role : 'HR Director'}">HR Director</p>
                     </div>
+                    <form th:action="@{/logout}" method="post" class="inline">
+                        <button type="submit" class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors" title="Logout">
+                            <span class="material-symbols-outlined text-lg">logout</span>
+                        </button>
+                    </form>
                 </div>
             </div>
         </div>
