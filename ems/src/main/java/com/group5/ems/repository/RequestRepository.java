@@ -27,5 +27,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
     
     @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status")
     Long countByStatus(@Param("status") String status);
+
+    List<Request> findByEmployeeIdAndLeaveTypeIsNotNull(Long employeeId);
+    List<Request> findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long employeeId);
 }
 
