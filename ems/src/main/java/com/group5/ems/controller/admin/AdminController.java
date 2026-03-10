@@ -25,7 +25,7 @@ public class AdminController {
     @ResponseBody
     public String dashboard() {
 
-        return "admin/dashboard";
+        return "admin/index";
     }
 
     @GetMapping("/users")
@@ -59,7 +59,7 @@ public class AdminController {
         model.addAttribute("statInactive", adminService.getStatusInactive());
         model.addAttribute("statSuspended", adminService.getStatusSuspended());
 
-        model.addAttribute("departments", adminService.getDepartmentName());
+//        model.addAttribute("departments", adminService.getDepartmentName());
 
         //paging
         Page<UserDTO> users = adminService.getUsersFilter(keyword, role, status, sort, dir, page, pageSize);

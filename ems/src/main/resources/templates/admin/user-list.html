@@ -265,7 +265,7 @@
                                         Role <span class="material-symbols-outlined text-sm" th:text="${sortField=='role'?(sortDir=='asc'?'arrow_upward':'arrow_downward'):'unfold_more'}">unfold_more</span>
                                     </a>
                                 </th>
-                                <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Department</th>
+<!--                                <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Department</th>-->
                                 <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     <a th:href="@{/admin/users(keyword=${keyword?:''},role=${roleFilter?:''},status=${statusFilter?:''},sort='lastLogin',dir=${(sortField=='lastLogin' and sortDir=='asc')?'desc':'asc'},page=0)}" class="flex items-center gap-1 hover:text-primary transition-colors">
                                         Last Login <span class="material-symbols-outlined text-sm" th:text="${sortField=='lastLogin'?(sortDir=='asc'?'arrow_upward':'arrow_downward'):'unfold_more'}">unfold_more</span>
@@ -302,7 +302,7 @@
                                 th:data-phone="${user.phone}"
                                 th:data-status="${user.status}"
                                 th:data-role="${user.role}"
-                                th:data-department-name="${user.departmentName}"
+
                                 th:data-initials="${user.initials}"
                                 th:data-last-login="${user.lastLoginDisplay}"
                                 class="hover:bg-primary/[3%] group"
@@ -338,12 +338,12 @@
                                           class="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-100 text-slate-500"><span class="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span><span th:text="${user.role}">Other</span></span>
                                 </td>
 
-                                <td class="px-4 py-3.5">
-                    <span class="inline-flex items-center gap-1.5 text-xs text-slate-600">
-                      <span class="material-symbols-outlined text-slate-300 text-sm">account_tree</span>
-                      <span th:text="${user.departmentName}">Engineering</span>
-                    </span>
-                                </td>
+<!--                                <td class="px-4 py-3.5">-->
+<!--                    <span class="inline-flex items-center gap-1.5 text-xs text-slate-600">-->
+<!--                      <span class="material-symbols-outlined text-slate-300 text-sm">account_tree</span>-->
+<!--                      <span th:text="${user.departmentName}">Engineering</span>-->
+<!--                    </span>-->
+<!--                                </td>-->
 
                                 <td class="px-4 py-3.5">
                     <span class="inline-flex items-center gap-1.5 text-xs text-slate-400">
