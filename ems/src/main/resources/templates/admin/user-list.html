@@ -91,7 +91,7 @@
         </div>
         <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
             <p class="px-3 pb-1 pt-1 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Main</p>
-            <a th:href="@{/dashboard}" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/dashboard}" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
                 <span class="text-sm font-medium">Dashboard</span>
             </a>
@@ -110,7 +110,6 @@
             <a th:href="@{/admin/users}" class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl transition-all">
                 <span class="material-symbols-outlined fill-icon text-[20px]">group</span>
                 <span class="text-sm font-semibold">User Accounts</span>
-                <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
             </a>
             <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">System</p>
             <a th:href="@{/logs}" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
