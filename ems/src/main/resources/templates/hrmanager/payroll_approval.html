@@ -61,7 +61,7 @@
                         <span class="material-symbols-outlined">settings</span>
                     </button>
                 </div>
-                <!-- Avatar: dùng ảnh nếu có URL, fallback initials -->
+                <!-- Avatar: use image if URL available, fallback to initials -->
                 <th:block th:if="${currentUser?.avatarUrl != null}">
                     <div class="aspect-square bg-cover rounded-full size-10 border-2 border-primary/20"
                          th:style="'background-image: url(' + ${currentUser.avatarUrl} + ')'"></div>
@@ -93,7 +93,7 @@
                     <a th:href="@{/hrmanager/payroll-approval}"
                        th:classappend="${activePage == 'payroll' or activePage == null ? 'bg-primary text-white' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}"
                        class="flex items-center gap-3 px-3 py-2 rounded-lg transition-colors cursor-pointer">
-                        <span class="material-symbols-outlined">currency_exchange</span>
+                        <span class="material-symbols-outlined">payments</span>
                         <p class="text-sm font-medium">Payroll Approval</p>
                     </a>
                     <a th:href="@{/hrmanager/hr-analytics}"
@@ -216,7 +216,7 @@
                                 </thead>
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
 
-                                <!--/* ── Dynamic rows từ backend ── */-->
+                                <!--/* ── Dynamic rows from backend ── */-->
                                 <th:block th:if="${payrollRuns != null and !payrollRuns.empty}">
                                     <tr th:each="run : ${payrollRuns}"
                                         th:id="'row-' + ${run.id}"
@@ -261,12 +261,12 @@
                                         </td>
                                         <td class="px-6 py-4 text-sm" th:text="${#temporals.format(run.dueDate, 'dd MMM yyyy')}">-- --- ----</td>
                                         <td class="px-6 py-4 text-right">
-                                            <!-- Pending: nút Review -->
+                                            <!-- Pending: Review button -->
                                             <th:block th:if="${run.status == 'PENDING_REVIEW'}">
                                                 <button th:onclick="|openReviewModal([[${run.id}]], [[${run.departmentName}]], [[${run.totalAmountFormatted}]])|"
                                                         class="text-primary font-bold text-sm hover:underline transition-colors">Review</button>
                                             </th:block>
-                                            <!-- Processing: nút Details -->
+                                            <!-- Processing: Details button -->
                                             <th:block th:if="${run.status == 'PROCESSING'}">
                                                 <a th:href="@{/payroll/runs/{id}(id=${run.id})}"
                                                    class="text-primary font-bold text-sm hover:underline transition-colors">Details</a>
@@ -283,7 +283,7 @@
                                     </tr>
                                 </th:block>
 
-                                <!--/* ── Fallback static rows (xoá khi backend sẵn sàng) ── */-->
+                                <!--/* ── Fallback static rows (remove when backend ready) ── */-->
                                 <th:block th:if="${payrollRuns == null or payrollRuns.empty}">
                                     <tr class="hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                                         <td class="px-6 py-4"><input type="checkbox" value="1" name="selectedRuns" class="row-checkbox rounded border-slate-300 text-primary focus:ring-primary"/></td>
@@ -449,7 +449,7 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
 
-    // CSRF token từ Spring Security
+    // CSRF token from Spring Security
     const csrfToken  = /*[[${_csrf != null ? _csrf.token : ''}]]*/ '';
     const csrfHeader = /*[[${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}]]*/ 'X-CSRF-TOKEN';
 
@@ -500,7 +500,7 @@
         currentRunId = null;
     }
 
-    // Đóng modal khi click backdrop
+    // Close modal when clicking backdrop
     document.getElementById('reviewModal').addEventListener('click', function(e) {
         if (e.target === this) closeReviewModal();
     });

@@ -208,9 +208,9 @@
                                 <tbody class="divide-y divide-slate-100 dark:divide-slate-800">
 
                                 <!--/*
-                                    Dữ liệu mẫu (fallback) để hiển thị khi không có model từ backend.
-                                    Khi tích hợp backend thực, hãy xóa khối th:block này
-                                    và chỉ giữ lại vòng lặp th:each bên dưới.
+                                    Sample data (fallback) to display when no model from backend.
+                                    When integrating real backend, delete this th:block
+                                    and keep only the th:each loop below.
                                 */-->
                                 <th:block th:if="${leaveRequests == null or leaveRequests.empty}">
                                     <!-- Fallback row 1 -->
@@ -439,7 +439,7 @@
 <script th:inline="javascript">
     /*<![CDATA[*/
 
-    // Lấy CSRF token từ Thymeleaf (nếu Spring Security được bật)
+    // Get CSRF token from Thymeleaf (if Spring Security is enabled)
     const csrfToken  = /*[[${_csrf != null ? _csrf.token : ''}]]*/ '';
     const csrfHeader = /*[[${_csrf != null ? _csrf.headerName : 'X-CSRF-TOKEN'}]]*/ 'X-CSRF-TOKEN';
 
@@ -482,7 +482,7 @@
     function handleReject(id)  { postAction(id, 'reject');  }
 
     function toggleFilterPanel() {
-        // Placeholder: mở panel filter tùy chỉnh của bạn ở đây
+        // Placeholder: open your custom filter panel here
         alert('Filter panel coming soon!');
     }
 
