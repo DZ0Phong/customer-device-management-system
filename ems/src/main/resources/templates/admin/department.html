@@ -385,7 +385,7 @@
                              onclick="openDetailPanel(this)">
 
                             <!-- Top accent strip -->
-                            <div class="h-1 bg-primary/80 group-hover:bg-primary transition-colors"></div>
+                            <div class="h-1 bg-primary/150 group-hover:bg-primary transition-colors"></div>
 
                             <div class="p-5">
                                 <!-- Header -->
@@ -908,7 +908,8 @@
                 };
 
                 data.forEach(function (u, i) {
-                    var rc         = roleColors[(u.role || '').toUpperCase()] || 'bg-slate-100 text-slate-500';
+                    // NOTE: Script is th:inline="javascript" so avoid Thymeleaf inline pattern "[(...)]"
+                    var rc         = roleColors[ (u.role || '').toUpperCase() ] || 'bg-slate-100 text-slate-500';
                     var statusDot  = u.status === 'ACTIVE' ? 'bg-emerald-400'
                         : u.status === 'SUSPENDED' ? 'bg-rose-500'
                             : 'bg-slate-400';

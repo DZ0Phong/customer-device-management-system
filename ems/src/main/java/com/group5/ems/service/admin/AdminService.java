@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -47,6 +49,13 @@ public class AdminService {
         return departmentRepository.countAllParentId();
     }
 
+    public List<DepartmentDTO> getAllDepartmentsDTO()
+    {
+        List<Department> dept = departmentRepository.findAll();
+        return dept.stream().map(this::toDepartmentDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
     public Page<DepartmentDTO> getDepartmentsFilter(String keyword,
                                               String sortField,
                                               String sortDir,
@@ -61,15 +70,15 @@ public class AdminService {
         }
 
         //check sort dỉr
-        if(!sortDir.equals("asc") || !sortDir.equals("desc")){
+        if (sortDir == null || (!sortDir.equalsIgnoreCase("asc") && !sortDir.equalsIgnoreCase("desc"))) {
             sortDir = "asc";
         }
 
-
-        Sort sort = Sort.by(sortDir, sortField);
+        Sort.Direction direction = Sort.Direction.fromString(sortDir);
+        Sort sort = Sort.by(direction, sortField);
         Pageable pageable = PageRequest.of(page, pageSize, sort);
         Page<Department> departmentPage = Page.empty();
-        if(keyword.isEmpty()){
+        if(keyword == null || keyword.isEmpty()){
             departmentPage = departmentRepository.findAll(pageable);
         }
         else{
@@ -83,7 +92,7 @@ public class AdminService {
     public DepartmentDTO toDepartmentDTO(Department department){
         Department parent = department.getParent();
         String parentName = "";
-        if(parent != null && parent.getName() == null){
+        if(parent != null && parent.getName() != null){
             parentName = parent.getName();
         }
 
@@ -112,6 +121,8 @@ public class AdminService {
                 .managerName(managerName)
                 .managerAvatarUrl(managerImgUrl)
                 .staffCount(staffCount)
+                .createTime(department.getCreatedAt())
+                .updateTime(department.getUpdatedAt())
         .build();
     }
 
@@ -213,6 +224,36 @@ public class AdminService {
 
     public List<Role> findAllRoles(){
         return roleRepository.findAll();
+    }
+
+    /**
+     * Danh sách user có thể chọn làm Department Manager trong form.
+     * Hiện tại filter theo role code = DEPT_MANAGER (đúng với SecurityConfig).
+     */
+    @Transactional(readOnly = true)
+    public List<UserDTO> getAllManagersForSelect() {
+        Optional<Role> managerRoleOpt = roleRepository.findByCode("DEPT_MANAGER");
+        if (managerRoleOpt.isEmpty()) {
+            return List.of();
+        }
+
+        Role managerRole = managerRoleOpt.get();
+        List<UserRole> mappings = userRoleRepository.findByRoleId(managerRole.getId());
+        if (mappings == null || mappings.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> userIds = mappings.stream()
+                .map(UserRole::getUserId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+
+        return userRepository.findAllById(userIds).stream()
+                .map(this::toUserDTO)
+                .toList();
     }
 
     public Role getRoleByUserId(Long id){

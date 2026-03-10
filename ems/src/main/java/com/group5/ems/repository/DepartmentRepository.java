@@ -21,8 +21,6 @@ public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     Page<Department> findByNameContainingIgnoreCaseOrCodeIgnoreCase(String keyword, String code, Pageable pageable);
 
-    Integer countByDepartmentId(Long id);
-
     @Query("select count(distinct d.parentId) from Department d where d.parentId is not null")
     long countAllParentId();
 }

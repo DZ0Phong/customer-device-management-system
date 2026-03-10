@@ -5,6 +5,7 @@ import lombok.Builder;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 
 @AllArgsConstructor
 @Data
@@ -22,6 +23,17 @@ public class DepartmentDTO {
     private Integer staffCount;
     private LocalDateTime createTime;
     private LocalDateTime updateTime;
+
+    // Template dùng dept.createdAt / dept.updatedAt (formatted string)
+    public String getCreatedAt() {
+        if (createTime == null) return "";
+        return createTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
+
+    public String getUpdatedAt() {
+        if (updateTime == null) return "";
+        return updateTime.format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm"));
+    }
 
     public String getManagerInitials() {
         if (managerName == null || managerName.isBlank()) return "?";
