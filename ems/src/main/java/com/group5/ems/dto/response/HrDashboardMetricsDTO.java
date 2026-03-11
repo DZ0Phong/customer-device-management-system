@@ -4,7 +4,7 @@ import lombok.Builder;
 
 @Builder
 public record HrDashboardMetricsDTO(
-    int activeEmployees,
+    Long activeEmployees,
     int pendingLeaveRequests,
     int openJobPosts,
     int pendingWorkflowRequests

@@ -20,7 +20,7 @@ public class HrDashboardService {
     }
 
     public HrDashboardMetricsDTO getDashboardMetrics() {
-        int activeEmployees = employeeRepository.countByStatus("ACTIVE");
+        Long activeEmployees = employeeRepository.countByStatus("ACTIVE");
         int openJobPosts = jobPostRepository.countByStatus("OPEN");
         // category ATTENDANCE is for Leave
         int pendingLeaveRequests = requestRepository.countByStatusAndRequestTypeCategory("PENDING", "ATTENDANCE");
