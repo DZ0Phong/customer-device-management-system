@@ -1,13 +1,15 @@
 package com.group5.ems.dto.response;
 
 import lombok.AllArgsConstructor;
-import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
-@Data
+@Getter
+@Setter
 @AllArgsConstructor
 public class ApplicationResponseDTO {
 
-    private Long id;
+    private Long applicationId;
     private Long candidateId;
     private Long jobId;
     private Long cvId;

@@ -285,30 +285,58 @@
 
   function submitContact(e) {
     e.preventDefault();
+
     const name    = document.getElementById('contact-name').value.trim();
     const email   = document.getElementById('contact-email').value.trim();
     const message = document.getElementById('msg-area').value.trim();
+
     if(!name || !email || !message) {
       showContactError('Please fill in all required fields.');
       return;
     }
+
     const btn = document.getElementById('send-btn');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="border-color:rgba(255,255,255,.35);border-top-color:white;width:16px;height:16px;border-width:2px;display:inline-block;"></span> Sending...';
 
-    // No backend endpoint for contact form yet → show friendly success
-    // When backend is ready, replace with fetch('/guest/contact/send', {...})
-    setTimeout(() => {
-      btn.disabled = false;
-      btn.innerHTML = '<span class="material-symbols-outlined" style="font-size:18px">send</span> Send Message';
-      document.getElementById('contact-form').reset();
-      document.getElementById('char-count').textContent = '0';
-      const box = document.getElementById('contact-success');
-      document.getElementById('contact-success-msg').textContent =
-        'Thank you, ' + name + '! We\'ll get back to you within 24 hours.';
-      box.style.display = 'flex';
-      setTimeout(() => box.style.display = 'none', 5000);
-    }, 1000);
+    fetch('/guest/contact/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        senderName: name,
+        senderEmail: email,
+        senderPhone: document.querySelector('[name="senderPhone"]').value,
+        topic: document.querySelector('[name="topic"]').value,
+        message: message
+      })
+    })
+            .then(res => res.text())
+            .then(data => {
+
+              btn.disabled = false;
+              btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Message';
+
+              document.getElementById('contact-form').reset();
+              document.getElementById('char-count').textContent = '0';
+
+              const box = document.getElementById('contact-success');
+              box.style.display = 'flex';
+
+              setTimeout(() => {
+                box.style.display = 'none';
+              }, 4000);
+
+            })
+            .catch(err => {
+
+              btn.disabled = false;
+              btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Message';
+
+              showContactError("Failed to send message");
+
+            });
   }
 
   function showContactError(msg) {

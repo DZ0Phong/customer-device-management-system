@@ -17,8 +17,12 @@ public class CandidateCv {
     @Column(name = "file_name", length = 255)
     private String fileName;
 
-    @Column(name = "file_path", length = 255)
-    private String filePath;
+    @Column(name = "file_type")
+    private String fileType;
+
+    @Lob
+    @Column(name = "file_data")
+    private byte[] fileData;
 
     @Column(name = "uploaded_at", updatable = false)
     private LocalDateTime uploadedAt;
@@ -38,8 +42,23 @@ public class CandidateCv {
     public void setCandidateId(Long candidateId) { this.candidateId = candidateId; }
     public String getFileName() { return fileName; }
     public void setFileName(String fileName) { this.fileName = fileName; }
-    public String getFilePath() { return filePath; }
-    public void setFilePath(String filePath) { this.filePath = filePath; }
+
+    public String getFileType() {
+        return fileType;
+    }
+
+    public void setFileType(String fileType) {
+        this.fileType = fileType;
+    }
+
+    public byte[] getFileData() {
+        return fileData;
+    }
+
+    public void setFileData(byte[] fileData) {
+        this.fileData = fileData;
+    }
+
     public LocalDateTime getUploadedAt() { return uploadedAt; }
     public void setUploadedAt(LocalDateTime uploadedAt) { this.uploadedAt = uploadedAt; }
     public Candidate getCandidate() { return candidate; }
