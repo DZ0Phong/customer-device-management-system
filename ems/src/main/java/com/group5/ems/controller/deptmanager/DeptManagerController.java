@@ -34,4 +34,22 @@ public class DeptManagerController {
         model.addAttribute("data", deptManagerService.getDepartmentMockData());
         return "deptmanager/department";
     }
+
+    @GetMapping("/leave-approval")
+    public String leaveApproval(Model model) {
+        model.addAttribute("data", deptManagerService.getDashboardMockData());
+        return "deptmanager/dashboard"; // Placeholder until view is created
+    }
+
+    @GetMapping("/attendance-review")
+    public String attendanceReview(Model model) {
+        model.addAttribute("data", deptManagerService.getDashboardMockData());
+        return "deptmanager/dashboard"; // Placeholder
+    }
+
+    @GetMapping("/performance-review")
+    public String performanceReview(Model model) {
+        model.addAttribute("data", deptManagerService.getDashboardMockData());
+        return "deptmanager/dashboard"; // Placeholder
+    }
 }

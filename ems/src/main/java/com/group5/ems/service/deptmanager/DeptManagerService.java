@@ -16,9 +16,11 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class DeptManagerService {
 
         private final DepartmentRepository departmentRepository;
@@ -68,9 +70,11 @@ public class DeptManagerService {
                 data.put("manager", getManagerMap(currentUser));
 
                 Department dept = getDepartmentForManager(currentUser);
-                int teamSize = (dept != null && dept.getEmployees() != null) ? dept.getEmployees().size() : 24;
+                int teamSize = 0;
+                int activeCount = 0;
+                int inactiveCount = 0;
+                int suspendedCount = 0;
 
-                data.put("teamSize", teamSize);
                 data.put("newApprovals", 3); // Metrics will need actual calculation logic later
                 data.put("pendingApprovals", 8);
                 data.put("teamAttendance", "92%");
@@ -78,11 +82,20 @@ public class DeptManagerService {
 
                 List<Map<String, String>> activities = new ArrayList<>();
                 if (dept != null && dept.getEmployees() != null) {
+                        teamSize = dept.getEmployees().size();
                         int count = 0;
                         for (Employee emp : dept.getEmployees()) {
-                                if (count >= 5)
-                                        break;
-                                User empUser = emp.getUser();
+                                String status = emp.getStatus();
+                                if ("ACTIVE".equalsIgnoreCase(status)) {
+                                        activeCount++;
+                                } else if ("ON_LEAVE".equalsIgnoreCase(status) || "INACTIVE".equalsIgnoreCase(status)) {
+                                        inactiveCount++;
+                                } else {
+                                        suspendedCount++;
+                                }
+
+                                if (count < 5) {
+                                        User empUser = emp.getUser();
                                 Map<String, String> map = new HashMap<>();
                                 map.put("name", empUser != null ? empUser.getFullName() : "Employee #" + emp.getId());
                                 map.put("title", "Staff");
@@ -99,10 +112,15 @@ public class DeptManagerService {
                                 map.put("attendance", "98%");
                                 map.put("lastReview", "Aug 12, 2023");
                                 activities.add(map);
-                                count++;
+                                        count++;
+                                }
                         }
                 }
 
+                data.put("teamSize", teamSize);
+                data.put("activeCount", activeCount);
+                data.put("inactiveCount", inactiveCount);
+                data.put("suspendedCount", suspendedCount);
                 data.put("recentTeamActivities", activities);
 
                 return data;
@@ -196,28 +214,14 @@ public class DeptManagerService {
                                 }
                         }
                 } else {
-                        // Provide fallback mock data so the page doesn't crash or look completely blank
-                        department.put("name", "Engineering (Mock)");
-                        department.put("code", "ENG-01");
-                        department.put("description",
-                                        "Leading product development and software engineering operations.");
+                        // Provide empty fallback data if no department is found
+                        department.put("name", "No Department Assigned");
+                        department.put("code", "N/A");
+                        department.put("description", "You are not currently managing any departments.");
                         department.put("manager", managerMap.get("name"));
-                        department.put("totalEmployees", "42");
-                        department.put("openPositions", "3");
-                        department.put("budgetUtilization", "76%");
-
-                        Map<String, String> mockTeam = new HashMap<>();
-                        mockTeam.put("name", "Frontend Team");
-                        mockTeam.put("headcount", "12");
-                        mockTeam.put("lead", "Sarah Chen");
-                        teams.add(mockTeam);
-
-                        Map<String, String> mockPos = new HashMap<>();
-                        mockPos.put("title", "Senior Developer");
-                        mockPos.put("headcount", "2");
-                        mockPos.put("status", "Open");
-                        mockPos.put("statusClass", "bg-amber-100 text-amber-700");
-                        positions.add(mockPos);
+                        department.put("totalEmployees", "0");
+                        department.put("openPositions", "0");
+                        department.put("budgetUtilization", "0%");
                 }
 
                 data.put("department", department);
