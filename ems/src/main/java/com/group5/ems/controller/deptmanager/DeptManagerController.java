@@ -37,8 +37,8 @@ public class DeptManagerController {
 
     @GetMapping("/leave-approval")
     public String leaveApproval(Model model) {
-        model.addAttribute("data", deptManagerService.getDashboardMockData());
-        return "deptmanager/dashboard"; // Placeholder until view is created
+        model.addAttribute("data", deptManagerService.getLeaveApprovalData());
+        return "deptmanager/leave-approval";
     }
 
     @GetMapping("/attendance-review")
