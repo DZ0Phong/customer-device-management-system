@@ -412,7 +412,7 @@
                                                  th:alt="${r.fullName}"
                                                  class="w-full h-full object-cover"
                                                  onerror="this.style.display='none'"/>
-                                            <span th:text="${r.initials ?: 'U'}">U</span>
+                                            <span th:unless="${r.avatarUrl != null}" th:text="${r.getInitials()}">U</span>
                                         </div>
                                         <div>
                                             <p th:text="${r.fullName}" class="text-xs font-semibold text-slate-800">Full Name</p>
@@ -458,52 +458,52 @@
                     <!-- Right column: Quick metrics + Activity feed -->
                     <div class="anim anim-8 flex flex-col gap-4">
 
-                        <!-- Quick metrics -->
-                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <h3 class="text-sm font-black text-slate-800 mb-4">Quick Metrics</h3>
-                            <div class="space-y-4">
+<!--                        &lt;!&ndash; Quick metrics &ndash;&gt;-->
+<!--                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">-->
+<!--                            <h3 class="text-sm font-black text-slate-800 mb-4">Quick Metrics</h3>-->
+<!--                            <div class="space-y-4">-->
 
-                                <div>
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-slate-500 font-medium">Attendance Rate</span>
-                                        <span class="text-xs font-bold text-slate-700">92.4%</span>
-                                    </div>
-                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-primary rounded-full progress-bar" style="width:92.4%"></div>
-                                    </div>
-                                </div>
+<!--                                <div>-->
+<!--                                    <div class="flex justify-between items-center mb-1.5">-->
+<!--                                        <span class="text-xs text-slate-500 font-medium">Attendance Rate</span>-->
+<!--                                        <span class="text-xs font-bold text-slate-700">92.4%</span>-->
+<!--                                    </div>-->
+<!--                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">-->
+<!--                                        <div class="h-full bg-primary rounded-full progress-bar" style="width:92.4%"></div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
 
-                                <div>
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-slate-500 font-medium">Onboarding Complete</span>
-                                        <span class="text-xs font-bold text-slate-700">78%</span>
-                                    </div>
-                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-sky-400 rounded-full progress-bar" style="width:78%; animation-delay:.15s"></div>
-                                    </div>
-                                </div>
+<!--                                <div>-->
+<!--                                    <div class="flex justify-between items-center mb-1.5">-->
+<!--                                        <span class="text-xs text-slate-500 font-medium">Onboarding Complete</span>-->
+<!--                                        <span class="text-xs font-bold text-slate-700">78%</span>-->
+<!--                                    </div>-->
+<!--                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">-->
+<!--                                        <div class="h-full bg-sky-400 rounded-full progress-bar" style="width:78%; animation-delay:.15s"></div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
 
-                                <div>
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-slate-500 font-medium">Leave Requests</span>
-                                        <span class="text-xs font-bold text-slate-700">14 pending</span>
-                                    </div>
-                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-amber-400 rounded-full progress-bar" style="width:45%; animation-delay:.3s"></div>
-                                    </div>
-                                </div>
+<!--                                <div>-->
+<!--                                    <div class="flex justify-between items-center mb-1.5">-->
+<!--                                        <span class="text-xs text-slate-500 font-medium">Leave Requests</span>-->
+<!--                                        <span class="text-xs font-bold text-slate-700">14 pending</span>-->
+<!--                                    </div>-->
+<!--                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">-->
+<!--                                        <div class="h-full bg-amber-400 rounded-full progress-bar" style="width:45%; animation-delay:.3s"></div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
 
-                                <div>
-                                    <div class="flex justify-between items-center mb-1.5">
-                                        <span class="text-xs text-slate-500 font-medium">Profile Completion</span>
-                                        <span class="text-xs font-bold text-slate-700">86%</span>
-                                    </div>
-                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">
-                                        <div class="h-full bg-emerald-400 rounded-full progress-bar" style="width:86%; animation-delay:.45s"></div>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+<!--                                <div>-->
+<!--                                    <div class="flex justify-between items-center mb-1.5">-->
+<!--                                        <span class="text-xs text-slate-500 font-medium">Profile Completion</span>-->
+<!--                                        <span class="text-xs font-bold text-slate-700">86%</span>-->
+<!--                                    </div>-->
+<!--                                    <div class="h-2 bg-slate-100 rounded-full overflow-hidden">-->
+<!--                                        <div class="h-full bg-emerald-400 rounded-full progress-bar" style="width:86%; animation-delay:.45s"></div>-->
+<!--                                    </div>-->
+<!--                                </div>-->
+<!--                            </div>-->
+<!--                        </div>-->
 
                         <!-- Activity feed -->
                         <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex-1">
