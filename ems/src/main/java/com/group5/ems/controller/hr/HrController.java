@@ -1,6 +1,6 @@
 package com.group5.ems.controller.hr;
 
-import com.group5.ems.dto.response.HrDashboardMetricsDto;
+import com.group5.ems.dto.response.HrDashboardMetricsDTO;
 import com.group5.ems.service.hr.HrDashboardService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -33,7 +33,7 @@ public class HrController {
 
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model) {
-        HrDashboardMetricsDto metrics = dashboardService.getDashboardMetrics();
+        HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
         model.addAttribute("activeEmployees", metrics.activeEmployees());
         model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("openJobs", metrics.openJobPosts());
@@ -55,7 +55,7 @@ public class HrController {
 
     @GetMapping("/leave")
     public String leave(Model model) {
-        HrDashboardMetricsDto metrics = dashboardService.getDashboardMetrics();
+        HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
         model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
         
@@ -83,7 +83,7 @@ public class HrController {
 
     @GetMapping("/requests")
     public String requests(Model model) {
-        HrDashboardMetricsDto metrics = dashboardService.getDashboardMetrics();
+        HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
         model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
         return "hr/requests";
