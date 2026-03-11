@@ -22,6 +22,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status AND r.requestType.category = :category")
     int countByStatusAndRequestTypeCategory(@org.springframework.data.repository.query.Param("status") String status, @org.springframework.data.repository.query.Param("category") String category);
     
+    List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
+  
     @Query("SELECT r FROM Request r " +
            "JOIN FETCH r.employee e " +
            "JOIN FETCH e.user u " +
