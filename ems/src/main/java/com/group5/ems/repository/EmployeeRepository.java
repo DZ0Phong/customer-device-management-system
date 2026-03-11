@@ -22,5 +22,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     List<Employee> findByStatus(String status);
 
     int countByDepartmentId(Long id);
+
+    @Query("SELECT COUNT(e) FROM Employee e WHERE e.status = :status")
+    Long countByStatus(@Param("status") String status);
+
+    @Query("SELECT AVG(DATEDIFF(CURRENT_DATE, e.hireDate)) FROM Employee e WHERE e.status = 'ACTIVE' AND e.hireDate IS NOT NULL")
+    Double getAverageTenureInDays();
+
+
 }
 
