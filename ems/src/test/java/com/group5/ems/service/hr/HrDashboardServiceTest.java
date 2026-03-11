@@ -32,7 +32,7 @@ public class HrDashboardServiceTest {
     @Test
     void testGetDashboardMetrics() {
         // Arrange
-        when(employeeRepository.countByStatus("ACTIVE")).thenReturn(42);
+        when(employeeRepository.countByStatus("ACTIVE")).thenReturn(42L);
         when(requestRepository.countByStatusAndRequestTypeCategory("PENDING", "ATTENDANCE")).thenReturn(5);
         when(jobPostRepository.countByStatus("OPEN")).thenReturn(2);
         when(requestRepository.countByStatusAndRequestTypeCategory("PENDING", "HR_STATUS")).thenReturn(10);
