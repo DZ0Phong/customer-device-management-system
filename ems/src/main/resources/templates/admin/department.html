@@ -793,7 +793,7 @@
                     Cancel
                 </button>
                 <!--
-                  th:action is set dynamically by JS (delete-form.action = '/departments/delete/' + id)
+                  th:action is set dynamically by JS (delete-form.action = '/admin/departments/delete/' + id)
                   The hidden CSRF input is rendered by Thymeleaf at page load.
                 -->
                 <form id="delete-form" th:action="@{/admin/departments/delete/0}" method="post" class="flex-1">
@@ -1017,7 +1017,7 @@
     // ── Delete modal ──────────────────────────────────────────────
     function openDeleteModal(id, name, staffCount) {
         document.getElementById('delete-name').textContent = name || '—';
-        document.getElementById('delete-form').action = _ctxPath + 'departments/delete/' + id;
+        document.getElementById('delete-form').action = _ctxPath + 'admin/departments/delete/' + id;
         var warn = document.getElementById('delete-warning');
         parseInt(staffCount) > 0 ? warn.classList.remove('hidden') : warn.classList.add('hidden');
         document.getElementById('delete-modal').classList.remove('hidden');
