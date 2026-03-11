@@ -49,6 +49,7 @@ public class AdminService {
         return departmentRepository.countAllParentId();
     }
 
+    @Transactional(readOnly = true)
     public List<DepartmentDTO> getAllDepartmentsDTO()
     {
         List<Department> dept = departmentRepository.findAll();
