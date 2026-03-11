@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{guest/layout :: layout('My Applications', ~{::content}, '')}">
+<body>
+<th:block th:fragment="content">
+<style>
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .anim-1{animation:fadeUp .6s ease both .05s}
+  .anim-2{animation:fadeUp .6s ease both .15s}
+  .anim-3{animation:fadeUp .6s ease both .25s}
+
+  .page-hero{
+    background:linear-gradient(135deg,#1414b8,#4f46e5);
+    padding:52px 24px 120px;position:relative;overflow:hidden;
+  }
+  .page-hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px);background-size:24px 24px;}
+  .page-hero::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:80px;background:var(--bg-light);clip-path:ellipse(60% 100% at 50% 100%);}
+  .page-hero-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1;color:white;}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;}
+  .breadcrumb a{color:rgba(255,255,255,.6);text-decoration:none;} .breadcrumb a:hover{color:white;}
+
+  .layout{max-width:1200px;margin:0 auto;padding:0 24px 64px;margin-top:-60px;}
+
+  /* Summary strip */
+  .summary-strip{
+    display:flex;gap:16px;margin-bottom:24px;flex-wrap:wrap;
+  }
+  .summary-card{
+    flex:1;min-width:160px;background:white;border-radius:14px;border:1px solid var(--border);
+    padding:16px 20px;display:flex;align-items:center;gap:12px;
+  }
+  .summary-card-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .summary-card-num{font-family:'Sora',sans-serif;font-size:22px;font-weight:800;}
+  .summary-card-label{font-size:12px;color:var(--text-muted);}
+
+  /* App card */
+  .app-card{
+    background:white;border-radius:16px;border:1px solid var(--border);
+    padding:22px;margin-bottom:14px;transition:all .2s;
+    display:flex;gap:18px;align-items:flex-start;position:relative;overflow:hidden;
+  }
+  .app-card::before{content:'';position:absolute;left:0;top:0;bottom:0;width:4px;transition:transform .25s;transform:scaleY(0);transform-origin:top;}
+  .app-card.status-applied::before{background:#16a34a;}
+  .app-card.status-screening::before{background:#1d4ed8;}
+  .app-card.status-interview::before{background:#a16207;}
+  .app-card.status-offer::before{background:#7e22ce;}
+  .app-card.status-rejected::before{background:#dc2626;}
+  .app-card:hover::before{transform:scaleY(1);}
+  .app-card:hover{transform:translateX(4px);box-shadow:0 8px 28px -8px #1414b825;}
+
+  .app-icon{width:48px;height:48px;border-radius:12px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .app-body{flex:1;min-width:0;}
+  .app-title{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .app-meta{display:flex;flex-wrap:wrap;gap:10px;font-size:12px;color:var(--text-muted);margin-bottom:12px;}
+  .app-meta span{display:flex;align-items:center;gap:4px;}
+  .app-footer{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;}
+
+  /* Status badge */
+  .status-badge{padding:5px 14px;border-radius:99px;font-size:12px;font-weight:700;display:inline-flex;align-items:center;gap:6px;}
+  .status-badge.applied  {background:#dcfce7;color:#16a34a;}
+  .status-badge.screening{background:#dbeafe;color:#1d4ed8;}
+  .status-badge.interview{background:#fef9c3;color:#a16207;}
+  .status-badge.offer    {background:#f3e8ff;color:#7e22ce;}
+  .status-badge.rejected {background:#fee2e2;color:#dc2626;}
+  .status-dot{width:6px;height:6px;border-radius:50%;background:currentColor;}
+
+  /* Timeline */
+  .timeline{margin-top:18px;padding-top:16px;border-top:1px solid var(--border);}
+  .timeline-steps{display:flex;align-items:center;gap:0;overflow-x:auto;}
+  .tl-step{display:flex;flex-direction:column;align-items:center;flex:1;min-width:70px;}
+  .tl-circle{width:28px;height:28px;border-radius:50%;border:2px solid var(--border);background:white;display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-muted);font-weight:700;transition:all .2s;z-index:1;}
+  .tl-step.done .tl-circle{background:#16a34a;border-color:#16a34a;color:white;}
+  .tl-step.active .tl-circle{background:var(--primary);border-color:var(--primary);color:white;box-shadow:0 0 0 4px #1414b820;}
+  .tl-line{flex:1;height:2px;background:var(--border);margin-top:-14px;}
+  .tl-line.done{background:#16a34a;}
+  .tl-label{font-size:10px;color:var(--text-muted);margin-top:5px;font-weight:600;text-align:center;}
+  .tl-step.active .tl-label{color:var(--primary);}
+  .tl-step.done .tl-label{color:#16a34a;}
+
+  /* Track token */
+  .token-chip{
+    display:inline-flex;align-items:center;gap:6px;
+    padding:5px 12px;border-radius:8px;background:var(--bg-light);
+    border:1px solid var(--border);font-size:11px;font-family:monospace;
+    color:var(--text-mid);cursor:pointer;transition:all .15s;
+  }
+  .token-chip:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light);}
+
+  /* Empty */
+  .empty-state{text-align:center;padding:80px 24px;color:var(--text-muted);}
+  .empty-icon-wrap{width:72px;height:72px;border-radius:18px;background:var(--primary-light);display:flex;align-items:center;justify-content:center;margin:0 auto 18px;}
+
+  @media(max-width:600px){.app-card{flex-direction:column} .app-icon{display:none}}
+</style>
+
+<!-- ── PAGE HERO ──────────────────────────────────────────── -->
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="breadcrumb">
+      <a th:href="@{/guest}">Home</a>
+      <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+      <span>My Applications</span>
+    </div>
+    <h1 style="animation:fadeUp .5s ease both;">My Applications</h1>
+    <p style="animation:fadeUp .5s ease both .1s;color:rgba(255,255,255,.75);font-size:15px;max-width:500px;">
+      Track and manage all your job applications in one place.
+    </p>
+  </div>
+</div>
+
+<!-- ── MAIN LAYOUT ────────────────────────────────────────── -->
+<div class="layout">
+
+  <!-- Summary strip -->
+  <div th:if="${!#lists.isEmpty(applications)}" class="summary-strip anim-1">
+    <div class="summary-card">
+      <div class="summary-card-icon" style="background:#e0f2fe;color:#0ea5e9;">
+        <span class="material-symbols-outlined fill-icon" style="font-size:20px">folder_open</span>
+      </div>
+      <div>
+        <div class="summary-card-num" th:text="${#lists.size(applications)}">0</div>
+        <div class="summary-card-label">Total Applications</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-icon" style="background:#dcfce7;color:#16a34a;">
+        <span class="material-symbols-outlined fill-icon" style="font-size:20px">check_circle</span>
+      </div>
+      <div>
+        <div class="summary-card-num"
+             th:text="${#lists.size(applications.?[status == 'APPLIED' or status == 'SCREENING' or status == 'INTERVIEW' or status == 'OFFER'])}">0</div>
+        <div class="summary-card-label">Active</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-icon" style="background:#f3e8ff;color:#7e22ce;">
+        <span class="material-symbols-outlined fill-icon" style="font-size:20px">star</span>
+      </div>
+      <div>
+        <div class="summary-card-num"
+             th:text="${#lists.size(applications.?[status == 'OFFER'])}">0</div>
+        <div class="summary-card-label">Offers</div>
+      </div>
+    </div>
+    <div class="summary-card">
+      <div class="summary-card-icon" style="background:#fee2e2;color:#dc2626;">
+        <span class="material-symbols-outlined fill-icon" style="font-size:20px">cancel</span>
+      </div>
+      <div>
+        <div class="summary-card-num"
+             th:text="${#lists.size(applications.?[status == 'REJECTED'])}">0</div>
+        <div class="summary-card-label">Rejected</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application cards -->
+  <div class="anim-2">
+    <div th:each="app : ${applications}"
+         th:classappend="'app-card status-' + ${#strings.toLowerCase(app.status ?: 'applied')}"
+         class="app-card">
+
+      <div class="app-icon">
+        <span class="material-symbols-outlined fill-icon" style="font-size:22px">work</span>
+      </div>
+
+      <div class="app-body">
+        <!-- Title & dept -->
+        <div class="app-title" th:text="${app.jobPost?.title ?: 'Position'}">Job Title</div>
+        <div class="app-meta">
+          <span>
+            <span class="material-symbols-outlined" style="font-size:14px">business</span>
+            <span th:text="${app.jobPost?.department?.name ?: 'Department'}">Department</span>
+          </span>
+          <span>
+            <span class="material-symbols-outlined" style="font-size:14px">calendar_month</span>
+            <span th:text="${app.appliedAt != null ? #temporals.format(app.appliedAt,'dd MMM yyyy') : '—'}">Date</span>
+          </span>
+          <span th:if="${app.trackingToken != null}">
+            <span class="material-symbols-outlined" style="font-size:14px">token</span>
+            <span>Token available</span>
+          </span>
+        </div>
+
+        <!-- Status timeline -->
+        <div class="timeline">
+          <div class="timeline-steps">
+            <th:block th:with="
+              steps=${ {'APPLIED','SCREENING','INTERVIEW','OFFER'} },
+              currentStatus=${app.status ?: 'APPLIED'},
+              statusOrder=${ {'APPLIED':1,'SCREENING':2,'INTERVIEW':3,'OFFER':4,'REJECTED':5} }
+            ">
+              <!-- Applied -->
+              <div th:classappend="${app.status == 'APPLIED' ? 'active' : (app.status != null and app.status != 'REJECTED' ? 'done' : 'done')}"
+                   class="tl-step done">
+                <div class="tl-circle"><span class="material-symbols-outlined" style="font-size:12px">check</span></div>
+                <div class="tl-label">Applied</div>
+              </div>
+              <div th:classappend="${app.status == 'APPLIED' ? '' : 'done'}" class="tl-line"></div>
+              <!-- Screening -->
+              <div th:classappend="${app.status == 'SCREENING' ? 'active' : (app.status == 'INTERVIEW' or app.status == 'OFFER' ? 'done' : '')}"
+                   class="tl-step">
+                <div class="tl-circle">2</div>
+                <div class="tl-label">Screening</div>
+              </div>
+              <div th:classappend="${app.status == 'INTERVIEW' or app.status == 'OFFER' ? 'done' : ''}" class="tl-line"></div>
+              <!-- Interview -->
+              <div th:classappend="${app.status == 'INTERVIEW' ? 'active' : (app.status == 'OFFER' ? 'done' : '')}"
+                   class="tl-step">
+                <div class="tl-circle">3</div>
+                <div class="tl-label">Interview</div>
+              </div>
+              <div th:classappend="${app.status == 'OFFER' ? 'done' : ''}" class="tl-line"></div>
+              <!-- Offer -->
+              <div th:classappend="${app.status == 'OFFER' ? 'active' : ''}" class="tl-step">
+                <div class="tl-circle">4</div>
+                <div class="tl-label">Offer</div>
+              </div>
+            </th:block>
+          </div>
+        </div>
+
+        <!-- Footer: status + token -->
+        <div class="app-footer" style="margin-top:14px;">
+          <div>
+            <!-- APPLIED -->
+            <span th:if="${app.status == 'APPLIED'}" class="status-badge applied">
+              <span class="status-dot"></span> Applied
+            </span>
+            <!-- SCREENING -->
+            <span th:if="${app.status == 'SCREENING'}" class="status-badge screening">
+              <span class="status-dot"></span> Under Screening
+            </span>
+            <!-- INTERVIEW -->
+            <span th:if="${app.status == 'INTERVIEW'}" class="status-badge interview">
+              <span class="status-dot"></span> Interview Stage
+            </span>
+            <!-- OFFER -->
+            <span th:if="${app.status == 'OFFER'}" class="status-badge offer">
+              <span class="status-dot"></span> Offer Extended
+            </span>
+            <!-- REJECTED -->
+            <span th:if="${app.status == 'REJECTED'}" class="status-badge rejected">
+              <span class="status-dot"></span> Rejected
+            </span>
+            <!-- fallback -->
+            <span th:if="${app.status == null}" class="status-badge applied">
+              <span class="status-dot"></span> Applied
+            </span>
+          </div>
+
+          <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+            <span th:if="${app.trackingToken != null}"
+                  th:data-token="${app.trackingToken}"
+                  class="token-chip"
+                  onclick="copyToken(this)">
+              <span class="material-symbols-outlined" style="font-size:13px">token</span>
+              <span th:text="${#strings.substring(app.trackingToken, 0, 8) + '...'}">abc12345...</span>
+              <span class="material-symbols-outlined" style="font-size:13px">content_copy</span>
+            </span>
+            <a th:if="${app.jobPost != null}"
+               th:href="@{/guest/jobs/__${app.jobPost.id}__}"
+               style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--primary);text-decoration:none;">
+              View Job <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#lists.isEmpty(applications)}" class="empty-state">
+      <div class="empty-icon-wrap">
+        <span class="material-symbols-outlined fill-icon" style="font-size:32px;color:var(--primary)">folder_open</span>
+      </div>
+      <h3 style="font-size:18px;font-weight:700;margin-bottom:8px;color:var(--text-dark);">No applications yet</h3>
+      <p style="font-size:14px;max-width:340px;margin:0 auto 24px;">
+        You haven't applied for any positions yet. Browse our open roles and submit your first application!
+      </p>
+      <a th:href="@{/guest/jobs}"
+         style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;background:var(--primary);color:white;font-size:14px;font-weight:600;text-decoration:none;">
+        <span class="material-symbols-outlined">work</span> Browse Open Jobs
+      </a>
+    </div>
+  </div>
+</div>
+
+<script>
+  function copyToken(el) {
+    const token = el.getAttribute('data-token');
+    if (!token) return;
+    navigator.clipboard.writeText(token).then(() => {
+      showToast('Tracking token copied!', 'success');
+    }).catch(() => {
+      showToast('Could not copy token.', 'error');
+    });
+  }
+</script>
+</th:block>
+</body>
+</html>

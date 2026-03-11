@@ -1,10 +1,11 @@
 package com.group5.ems.repository;
 
-import com.group5.ems.entity.Application;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
 import java.util.Optional;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+import com.group5.ems.entity.Application;
 
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
@@ -15,4 +16,6 @@ public interface ApplicationRepository extends JpaRepository<Application, Long> 
     Optional<Application> findByJobPostIdAndCandidateId(Long jobPostId, Long candidateId);
 
     List<Application> findByJobPostIdAndStatus(Long jobPostId, String status);
+
+    Application findByTrackingToken(String trackingToken);
 }

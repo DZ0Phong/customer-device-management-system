@@ -9,7 +9,7 @@ import com.group5.ems.entity.Candidate;
 
 public interface CandidateRepository extends JpaRepository<Candidate, Long> {
 
-    Optional<Candidate> findByEmail(String email);
+    Optional<Candidate> findByEmailAndPhone(String email,String phone);
 
     List<Candidate> findByEmailContainingOrPhoneContaining(String email, String phone);
 }
