@@ -1,6 +1,6 @@
 package com.group5.ems.controller.admin;
 
-import com.group5.ems.dto.request.SaveUserRequest;
+import com.group5.ems.dto.request.SaveUserRequestDTO;
 import com.group5.ems.dto.response.UserDTO;
 import com.group5.ems.entity.Role;
 import com.group5.ems.service.admin.AdminService;
@@ -67,7 +67,7 @@ public class UserListController {
     }
 
     @PostMapping("/users/save")
-    public String saveUser(@ModelAttribute SaveUserRequest req, RedirectAttributes  redirectAttributes) {
+    public String saveUser(@ModelAttribute SaveUserRequestDTO req, RedirectAttributes  redirectAttributes) {
         try{
             adminService.saveUser(req);
             redirectAttributes.addFlashAttribute("message", "User has been saved successfully");
