@@ -1310,8 +1310,13 @@
         fd.append('expectedSalary', document.getElementById('a-sal').value || 0);
 
         fetch('/guest/apply-full', { method: 'POST', body: fd })
-          .then(r => {
-            if (!r.ok) throw new Error('HTTP ' + r.status);
+          .then(async r => {
+
+            if (!r.ok) {
+              const text = await r.text();
+              throw new Error(text);
+            }
+
             return r.json();
           })
           .then(app => {
