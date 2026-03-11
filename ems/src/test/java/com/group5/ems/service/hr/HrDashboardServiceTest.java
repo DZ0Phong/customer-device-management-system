@@ -1,5 +1,6 @@
 package com.group5.ems.service.hr;
 
+import com.group5.ems.dto.response.HrDashboardMetricsDTO;
 import com.group5.ems.dto.response.HrDashboardMetricsDto;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.JobPostRepository;
@@ -37,7 +38,7 @@ public class HrDashboardServiceTest {
         when(requestRepository.countByStatusAndRequestTypeCategory("PENDING", "HR_STATUS")).thenReturn(10);
 
         // Act
-        HrDashboardMetricsDto result = hrDashboardService.getDashboardMetrics();
+        HrDashboardMetricsDTO result = hrDashboardService.getDashboardMetrics();
 
         // Assert
         assertEquals(42, result.activeEmployees());
