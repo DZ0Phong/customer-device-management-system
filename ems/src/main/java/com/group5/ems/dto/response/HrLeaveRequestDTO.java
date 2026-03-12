@@ -6,14 +6,17 @@ import java.time.LocalDate;
 
 @Builder
 public record HrLeaveRequestDTO(
-    Long id,
-    String employeeName,
-    String initials,
-    String department,
-    String leaveType,
-    String duration,
-    LocalDate startDate,
-    LocalDate endDate,
-    String status
+        Long id,
+        String employeeName,
+        String initials,
+        String department,
+        String employeeCode,
+        String leaveType,
+        String duration,
+        String dates,
+        String reason,
+        LocalDate leave_from,
+        LocalDate leave_to,
+        String status
 ) {
 }
