@@ -1,11 +1,9 @@
 package com.group5.ems.service.admin;
 
 import com.group5.ems.dto.request.SaveUserRequest;
+import com.group5.ems.dto.response.DepartmentDTO;
 import com.group5.ems.dto.response.UserDTO;
-import com.group5.ems.entity.Department;
-import com.group5.ems.entity.Role;
-import com.group5.ems.entity.User;
-import com.group5.ems.entity.UserRole;
+import com.group5.ems.entity.*;
 import com.group5.ems.repository.*;
 import com.group5.ems.repository.spec.UserSpecification;
 import lombok.RequiredArgsConstructor;
@@ -23,9 +21,12 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Transactional(readOnly = true)
 public class AdminService {
 
     private final UserRepository userRepository;
@@ -35,6 +36,99 @@ public class AdminService {
     private final EmployeeRepository employeeRepository;
     private final PasswordEncoder passwordEncoder;
 
+    private final List<String> departmentSortList = List.of("name", "code" ,"createdAt");
+
+    public long getAllDepartmentsCount()
+    {
+        return departmentRepository.count();
+    }
+    public long getAllEmployeesCount()
+    {
+        return employeeRepository.count();
+    }
+    public long getAllParents(){
+        return departmentRepository.countAllParentId();
+    }
+
+    public List<DepartmentDTO> getAllDepartmentsDTO()
+    {
+        List<Department> dept = departmentRepository.findAll();
+        return dept.stream().map(this::toDepartmentDTO).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public Page<DepartmentDTO> getDepartmentsFilter(String keyword,
+                                              String sortField,
+                                              String sortDir,
+                                              int page,
+                                              int pageSize){
+        if(pageSize < 1) pageSize = 10;
+        if(page < 0) page = 0;
+
+        //check sort field
+        if(!departmentSortList.contains(sortField)){
+            sortField = "name";
+        }
+
+        //check sort dỉr
+        if (sortDir == null || (!sortDir.equalsIgnoreCase("asc") && !sortDir.equalsIgnoreCase("desc"))) {
+            sortDir = "asc";
+        }
+
+        Sort.Direction direction = Sort.Direction.fromString(sortDir);
+        Sort sort = Sort.by(direction, sortField);
+        Pageable pageable = PageRequest.of(page, pageSize, sort);
+        Page<Department> departmentPage = Page.empty();
+        if(keyword == null || keyword.isEmpty()){
+            departmentPage = departmentRepository.findAll(pageable);
+        }
+        else{
+           departmentPage = departmentRepository.findByNameContainingIgnoreCaseOrCodeIgnoreCase(keyword,keyword,pageable);
+        }
+
+        Page<DepartmentDTO> dept = departmentPage.map(this::toDepartmentDTO);
+        return dept;
+    }
+
+    @Transactional(readOnly = true)
+    public DepartmentDTO toDepartmentDTO(Department department){
+        Department parent = department.getParent();
+        String parentName = "";
+        if(parent != null && parent.getName() != null){
+            parentName = parent.getName();
+        }
+
+
+        String managerName = "";
+        String managerImgUrl = "";
+
+        Employee manager = department.getManager();
+        if(manager != null && manager.getUser() != null){
+            User user = manager.getUser();
+            managerName = user.getFullName();
+            managerImgUrl = user.getAvatarUrl();
+        }
+        int staffCount = employeeRepository.countByDepartmentId(department.getId());
+
+
+        return DepartmentDTO
+                .builder()
+                .code(department.getCode())
+                .name(department.getName())
+                .description(department.getDescription())
+                .id(department.getId())
+                .parentId(department.getParentId())
+                .parentName(parentName)
+                .managerId(department.getManagerId())
+                .managerName(managerName)
+                .managerAvatarUrl(managerImgUrl)
+                .staffCount(staffCount)
+                .createTime(department.getCreatedAt())
+                .updateTime(department.getUpdatedAt())
+        .build();
+    }
+
+    @Transactional
     public void saveUser(SaveUserRequest req){
         if(req.getUsername().isBlank() ||req.getEmail().isBlank() ||req.getFullName().isBlank()){
             throw new IllegalArgumentException("User name, email and full name are required");
@@ -134,6 +228,36 @@ public class AdminService {
         return roleRepository.findAll();
     }
 
+    /**
+     * Danh sách user có thể chọn làm Department Manager trong form.
+     * Hiện tại filter theo role code = DEPT_MANAGER (đúng với SecurityConfig).
+     */
+    @Transactional(readOnly = true)
+    public List<UserDTO> getAllManagersForSelect() {
+        Optional<Role> managerRoleOpt = roleRepository.findByCode("DEPT_MANAGER");
+        if (managerRoleOpt.isEmpty()) {
+            return List.of();
+        }
+
+        Role managerRole = managerRoleOpt.get();
+        List<UserRole> mappings = userRoleRepository.findByRoleId(managerRole.getId());
+        if (mappings == null || mappings.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> userIds = mappings.stream()
+                .map(UserRole::getUserId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+        if (userIds.isEmpty()) {
+            return List.of();
+        }
+
+        return userRepository.findAllById(userIds).stream()
+                .map(this::toUserDTO)
+                .toList();
+    }
+
     public Role getRoleByUserId(Long id){
         return userRoleRepository.getRoleByUserId(id);
     }
@@ -222,7 +346,7 @@ public class AdminService {
         else if ("LOCKED".equalsIgnoreCase(status)) statusDB = "Suspended";
 
         Role role = userRoleRepository.getRoleByUserId(user.getId());
-        String roleCode = (role != null && role.getCode() != null) ? role.getCode() : "";
+        String roleCode = (role != null && role.getName() != null) ? role.getName() : "";
         String deptName = (user.getEmployee() != null && user.getEmployee().getDepartment() != null)
                 ? user.getEmployee().getDepartment().getName() : "";
 

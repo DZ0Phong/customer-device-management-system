@@ -1,0 +1,924 @@
+<!DOCTYPE html>
+<html lang="en"
+      xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <meta name="_csrf"        th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>HRM Pro – System Logs</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary:        "#1414b8",
+                        "primary-light":"#e8e8fb",
+                        "bg-light":     "#f6f6f8"
+                    },
+                    fontFamily: { display: ["Inter"] }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings:'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+        .fill-icon                 { font-variation-settings:'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+
+        /* ── Entrance animations ── */
+        @keyframes fadeSlideUp { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+        .anim   { animation:fadeSlideUp .45s ease both }
+        .anim-1 { animation-delay:.04s } .anim-2 { animation-delay:.10s }
+        .anim-3 { animation-delay:.16s } .anim-4 { animation-delay:.22s }
+        .anim-5 { animation-delay:.28s } .anim-6 { animation-delay:.34s }
+        .anim-7 { animation-delay:.40s }
+
+        @keyframes gShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+        .gradient-card {
+            background: linear-gradient(135deg,#1414b8,#3b3bea,#6366f1,#1414b8);
+            background-size: 300% 300%;
+            animation: gShift 6s ease infinite;
+        }
+
+        .dot-grid {
+            background-image: radial-gradient(circle,#1414b818 1px,transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .nav-active { box-shadow: inset 3px 0 0 #1414b8; }
+        .stat-num   { font-feature-settings:"tnum"; font-variant-numeric:tabular-nums; }
+
+        /* hover lift */
+        .card-hover { transition:transform .18s ease,box-shadow .18s ease; }
+        .card-hover:hover { transform:translateY(-2px); box-shadow:0 10px 28px -8px rgba(20,20,184,.13); }
+
+        /* pulse */
+        @keyframes pulseDot { 0%,100%{transform:scale(1);opacity:1} 50%{transform:scale(1.6);opacity:.5} }
+        .pulse-dot { animation:pulseDot 2s ease-in-out infinite; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width:5px; height:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#1414b840; border-radius:99px; }
+
+        /* overlay / modal */
+        .overlay { transition:opacity .2s ease; }
+        .overlay.hidden { opacity:0; pointer-events:none; }
+        @keyframes modalIn { from{transform:scale(.96) translateY(8px);opacity:0} to{transform:scale(1) translateY(0);opacity:1} }
+        .modal-box { animation:modalIn .2s ease both; }
+
+        /* side panel */
+        #log-panel { transition:transform .26s cubic-bezier(.4,0,.2,1); transform:translateX(100%); }
+        #log-panel.open { transform:translateX(0); }
+
+        /* toast */
+        @keyframes toastIn  { from{transform:translateY(18px);opacity:0} to{transform:translateY(0);opacity:1} }
+        @keyframes toastOut { from{opacity:1} to{opacity:0} }
+        .toast     { animation:toastIn .28s ease both; }
+        .toast.out { animation:toastOut .28s ease both; }
+
+        /* table rows */
+        @keyframes rowIn { from{opacity:0;transform:translateX(-4px)} to{opacity:1;transform:translateX(0)} }
+        tbody tr { animation:rowIn .3s ease both; cursor:pointer; }
+        tbody tr:nth-child(1)    { animation-delay:.28s }
+        tbody tr:nth-child(2)    { animation-delay:.32s }
+        tbody tr:nth-child(3)    { animation-delay:.36s }
+        tbody tr:nth-child(4)    { animation-delay:.40s }
+        tbody tr:nth-child(5)    { animation-delay:.44s }
+        tbody tr:nth-child(n+6)  { animation-delay:.48s }
+
+        /* level badges */
+        .badge-info    { background:#e8e8fb; color:#1414b8; }
+        .badge-warn    { background:#fef3c7; color:#d97706; }
+        .badge-error   { background:#fee2e2; color:#dc2626; }
+        .badge-debug   { background:#f1f5f9; color:#64748b; }
+        .badge-success { background:#d1fae5; color:#059669; }
+
+        /* dot colours */
+        .dot-info    { background:#1414b8; }
+        .dot-warn    { background:#f59e0b; }
+        .dot-error   { background:#ef4444; }
+        .dot-debug   { background:#94a3b8; }
+        .dot-success { background:#10b981; }
+
+        /* filter chip */
+        .chip { transition:all .15s ease; }
+        .chip.active { background:#1414b8; color:#fff; border-color:#1414b8; }
+    </style>
+</head>
+
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  MODEL ATTRIBUTES  (SystemLogController)                     ║
+╠══════════════════════════════════════════════════════════════╣
+║  logs           : Page<SystemLogDTO>                         ║
+║  statTotal      : long   — tổng log                          ║
+║  statErrors     : long   — ERROR count                       ║
+║  statWarnings   : long   — WARN count                        ║
+║  statToday      : long   — log hôm nay                       ║
+║  currentPage, totalPages, pageSize, totalElements            ║
+║  keyword        : String                                     ║
+║  levelFilter    : String  (INFO/WARN/ERROR/DEBUG/SUCCESS/"") ║
+║  actionFilter   : String  (CREATE/UPDATE/DELETE/LOGIN/...)   ║
+║  dateFrom, dateTo : String  (yyyy-MM-dd, optional)           ║
+║  sortField, sortDir : String                                 ║
+║  currentUser    : UserDTO                                    ║
+║  successMsg     : String  (flash, optional)                  ║
+╠══════════════════════════════════════════════════════════════╣
+║  SystemLogDTO fields:                                        ║
+║    id, level (INFO/WARN/ERROR/DEBUG/SUCCESS)                 ║
+║    action    (CREATE/UPDATE/DELETE/LOGIN/LOGOUT/ACCESS/...)  ║
+║    module    (DEPARTMENT/USER/ROLE/AUTH/SYSTEM/...)          ║
+║    message   : String                                        ║
+║    actorName, actorEmail, actorAvatarUrl, actorInitials      ║
+║    targetType, targetName  (optional, what was affected)     ║
+║    ipAddress : String                                        ║
+║    createdAt : String  (formatted, e.g. "Mar 10, 2026 14:32")║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
+<body class="bg-bg-light font-display text-slate-900 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                   -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden">
+
+        <div class="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+        <!-- Brand -->
+        <div class="px-6 py-6 flex items-center gap-3 relative z-10">
+            <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
+                <span class="material-symbols-outlined text-[22px]">corporate_fare</span>
+            </div>
+            <div>
+                <h1 class="text-base font-black tracking-tight">HRM Pro</h1>
+                <p class="text-[11px] text-slate-400 font-medium">Workspace Management</p>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
+            <p class="px-3 pb-1 pt-1 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Main</p>
+
+            <a th:href="@{/admin/dashboard}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
+                <span class="text-sm font-medium">Dashboard</span>
+            </a>
+
+            <a th:href="@{/admin/companies}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">domain</span>
+                <span class="text-sm font-medium">Company</span>
+            </a>
+
+            <a th:href="@{/admin/departments}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">account_tree</span>
+                <span class="text-sm font-medium">Departments</span>
+            </a>
+
+            <a th:href="@{/admin/roles}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">admin_panel_settings</span>
+                <span class="text-sm font-medium">Roles &amp; Permissions</span>
+            </a>
+
+            <a th:href="@{/admin/users}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">group</span>
+                <span class="text-sm font-medium">User Accounts</span>
+                <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+            </a>
+
+            <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">System</p>
+
+            <!-- ACTIVE -->
+            <a th:href="@{/admin/logs}"
+               class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl">
+                <span class="material-symbols-outlined fill-icon text-[20px]">receipt_long</span>
+                <span class="text-sm font-semibold">System Logs</span>
+                <span th:if="${statErrors > 0}"
+                      class="ml-auto text-[10px] font-bold bg-rose-500 text-white px-1.5 py-0.5 rounded-md"
+                      th:text="${statErrors}">0</span>
+            </a>
+
+            <a th:href="@{/admin/settings}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">settings</span>
+                <span class="text-sm font-medium">Settings</span>
+            </a>
+        </nav>
+
+        <!-- User card -->
+        <div class="p-4">
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    <img th:if="${currentUser?.avatarUrl != null}"
+                         th:src="${currentUser.avatarUrl}"
+                         th:alt="${currentUser.fullName}"
+                         class="w-full h-full object-cover"
+                         onerror="this.style.display='none'"/>
+                    <span th:text="${currentUser?.initials ?: 'U'}">U</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 truncate" th:text="${currentUser?.fullName ?: 'User'}">User</p>
+                    <p class="text-[11px] text-slate-400 truncate" th:text="${currentUser?.email ?: ''}"></p>
+                </div>
+                <form th:action="@{/logout}" method="post" class="shrink-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                        <span class="material-symbols-outlined text-sm">logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- MAIN                                                       -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+
+        <!-- Top bar -->
+        <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+            <div>
+                <h2 class="text-base font-black text-slate-900 leading-tight">System Logs</h2>
+                <p class="text-xs text-slate-400">Audit trail &amp; activity monitoring</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <!-- Export button -->
+                <a th:href="@{/admin/logs/export(keyword=${keyword},level=${levelFilter},action=${actionFilter},dateFrom=${dateFrom},dateTo=${dateTo})}"
+                   class="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 text-slate-500 text-xs font-semibold rounded-xl hover:bg-slate-50 transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">download</span>
+                    Export CSV
+                </a>
+                <!-- Clear old logs (ADMIN only) -->
+                <button type="button" sec:authorize="hasRole('ADMIN')" onclick="openClearModal()"
+                        class="flex items-center gap-1.5 px-3.5 py-2 bg-white border border-slate-200 text-rose-500 text-xs font-semibold rounded-xl hover:bg-rose-50 hover:border-rose-200 transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[17px]">delete_sweep</span>
+                    Clear Old
+                </button>
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center ml-1"
+                     th:text="${currentUser?.initials ?: 'U'}">U</div>
+            </div>
+        </header>
+
+        <!-- Scrollable content -->
+        <div class="flex-1 overflow-y-auto p-8 dot-grid">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- ── Page header ── -->
+                <div class="anim anim-1 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-3xl font-black text-slate-900 tracking-tight">Activity Log</h3>
+                        <p class="text-sm text-slate-400 mt-0.5">
+                            <span th:text="${totalElements}">0</span> log entries recorded
+                        </p>
+                    </div>
+                </div>
+
+                <!-- ── Stat cards ── -->
+                <div class="grid grid-cols-4 gap-4">
+
+                    <!-- Total logs -->
+                    <div class="anim anim-2 card-hover gradient-card rounded-2xl p-5 text-white relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-10"
+                             style="background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2220%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221%22/></svg>')"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-[20px]">receipt_long</span>
+                            </div>
+                            <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Total Logs</p>
+                            <p class="text-3xl font-black stat-num mt-0.5" th:text="${statTotal}">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Errors -->
+                    <div class="anim anim-3 card-hover bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-rose-50 rounded-tl-3xl pointer-events-none"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-rose-50 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-rose-500 text-[20px]">error</span>
+                            </div>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Errors</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-rose-600" th:text="${statErrors}">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Warnings -->
+                    <div class="anim anim-4 card-hover bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-amber-50 rounded-tl-3xl pointer-events-none"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-amber-500 text-[20px]">warning</span>
+                            </div>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Warnings</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-amber-600" th:text="${statWarnings}">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Today -->
+                    <div class="anim anim-5 card-hover bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-emerald-50 rounded-tl-3xl pointer-events-none"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-emerald-500 text-[20px]">today</span>
+                            </div>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Today</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-emerald-600" th:text="${statToday}">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Filters ── -->
+                <div class="anim anim-6 bg-white rounded-2xl border border-slate-100 shadow-sm p-4">
+                    <form th:action="@{/admin/logs}" method="get" id="filter-form" class="flex flex-wrap items-end gap-3">
+
+                        <!-- Keyword -->
+                        <div class="flex-1 min-w-[200px]">
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Search</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[17px]">search</span>
+                                <input type="text" name="keyword" th:value="${keyword}"
+                                       placeholder="Search message, actor, module…"
+                                       oninput="debounceSubmit()"
+                                       class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-xs text-slate-700
+                              focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+                              transition-all placeholder:text-slate-300"/>
+                            </div>
+                        </div>
+
+                        <!-- Level filter -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Level</label>
+                            <select name="level"
+                                    th:value="${levelFilter}"
+                                    onchange="this.form.submit()"
+                                    class="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-600 bg-white
+                             focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value=""      th:selected="${levelFilter == null or levelFilter == ''}">All Levels</option>
+                                <option value="INFO"  th:selected="${levelFilter == 'INFO'}">INFO</option>
+                                <option value="WARN"  th:selected="${levelFilter == 'WARN'}">WARN</option>
+                                <option value="ERROR" th:selected="${levelFilter == 'ERROR'}">ERROR</option>
+                                <option value="DEBUG" th:selected="${levelFilter == 'DEBUG'}">DEBUG</option>
+                                <option value="SUCCESS" th:selected="${levelFilter == 'SUCCESS'}">SUCCESS</option>
+                            </select>
+                        </div>
+
+                        <!-- Action filter -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Action</label>
+                            <select name="action"
+                                    th:value="${actionFilter}"
+                                    onchange="this.form.submit()"
+                                    class="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-600 bg-white
+                             focus:outline-none focus:ring-2 focus:ring-primary">
+                                <option value=""       th:selected="${actionFilter == null or actionFilter == ''}">All Actions</option>
+                                <option value="CREATE" th:selected="${actionFilter == 'CREATE'}">CREATE</option>
+                                <option value="UPDATE" th:selected="${actionFilter == 'UPDATE'}">UPDATE</option>
+                                <option value="DELETE" th:selected="${actionFilter == 'DELETE'}">DELETE</option>
+                                <option value="LOGIN"  th:selected="${actionFilter == 'LOGIN'}">LOGIN</option>
+                                <option value="LOGOUT" th:selected="${actionFilter == 'LOGOUT'}">LOGOUT</option>
+                                <option value="ACCESS" th:selected="${actionFilter == 'ACCESS'}">ACCESS</option>
+                            </select>
+                        </div>
+
+                        <!-- Date range -->
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">From</label>
+                            <input type="date" name="dateFrom" th:value="${dateFrom}"
+                                   onchange="this.form.submit()"
+                                   class="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-600 bg-white
+                            focus:outline-none focus:ring-2 focus:ring-primary"/>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">To</label>
+                            <input type="date" name="dateTo" th:value="${dateTo}"
+                                   onchange="this.form.submit()"
+                                   class="px-3 py-2 border border-slate-200 rounded-xl text-xs text-slate-600 bg-white
+                            focus:outline-none focus:ring-2 focus:ring-primary"/>
+                        </div>
+
+                        <!-- Preserve sort -->
+                        <input type="hidden" name="sort" th:value="${sortField}"/>
+                        <input type="hidden" name="dir"  th:value="${sortDir}"/>
+                        <input type="hidden" name="page" value="0"/>
+
+                        <!-- Reset -->
+                        <a th:href="@{/admin/logs}"
+                           class="flex items-center gap-1.5 px-4 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-500 hover:bg-slate-50 transition-colors">
+                            <span class="material-symbols-outlined text-[16px]">filter_alt_off</span>
+                            Reset
+                        </a>
+                    </form>
+                </div>
+
+                <!-- ── Log table ── -->
+                <div class="anim anim-7 bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+
+                    <!-- Table toolbar -->
+                    <div class="px-6 py-3.5 border-b border-slate-50 flex items-center justify-between">
+            <span class="text-xs text-slate-400"
+                  th:text="|${totalElements} entries found|">0 entries found</span>
+                        <!-- Sort links -->
+                        <div class="flex items-center gap-1">
+                            <a th:href="@{/admin/logs(keyword=${keyword?:''},level=${levelFilter?:''},action=${actionFilter?:''},dateFrom=${dateFrom?:''},dateTo=${dateTo?:''},sort='createdAt',dir=${sortField=='createdAt' and sortDir=='asc' ? 'desc':'asc'},page=0)}"
+                               class="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors"
+                               th:classappend="${sortField=='createdAt'} ? 'text-primary' : 'text-slate-400'">
+                                Date
+                                <span class="material-symbols-outlined text-sm"
+                                      th:text="${sortField=='createdAt' ? (sortDir=='asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}">unfold_more</span>
+                            </a>
+                            <a th:href="@{/admin/logs(keyword=${keyword?:''},level=${levelFilter?:''},action=${actionFilter?:''},dateFrom=${dateFrom?:''},dateTo=${dateTo?:''},sort='level',dir=${sortField=='level' and sortDir=='asc' ? 'desc':'asc'},page=0)}"
+                               class="flex items-center gap-1 text-[11px] font-semibold px-2 py-1 rounded-lg hover:bg-primary/5 transition-colors"
+                               th:classappend="${sortField=='level'} ? 'text-primary' : 'text-slate-400'">
+                                Level
+                                <span class="material-symbols-outlined text-sm"
+                                      th:text="${sortField=='level' ? (sortDir=='asc' ? 'arrow_upward' : 'arrow_downward') : 'unfold_more'}">unfold_more</span>
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Table -->
+                    <table class="w-full text-left">
+                        <thead>
+                        <tr class="bg-slate-50/80 border-b border-slate-100">
+                            <th class="px-6 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-40">Time</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-24">Level</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28">Action</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-28">Module</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest">Message</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-44">Actor</th>
+                            <th class="px-4 py-3.5 text-[10px] font-bold text-slate-400 uppercase tracking-widest w-32">IP Address</th>
+                        </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-50">
+
+                        <!-- Empty state row -->
+                        <tr th:if="${logs == null or #lists.isEmpty(logs.content)}">
+                            <td colspan="7" class="px-6 py-20 text-center">
+                                <div class="flex flex-col items-center gap-3">
+                                    <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                        <span class="material-symbols-outlined text-slate-300 text-4xl">receipt_long</span>
+                                    </div>
+                                    <p class="text-sm font-bold text-slate-500">No log entries found</p>
+                                    <p class="text-xs text-slate-400">Try adjusting your filters</p>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Log rows -->
+                        <tr th:each="log : ${logs.content}"
+                            th:data-id="${log.id}"
+                            th:data-level="${log.level}"
+                            th:data-action="${log.action}"
+                            th:data-module="${log.module}"
+                            th:data-message="${log.message}"
+                            th:data-actor-name="${log.actorName}"
+                            th:data-actor-email="${log.actorEmail}"
+                            th:data-actor-initials="${log.actorInitials}"
+                            th:data-actor-avatar="${log.actorAvatarUrl}"
+                            th:data-target-type="${log.targetType}"
+                            th:data-target-name="${log.targetName}"
+                            th:data-ip="${log.ipAddress}"
+                            th:data-created-at="${log.createdAt}"
+                            onclick="openLogPanel(this)"
+                            class="hover:bg-primary/[3%] group transition-colors">
+
+                            <!-- Time -->
+                            <td class="px-6 py-3.5">
+                                <p class="text-xs font-semibold text-slate-700" th:text="${log.createdAt}">—</p>
+                            </td>
+
+                            <!-- Level badge -->
+                            <td class="px-4 py-3.5">
+                  <span th:switch="${log.level}">
+                    <span th:case="'INFO'"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-info">
+                      <span class="w-1.5 h-1.5 rounded-full dot-info inline-block"></span>INFO
+                    </span>
+                    <span th:case="'WARN'"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-warn">
+                      <span class="w-1.5 h-1.5 rounded-full dot-warn inline-block"></span>WARN
+                    </span>
+                    <span th:case="'ERROR'"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-error">
+                      <span class="w-1.5 h-1.5 rounded-full dot-error inline-block"></span>ERROR
+                    </span>
+                    <span th:case="'DEBUG'"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-debug">
+                      <span class="w-1.5 h-1.5 rounded-full dot-debug inline-block"></span>DEBUG
+                    </span>
+                    <span th:case="'SUCCESS'"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-success">
+                      <span class="w-1.5 h-1.5 rounded-full dot-success inline-block"></span>SUCCESS
+                    </span>
+                    <span th:case="*"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold badge-debug"
+                          th:text="${log.level}">—</span>
+                  </span>
+                            </td>
+
+                            <!-- Action -->
+                            <td class="px-4 py-3.5">
+                  <span class="text-[10px] font-bold font-mono text-slate-500 bg-slate-100 px-2 py-1 rounded-lg"
+                        th:text="${log.action}">—</span>
+                            </td>
+
+                            <!-- Module -->
+                            <td class="px-4 py-3.5">
+                  <span class="text-[10px] font-semibold text-primary bg-primary-light px-2 py-1 rounded-lg"
+                        th:text="${log.module}">—</span>
+                            </td>
+
+                            <!-- Message -->
+                            <td class="px-4 py-3.5 max-w-xs">
+                                <p class="text-xs text-slate-600 truncate group-hover:text-slate-800 transition-colors"
+                                   th:text="${log.message}">—</p>
+                                <p th:if="${log.targetName != null}"
+                                   class="text-[10px] text-slate-400 mt-0.5 truncate flex items-center gap-1">
+                                    <span class="material-symbols-outlined text-[12px]">arrow_right_alt</span>
+                                    <span th:text="${log.targetType + ': ' + log.targetName}">Target</span>
+                                </p>
+                            </td>
+
+                            <!-- Actor -->
+                            <td class="px-4 py-3.5">
+                                <div th:if="${log.actorName != null}" class="flex items-center gap-2">
+                                    <div class="w-6 h-6 rounded-xl bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center overflow-hidden shrink-0">
+                                        <img th:if="${log.actorAvatarUrl != null}"
+                                             th:src="${log.actorAvatarUrl}"
+                                             class="w-full h-full object-cover"
+                                             onerror="this.style.display='none'"/>
+                                        <span th:text="${log.actorInitials ?: '?'}">?</span>
+                                    </div>
+                                    <div class="min-w-0">
+                                        <p class="text-xs font-semibold text-slate-700 truncate leading-tight"
+                                           th:text="${log.actorName}">—</p>
+                                        <p class="text-[10px] text-slate-400 truncate"
+                                           th:text="${log.actorEmail}">—</p>
+                                    </div>
+                                </div>
+                                <span th:unless="${log.actorName != null}" class="text-xs text-slate-400">System</span>
+                            </td>
+
+                            <!-- IP -->
+                            <td class="px-4 py-3.5">
+                                <span class="text-[11px] font-mono text-slate-500" th:text="${log.ipAddress ?: '—'}">—</span>
+                            </td>
+
+                        </tr>
+                        </tbody>
+                    </table>
+
+                    <!-- Pagination -->
+                    <div class="px-6 py-4 border-t border-slate-50 bg-slate-50/40 flex items-center justify-between"
+                         th:if="${totalPages >= 1}">
+            <span class="text-xs text-slate-400"
+                  th:text="|Showing ${currentPage * pageSize + 1}–${(currentPage + 1) * pageSize <= totalElements ? (currentPage + 1) * pageSize : totalElements} of ${totalElements}|">
+              Showing 1–20 of 0
+            </span>
+                        <div class="flex items-center gap-1.5">
+                            <!-- Prev -->
+                            <a th:href="@{/admin/logs(keyword=${keyword?:''},level=${levelFilter?:''},action=${actionFilter?:''},dateFrom=${dateFrom?:''},dateTo=${dateTo?:''},sort=${sortField?:'createdAt'},dir=${sortDir?:'desc'},page=${currentPage - 1})}"
+                               th:classappend="${currentPage == 0 ? 'opacity-30 pointer-events-none' : ''}"
+                               class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
+                                <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                            </a>
+                            <!-- Pages -->
+                            <th:block th:each="p : ${#numbers.sequence(
+                                        T(java.lang.Math).max(0, currentPage - 2),
+                                        T(java.lang.Math).min(totalPages - 1, currentPage + 2))}">
+                                <a th:href="@{/admin/logs(keyword=${keyword?:''},level=${levelFilter?:''},action=${actionFilter?:''},dateFrom=${dateFrom?:''},dateTo=${dateTo?:''},sort=${sortField?:'createdAt'},dir=${sortDir?:'desc'},page=${p})}"
+                                   th:text="${p + 1}"
+                                   th:class="${p == currentPage}
+                     ? 'w-8 h-8 flex items-center justify-center rounded-xl bg-primary text-white text-xs font-bold shadow-md shadow-primary/25'
+                     : 'w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-medium hover:bg-primary/5 transition-colors'">
+                                </a>
+                            </th:block>
+                            <!-- Next -->
+                            <a th:href="@{/admin/logs(keyword=${keyword?:''},level=${levelFilter?:''},action=${actionFilter?:''},dateFrom=${dateFrom?:''},dateTo=${dateTo?:''},sort=${sortField?:'createdAt'},dir=${sortDir?:'desc'},page=${currentPage + 1})}"
+                               th:classappend="${currentPage + 1 >= totalPages ? 'opacity-30 pointer-events-none' : ''}"
+                               class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
+                                <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+            </div><!-- /max-w-7xl -->
+        </div><!-- /scrollable -->
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- LOG DETAIL SIDE PANEL                                     -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <div id="log-panel"
+             class="absolute top-0 right-0 h-full w-96 bg-white border-l border-slate-100 shadow-2xl z-40 flex flex-col">
+
+            <!-- Panel header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div id="lp-level-icon"
+                         class="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 badge-info">
+                        <span class="material-symbols-outlined fill-icon text-[20px]">info</span>
+                    </div>
+                    <div>
+                        <p id="lp-action" class="text-sm font-black text-slate-800 leading-tight">—</p>
+                        <p id="lp-module" class="text-[10px] text-slate-400">—</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeLogPanel()"
+                        class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <!-- Panel body -->
+            <div class="flex-1 overflow-y-auto p-5 space-y-4">
+
+                <!-- Message -->
+                <div class="bg-slate-50 rounded-xl px-4 py-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Message</p>
+                    <p id="lp-message" class="text-xs text-slate-700 leading-relaxed break-words">—</p>
+                </div>
+
+                <!-- Target (if any) -->
+                <div id="lp-target-block" class="hidden bg-slate-50 rounded-xl px-4 py-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Affected Target</p>
+                    <div class="flex items-center gap-2">
+                        <span class="material-symbols-outlined text-slate-400 text-[16px]">arrow_right_alt</span>
+                        <div>
+                            <p id="lp-target-type" class="text-[10px] font-bold text-primary">—</p>
+                            <p id="lp-target-name" class="text-xs font-semibold text-slate-700">—</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Details list -->
+                <div class="bg-slate-50 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+
+                    <!-- Actor -->
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">person</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Actor</p>
+                            <div class="flex items-center gap-2 mt-1">
+                                <div id="lp-actor-avatar"
+                                     class="w-6 h-6 rounded-xl bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center overflow-hidden shrink-0">?</div>
+                                <div class="min-w-0">
+                                    <p id="lp-actor-name"  class="text-xs font-semibold text-slate-700 truncate">—</p>
+                                    <p id="lp-actor-email" class="text-[10px] text-slate-400 truncate">—</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- IP -->
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">router</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">IP Address</p>
+                            <p id="lp-ip" class="text-xs font-mono font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Level -->
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">label</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Level</p>
+                            <p id="lp-level-text" class="text-xs font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Timestamp -->
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">schedule</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Timestamp</p>
+                            <p id="lp-time" class="text-xs font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+
+                    <!-- Log ID -->
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">tag</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Log ID</p>
+                            <p id="lp-id" class="text-xs font-mono text-slate-500 mt-0.5">—</p>
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+
+            <!-- Panel footer (admin: delete single log) -->
+            <div sec:authorize="hasRole('ADMIN')"
+                 class="px-5 py-4 border-t border-slate-100 shrink-0">
+                <form id="delete-log-form" th:action="@{/admin/logs/delete/0}" method="post">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit"
+                            class="w-full flex items-center justify-center gap-2 py-2.5 border border-slate-200 text-slate-400
+                         text-xs font-bold rounded-xl hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-colors">
+                        <span class="material-symbols-outlined text-[16px]">delete</span>Delete This Entry
+                    </button>
+                </form>
+            </div>
+        </div><!-- /log-panel -->
+
+    </main>
+</div><!-- /flex wrapper -->
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- CLEAR OLD LOGS MODAL (ADMIN)                              -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="clear-modal"
+     class="overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-100">
+        <div class="p-6 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined fill-icon text-rose-500 text-4xl">delete_sweep</span>
+            </div>
+            <h3 class="text-lg font-black text-slate-800 mb-1">Clear Old Logs?</h3>
+            <p class="text-sm text-slate-400 mb-5">Remove log entries older than:</p>
+
+            <form th:action="@{/admin/logs/clear}" method="post" id="clear-form">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                <div class="grid grid-cols-3 gap-2 mb-6">
+                    <label class="cursor-pointer">
+                        <input type="radio" name="olderThanDays" value="30" class="peer sr-only" checked/>
+                        <div class="flex flex-col items-center justify-center px-2 py-3 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-500 transition-all
+                        peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700">
+                            <span class="text-lg font-black">30</span>days
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="olderThanDays" value="60" class="peer sr-only"/>
+                        <div class="flex flex-col items-center justify-center px-2 py-3 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-500 transition-all
+                        peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700">
+                            <span class="text-lg font-black">60</span>days
+                        </div>
+                    </label>
+                    <label class="cursor-pointer">
+                        <input type="radio" name="olderThanDays" value="90" class="peer sr-only"/>
+                        <div class="flex flex-col items-center justify-center px-2 py-3 rounded-xl border-2 border-slate-200 text-xs font-bold text-slate-500 transition-all
+                        peer-checked:border-rose-400 peer-checked:bg-rose-50 peer-checked:text-rose-700">
+                            <span class="text-lg font-black">90</span>days
+                        </div>
+                    </label>
+                </div>
+
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeClearModal()"
+                            class="flex-1 px-4 py-2.5 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-600">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                            class="flex-1 px-4 py-2.5 bg-rose-500 text-white text-sm font-bold rounded-xl hover:bg-rose-600 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[17px]">delete_sweep</span>Clear
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    var _csrfToken  = /*[[${_csrf.token}]]*/ '';
+    var _csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+    var _ctxPath    = /*[[@{/}]]*/ '/';
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(msg, type) {
+        var cfg = {
+            success:{ bg:'bg-emerald-600', icon:'check_circle' },
+            error:  { bg:'bg-rose-600',    icon:'error' },
+            info:   { bg:'bg-primary',     icon:'info' }
+        };
+        var c = cfg[type || 'success'];
+        var el = document.createElement('div');
+        el.className = 'toast pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white ' + c.bg;
+        el.innerHTML = '<span class="material-symbols-outlined fill-icon text-[20px]">' + c.icon + '</span>' + msg;
+        document.getElementById('toast-container').appendChild(el);
+        setTimeout(function () {
+            el.classList.add('out');
+            setTimeout(function () { el.remove(); }, 300);
+        }, 3000);
+    }
+
+    // Flash from controller
+    (function () {
+        var msg = /*[[${successMsg}]]*/ null;
+        if (msg) showToast(msg, 'success');
+    })();
+
+    // ── Level → style map ─────────────────────────────────────────
+    var levelStyle = {
+        INFO:    { bg:'badge-info',    icon:'info',             textColor:'text-primary' },
+        WARN:    { bg:'badge-warn',    icon:'warning',          textColor:'text-amber-600' },
+        ERROR:   { bg:'badge-error',   icon:'error',            textColor:'text-rose-600' },
+        DEBUG:   { bg:'badge-debug',   icon:'bug_report',       textColor:'text-slate-500' },
+        SUCCESS: { bg:'badge-success', icon:'check_circle',     textColor:'text-emerald-600' }
+    };
+
+    // ── Log detail panel ──────────────────────────────────────────
+    function openLogPanel(row) {
+        var d = row.dataset;
+        var level = (d.level || 'INFO').toUpperCase();
+        var ls = levelStyle[level] || levelStyle['INFO'];
+
+        // header icon
+        var icon = document.getElementById('lp-level-icon');
+        icon.className = 'w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ' + ls.bg;
+        icon.innerHTML = '<span class="material-symbols-outlined fill-icon text-[20px]">' + ls.icon + '</span>';
+
+        document.getElementById('lp-action').textContent    = d.action  || '—';
+        document.getElementById('lp-module').textContent    = d.module  || '—';
+        document.getElementById('lp-message').textContent   = d.message || '—';
+        document.getElementById('lp-level-text').textContent = level;
+        document.getElementById('lp-time').textContent      = d.createdAt || '—';
+        document.getElementById('lp-ip').textContent        = (d.ip && d.ip !== 'null') ? d.ip : '—';
+        document.getElementById('lp-id').textContent        = '#' + (d.id || '—');
+
+        // actor
+        var actorName   = (d.actorName  && d.actorName  !== 'null') ? d.actorName  : 'System';
+        var actorEmail  = (d.actorEmail && d.actorEmail !== 'null') ? d.actorEmail : '—';
+        var actorInitials = d.actorInitials || '?';
+        document.getElementById('lp-actor-name').textContent  = actorName;
+        document.getElementById('lp-actor-email').textContent = actorEmail;
+        var avatarDiv = document.getElementById('lp-actor-avatar');
+        if (d.actorAvatar && d.actorAvatar !== 'null') {
+            avatarDiv.innerHTML = '<img src="' + d.actorAvatar + '" class="w-full h-full object-cover" onerror="this.style.display=\'none\'">' + actorInitials;
+        } else {
+            avatarDiv.textContent = actorInitials;
+        }
+
+        // target
+        var targetBlock = document.getElementById('lp-target-block');
+        if (d.targetName && d.targetName !== 'null') {
+            targetBlock.classList.remove('hidden');
+            document.getElementById('lp-target-type').textContent = d.targetType || 'Entity';
+            document.getElementById('lp-target-name').textContent = d.targetName;
+        } else {
+            targetBlock.classList.add('hidden');
+        }
+
+        // delete form action
+        var deleteForm = document.getElementById('delete-log-form');
+        if (deleteForm) deleteForm.action = _ctxPath + 'logs/delete/' + d.id;
+
+        document.getElementById('log-panel').classList.add('open');
+    }
+
+    function closeLogPanel() {
+        document.getElementById('log-panel').classList.remove('open');
+    }
+
+    // ── Clear modal ───────────────────────────────────────────────
+    function openClearModal() {
+        document.getElementById('clear-modal').classList.remove('hidden');
+    }
+    function closeClearModal() {
+        document.getElementById('clear-modal').classList.add('hidden');
+    }
+
+    document.getElementById('clear-modal').addEventListener('click', function (e) {
+        if (e.target === e.currentTarget) closeClearModal();
+    });
+
+    // ── Search debounce ───────────────────────────────────────────
+    var _dt;
+    function debounceSubmit() {
+        clearTimeout(_dt);
+        _dt = setTimeout(function () {
+            document.getElementById('filter-form').submit();
+        }, 400);
+    }
+
+    /*]]>*/
+</script>
+</body>
+</html>

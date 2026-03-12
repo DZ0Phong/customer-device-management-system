@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
@@ -102,9 +102,11 @@
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
 <div class="flex h-screen overflow-hidden">
 
-    <!-- ─── Sidebar ──────────────────────────────────────────── -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                   -->
+    <!-- ══════════════════════════════════════════════════════════ -->
     <aside class="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden">
-        <!-- Top decoration -->
+
         <div class="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
 
         <!-- Brand -->
@@ -113,17 +115,8 @@
                 <span class="material-symbols-outlined text-[22px]">corporate_fare</span>
             </div>
             <div>
-                <h1 class="text-base font-black tracking-tight text-slate-900">HRM Pro</h1>
+                <h1 class="text-base font-black tracking-tight">EMS Pro</h1>
                 <p class="text-[11px] text-slate-400 font-medium">Workspace Management</p>
-            </div>
-        </div>
-
-        <!-- Search -->
-        <div class="px-4 mb-4">
-            <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-2">
-                <span class="material-symbols-outlined text-slate-300 text-lg">search</span>
-                <input type="text" placeholder="Search..." class="bg-transparent text-xs text-slate-500 flex-1 outline-none placeholder:text-slate-300"/>
-                <span class="text-[10px] text-slate-300 font-mono border border-slate-200 rounded px-1">⌘K</span>
             </div>
         </div>
 
@@ -131,29 +124,35 @@
         <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
             <p class="px-3 pb-1 pt-1 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Main</p>
 
-            <a href="#" class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl transition-all">
+            <!-- ACTIVE -->
+            <a th:href="@{/admin/dashboard}"
+               class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl">
                 <span class="material-symbols-outlined fill-icon text-[20px]">dashboard</span>
                 <span class="text-sm font-semibold">Dashboard</span>
-                <span class="ml-auto text-[10px] font-bold bg-primary text-white px-1.5 py-0.5 rounded-md">New</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/companies}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">domain</span>
                 <span class="text-sm font-medium">Company</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/departments}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">account_tree</span>
                 <span class="text-sm font-medium">Departments</span>
-                <span class="ml-auto text-[10px] font-semibold text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-md">12</span>
+                <span class="ml-auto text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md"
+                      th:text="${statTotal ?: 0}">0</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/roles}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">admin_panel_settings</span>
                 <span class="text-sm font-medium">Roles &amp; Permissions</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/users}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">group</span>
                 <span class="text-sm font-medium">User Accounts</span>
                 <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
@@ -161,13 +160,14 @@
 
             <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">System</p>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/logs}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">receipt_long</span>
                 <span class="text-sm font-medium">System Logs</span>
-                <span class="ml-auto text-[10px] font-bold text-rose-500 bg-rose-50 px-1.5 py-0.5 rounded-md">3</span>
             </a>
 
-            <a href="#" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+            <a th:href="@{/admin/settings}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
                 <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">settings</span>
                 <span class="text-sm font-medium">Settings</span>
             </a>
@@ -177,15 +177,26 @@
         <div class="p-4">
             <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex items-center gap-3">
                 <div class="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                    AR
+                    <img th:if="${currentUser?.avatarUrl != null}"
+                         th:src="${currentUser.avatarUrl}"
+                         th:alt="${currentUser.fullName}"
+                         class="w-full h-full object-cover"
+                         onerror="this.style.display='none'"/>
+                    <span th:text="${currentUser?.initials ?: 'U'}">U</span>
                 </div>
                 <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-slate-800 truncate">Alex Rivera</p>
-                    <p class="text-[11px] text-slate-400 truncate">alex@company.com</p>
+                    <p class="text-xs font-bold text-slate-800 truncate"
+                       th:text="${currentUser?.fullName ?: 'User'}">User</p>
+                    <p class="text-[11px] text-slate-400 truncate"
+                       th:text="${currentUser?.email ?: ''}"></p>
                 </div>
-                <a href="#" class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
-                    <span class="material-symbols-outlined text-sm">logout</span>
-                </a>
+                <form th:action="@{/logout}" method="post" class="shrink-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                        <span class="material-symbols-outlined text-sm">logout</span>
+                    </button>
+                </form>
             </div>
         </div>
     </aside>
@@ -196,8 +207,14 @@
         <!-- Topbar -->
         <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
             <div>
-                <h2 class="text-base font-black text-slate-900 leading-tight">Good morning, Alex 👋</h2>
-                <p class="text-xs text-slate-400">Monday, 9 March 2026 · Q1 Week 10</p>
+                <h2 class="text-base font-black text-slate-900 leading-tight"
+                    th:text="${currentUser != null ? 'Good morning, ' + currentUser.firstName + ' 👋' : 'Good morning 👋'}">
+                    Good morning 👋
+                </h2>
+                <p class="text-xs text-slate-400"
+                   th:text="${#dates.format(#dates.createNow(), 'EEEE, d MMMM yyyy')}">
+                    Monday, 9 March 2026
+                </p>
             </div>
             <div class="flex items-center gap-2">
                 <!-- Search pill -->
@@ -235,8 +252,10 @@
                                 <span class="text-xs font-semibold bg-white/20 px-2 py-0.5 rounded-full">↑ 12%</span>
                             </div>
                             <p class="text-white/70 text-xs font-semibold uppercase tracking-wider">Total Employees</p>
-                            <p class="text-3xl font-black stat-num mt-0.5">1,284</p>
-                            <p class="text-white/60 text-[11px] mt-1 font-medium">+34 this month</p>
+                            <p class="text-3xl font-black stat-num mt-0.5"
+                               th:text="${statTotalStaff ?: 0}">0</p>
+                            <p class="text-white/60 text-[11px] mt-1 font-medium"
+                               th:text="${statNewThisMonth != null ? '+' + statNewThisMonth + ' this month' : '—'}">—</p>
                         </div>
                     </div>
 
@@ -251,8 +270,10 @@
                                 <span class="text-xs font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">↑ 3.2%</span>
                             </div>
                             <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Active</p>
-                            <p class="text-3xl font-black stat-num mt-0.5 text-emerald-600">1,098</p>
-                            <p class="text-slate-400 text-[11px] mt-1">85.5% of total</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-emerald-600"
+                               th:text="${statActiveEmployees ?: 0}">0</p>
+                            <p class="text-slate-400 text-[11px] mt-1"
+                               th:text="${statActiveRate != null ? statActiveRate + '% of total' : '—'}">—</p>
                         </div>
                     </div>
 
@@ -267,8 +288,10 @@
                                 <span class="text-xs font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">→ 0.1%</span>
                             </div>
                             <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Inactive</p>
-                            <p class="text-3xl font-black stat-num mt-0.5 text-slate-600">148</p>
-                            <p class="text-slate-400 text-[11px] mt-1">11.5% of total</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-slate-600"
+                               th:text="${statInactiveEmployees ?: 0}">0</p>
+                            <p class="text-slate-400 text-[11px] mt-1"
+                               th:text="${statInactiveRate != null ? statInactiveRate + '% of total' : '—'}">—</p>
                         </div>
                     </div>
 
@@ -283,8 +306,10 @@
                                 <span class="text-xs font-semibold text-rose-500 bg-rose-50 px-2 py-0.5 rounded-full">↑ 2 new</span>
                             </div>
                             <p class="text-slate-400 text-xs font-semibold uppercase tracking-wider">Suspended</p>
-                            <p class="text-3xl font-black stat-num mt-0.5 text-rose-500">38</p>
-                            <p class="text-slate-400 text-[11px] mt-1">Requires review</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-rose-500"
+                               th:text="${statSuspendedEmployees ?: 0}">0</p>
+                            <p class="text-slate-400 text-[11px] mt-1"
+                               th:text="${statSuspendedHint ?: 'Requires review'}">Requires review</p>
                         </div>
                     </div>
                 </div>
@@ -337,7 +362,8 @@
                         <div class="relative h-36 flex items-center justify-center">
                             <canvas id="deptChart"></canvas>
                             <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                                <span class="text-2xl font-black text-slate-800">8</span>
+                                <span class="text-2xl font-black text-slate-800"
+                                      th:text="${deptCount ?: 0}">0</span>
                                 <span class="text-[10px] text-slate-400 font-medium">Depts</span>
                             </div>
                         </div>
@@ -619,13 +645,20 @@
     </main>
 </div>
 
-<script>
-    // ─── Headcount Chart ────────────────────────────────────────────
-    const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
-    const total  = [1080,1105,1130,1148,1160,1172,1198,1215,1228,1244,1260,1284];
-    const active = [ 920, 948, 970, 990,1005,1018,1038,1058,1070,1082,1095,1098];
-    const susp   = [  20,  22,  25,  28,  30,  31,  33,  34,  36,  37,  38,  38];
+<script th:inline="javascript">
+    /*<![CDATA[*/
+    // Data injected from backend (fallbacks keep page usable)
+    const months = /*[[${headcountMonths}]]*/ ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar'];
+    const total  = /*[[${headcountTotal}]]*/  [1080,1105,1130,1148,1160,1172,1198,1215,1228,1244,1260,1284];
+    const active = /*[[${headcountActive}]]*/ [ 920, 948, 970, 990,1005,1018,1038,1058,1070,1082,1095,1098];
+    const susp   = /*[[${headcountSuspended}]]*/ [  20,  22,  25,  28,  30,  31,  33,  34,  36,  37,  38,  38];
 
+    const deptLabels = /*[[${deptChartLabels}]]*/ ['Engineering','Sales','Design','Operations','HR','Finance','IT','Legal'];
+    const deptData   = /*[[${deptChartData}]]*/   [35, 22, 18, 25, 8, 6, 5, 4];
+    const deptColors = /*[[${deptChartColors}]]*/ ['#1414b8','#38bdf8','#a78bfa','#2dd4bf','#f472b6','#fb923c','#94a3b8','#6366f1'];
+    /*]]>*/
+
+    // ─── Headcount Chart ────────────────────────────────────────────
     const ctx = document.getElementById('headcountChart').getContext('2d');
 
     // Gradient fills
@@ -722,10 +755,10 @@
     new Chart(dctx, {
         type: 'doughnut',
         data: {
-            labels: ['Engineering','Sales','Design','Operations','HR','Finance','IT','Legal'],
+            labels: deptLabels,
             datasets: [{
-                data: [35, 22, 18, 25, 8, 6, 5, 4],
-                backgroundColor: ['#1414b8','#38bdf8','#a78bfa','#2dd4bf','#f472b6','#fb923c','#94a3b8','#6366f1'],
+                data: deptData,
+                backgroundColor: deptColors,
                 borderWidth: 3,
                 borderColor: '#fff',
                 hoverOffset: 6,

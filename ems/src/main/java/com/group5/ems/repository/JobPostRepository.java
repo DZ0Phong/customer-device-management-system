@@ -15,6 +15,9 @@ public interface JobPostRepository extends JpaRepository<JobPost, Long> {
 
     List<JobPost> findByCreatedBy(Long createdBy);
 
+    int countByStatus(String status);
+}
+
     @Query("SELECT COUNT(DISTINCT j.departmentId) FROM JobPost j")
     long countDistinctDepartment();
 

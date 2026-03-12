@@ -1,0 +1,1062 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <!--/* CSRF token cho fetch() calls */-->
+    <meta name="_csrf"        th:content="${_csrf.token}"/>
+    <meta name="_csrf_header" th:content="${_csrf.headerName}"/>
+    <title>HRM Pro – Departments</title>
+
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1414b8",
+                        "primary-light": "#e8e8fb",
+                        "bg-light": "#f6f6f8"
+                    },
+                    fontFamily: { display: ["Inter"] }
+                }
+            }
+        };
+    </script>
+
+    <style>
+        * { font-family: 'Inter', sans-serif; }
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0,'wght' 400,'GRAD' 0,'opsz' 24; }
+        .fill-icon               { font-variation-settings: 'FILL' 1,'wght' 400,'GRAD' 0,'opsz' 24; }
+
+        /* ── Animations ── */
+        @keyframes fadeSlideUp { from { opacity:0; transform:translateY(14px) } to { opacity:1; transform:translateY(0) } }
+        .anim   { animation: fadeSlideUp .45s ease both }
+        .anim-1 { animation-delay: .04s } .anim-2 { animation-delay: .10s }
+        .anim-3 { animation-delay: .16s } .anim-4 { animation-delay: .22s }
+        .anim-5 { animation-delay: .28s } .anim-6 { animation-delay: .34s }
+        .anim-7 { animation-delay: .40s }
+
+        @keyframes gShift { 0%,100% { background-position:0% 50% } 50% { background-position:100% 50% } }
+        .gradient-card {
+            background: linear-gradient(135deg,#1414b8,#3b3bea,#6366f1,#1414b8);
+            background-size: 300% 300%;
+            animation: gShift 6s ease infinite;
+        }
+
+        .dot-grid {
+            background-image: radial-gradient(circle, #1414b818 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+
+        .nav-active { box-shadow: inset 3px 0 0 #1414b8; }
+        .stat-num   { font-feature-settings: "tnum"; font-variant-numeric: tabular-nums; }
+
+        /* card hover */
+        .card-hover { transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease; }
+        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 16px 40px -10px rgba(20,20,184,.14); border-color: #1414b825; }
+
+        /* pulse dot */
+        @keyframes pulseDot { 0%,100% { transform:scale(1); opacity:1 } 50% { transform:scale(1.6); opacity:.5 } }
+        .pulse-dot { animation: pulseDot 2s ease-in-out infinite; }
+
+        /* scrollbar */
+        ::-webkit-scrollbar { width:5px; height:5px; }
+        ::-webkit-scrollbar-track { background:transparent; }
+        ::-webkit-scrollbar-thumb { background:#1414b840; border-radius:99px; }
+
+        /* overlay */
+        .overlay { transition: opacity .2s ease; }
+        .overlay.hidden { opacity:0; pointer-events:none; }
+        @keyframes modalIn { from { transform:scale(.96) translateY(8px); opacity:0 } to { transform:scale(1) translateY(0); opacity:1 } }
+        .modal-box { animation: modalIn .2s ease both; }
+
+        /* side panel */
+        #detail-panel { transition: transform .26s cubic-bezier(.4,0,.2,1); transform: translateX(100%); }
+        #detail-panel.open { transform: translateX(0); }
+
+        /* toast */
+        @keyframes toastIn  { from { transform:translateY(18px); opacity:0 } to   { transform:translateY(0); opacity:1 } }
+        @keyframes toastOut { from { opacity:1 }                              to   { opacity:0 } }
+        .toast     { animation: toastIn .28s ease both; }
+        .toast.out { animation: toastOut .28s ease both; }
+
+        /* card stagger */
+        @keyframes cardIn { from { opacity:0; transform:translateY(10px) } to { opacity:1; transform:translateY(0) } }
+        .dept-card                   { animation: cardIn .38s ease both; }
+        .dept-card:nth-child(1)      { animation-delay: .28s; }
+        .dept-card:nth-child(2)      { animation-delay: .34s; }
+        .dept-card:nth-child(3)      { animation-delay: .40s; }
+        .dept-card:nth-child(4)      { animation-delay: .46s; }
+        .dept-card:nth-child(5)      { animation-delay: .52s; }
+        .dept-card:nth-child(6)      { animation-delay: .58s; }
+        .dept-card:nth-child(n+7)    { animation-delay: .64s; }
+
+        /* panel tabs */
+        .tab-btn            { transition: all .15s ease; }
+        .tab-btn.active     { background: #1414b8; color: #fff; }
+        .tab-btn:not(.active)       { color: #64748b; }
+        .tab-btn:not(.active):hover { background: #f1f5f9; }
+
+        /* member rows */
+        @keyframes memberIn { from { opacity:0; transform:translateX(6px) } to { opacity:1; transform:translateX(0) } }
+        .member-row { animation: memberIn .3s ease both; }
+    </style>
+</head>
+
+<!--
+╔══════════════════════════════════════════════════════════════╗
+║  MODEL ATTRIBUTES  (DepartmentController)                    ║
+╠══════════════════════════════════════════════════════════════╣
+║  departments   : Page<DepartmentDTO>                         ║
+║  deptForm      : DepartmentFormDTO   (add/edit form object)  ║
+║  allDepartments: List<DepartmentDTO> (for parent select)     ║
+║  allManagers   : List<UserDTO>       (for manager select)    ║
+║  statTotal        : long                                     ║
+║  statTotalStaff   : long                                     ║
+║  statWithChildren : long                                     ║
+║  currentPage, totalPages, pageSize, totalElements : int/long ║
+║  keyword, sortField, sortDir : String                        ║
+║  currentUser   : UserDTO                                     ║
+║  successMsg    : String  (flash attribute, optional)         ║
+╠══════════════════════════════════════════════════════════════╣
+║  DepartmentDTO  fields:                                      ║
+║    id, code, name, description                               ║
+║    parentId, parentName                                      ║
+║    managerId, managerName, managerInitials, managerAvatarUrl ║
+║    staffCount, createdAt (formatted String), updatedAt       ║
+╠══════════════════════════════════════════════════════════════╣
+║  DepartmentFormDTO fields (mirrors form inputs):             ║
+║    id, code, name, description, parentId, managerId          ║
+╠══════════════════════════════════════════════════════════════╣
+║  REST endpoint:                                              ║
+║    GET  /departments/{id}/members → List<UserDTO> (JSON)     ║
+║         UserDTO: fullName, email, initials, avatarUrl,       ║
+║                  role, status                                ║
+╚══════════════════════════════════════════════════════════════╝
+-->
+
+<body class="bg-bg-light font-display text-slate-900 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                   -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden">
+
+        <div class="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
+
+        <!-- Brand -->
+        <div class="px-6 py-6 flex items-center gap-3 relative z-10">
+            <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
+                <span class="material-symbols-outlined text-[22px]">corporate_fare</span>
+            </div>
+            <div>
+                <h1 class="text-base font-black tracking-tight">EMS Pro</h1>
+                <p class="text-[11px] text-slate-400 font-medium">Workspace Management</p>
+            </div>
+        </div>
+
+        <!-- Nav -->
+        <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
+            <p class="px-3 pb-1 pt-1 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Main</p>
+
+            <a th:href="@{/admin/dashboard}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
+                <span class="text-sm font-medium">Dashboard</span>
+            </a>
+
+            <a th:href="@{/admin/companies}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">domain</span>
+                <span class="text-sm font-medium">Company</span>
+            </a>
+
+            <!-- ACTIVE -->
+            <a th:href="@{/admin/departments}"
+               class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl">
+                <span class="material-symbols-outlined fill-icon text-[20px]">account_tree</span>
+                <span class="text-sm font-semibold">Departments</span>
+                <span class="ml-auto text-[10px] font-bold bg-primary text-white px-1.5 py-0.5 rounded-md"
+                      th:text="${statTotal}">0</span>
+            </a>
+
+            <a th:href="@{/admin/roles}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">admin_panel_settings</span>
+                <span class="text-sm font-medium">Roles &amp; Permissions</span>
+            </a>
+
+            <a th:href="@{/admin/users}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">group</span>
+                <span class="text-sm font-medium">User Accounts</span>
+                <span class="ml-auto w-2 h-2 rounded-full bg-emerald-400 pulse-dot"></span>
+            </a>
+
+            <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">System</p>
+
+            <a th:href="@{/admin/logs}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">receipt_long</span>
+                <span class="text-sm font-medium">System Logs</span>
+            </a>
+
+            <a th:href="@{/admin/settings}"
+               class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
+                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">settings</span>
+                <span class="text-sm font-medium">Settings</span>
+            </a>
+        </nav>
+
+        <!-- User card -->
+        <div class="p-4">
+            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                    <img th:if="${currentUser?.avatarUrl != null}"
+                         th:src="${currentUser.avatarUrl}"
+                         th:alt="${currentUser.fullName}"
+                         class="w-full h-full object-cover"
+                         onerror="this.style.display='none'"/>
+                    <span th:text="${currentUser?.initials ?: 'U'}">U</span>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <p class="text-xs font-bold text-slate-800 truncate"
+                       th:text="${currentUser?.fullName ?: 'User'}">User</p>
+                    <p class="text-[11px] text-slate-400 truncate"
+                       th:text="${currentUser?.email ?: ''}"></p>
+                </div>
+                <form th:action="@{/logout}" method="post" class="shrink-0">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit"
+                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
+                        <span class="material-symbols-outlined text-sm">logout</span>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- MAIN                                                       -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden relative">
+
+        <!-- Top bar -->
+        <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+            <div>
+                <h2 class="text-base font-black text-slate-900 leading-tight">Department Management</h2>
+                <p class="text-xs text-slate-400">Organizational structure &amp; team overview</p>
+            </div>
+            <div class="flex items-center gap-2">
+                <button class="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-500 transition-colors">
+                    <span class="material-symbols-outlined text-[20px]">notifications</span>
+                    <span class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
+                </button>
+                <div class="w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-xs flex items-center justify-center ml-1"
+                     th:text="${currentUser?.initials ?: 'U'}">U</div>
+            </div>
+        </header>
+
+        <!-- Scrollable content -->
+        <div class="flex-1 overflow-y-auto p-8 dot-grid">
+            <div class="max-w-7xl mx-auto space-y-6">
+
+                <!-- ── Page header ── -->
+                <div class="anim anim-1 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                        <h3 class="text-3xl font-black text-slate-900 tracking-tight">All Departments</h3>
+                        <p class="text-sm text-slate-400 mt-0.5">
+                            <span th:text="${totalElements}">0</span> departments in your organization
+                        </p>
+                    </div>
+                    <button type="button" onclick="openAddModal()"
+                            class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-xl shadow-lg shadow-primary/25 hover:bg-primary/90 transition-all active:scale-95">
+                        <span class="material-symbols-outlined text-[20px]">add_circle</span>
+                        New Department
+                    </button>
+                </div>
+
+                <!-- ── Stat cards ── -->
+                <div class="grid grid-cols-3 gap-4">
+
+                    <!-- Total departments -->
+                    <div class="anim anim-2 card-hover gradient-card rounded-2xl p-5 text-white relative overflow-hidden">
+                        <div class="absolute inset-0 opacity-10"
+                             style="background:url('data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%2260%22 height=%2260%22><circle cx=%2230%22 cy=%2230%22 r=%2220%22 fill=%22none%22 stroke=%22white%22 stroke-width=%221%22/></svg>')"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-[20px]">account_tree</span>
+                            </div>
+                            <p class="text-white/70 text-[10px] font-bold uppercase tracking-wider">Total Departments</p>
+                            <p class="text-3xl font-black stat-num mt-0.5" th:text="${statTotal}">0</p>
+                        </div>
+                    </div>
+
+                    <!-- Total staff -->
+                    <div class="anim anim-3 card-hover bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-sky-50 rounded-tl-3xl pointer-events-none"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-sky-50 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-sky-500 text-[20px]">groups</span>
+                            </div>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">Total Staff</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-sky-600" th:text="${statTotalStaff}">0</p>
+                        </div>
+                    </div>
+
+                    <!-- With sub-departments -->
+                    <div class="anim anim-4 card-hover bg-white rounded-2xl p-5 border border-slate-100 shadow-sm relative overflow-hidden">
+                        <div class="absolute bottom-0 right-0 w-16 h-16 bg-violet-50 rounded-tl-3xl pointer-events-none"></div>
+                        <div class="relative">
+                            <div class="w-9 h-9 bg-violet-50 rounded-xl flex items-center justify-center mb-3">
+                                <span class="material-symbols-outlined fill-icon text-violet-500 text-[20px]">device_hub</span>
+                            </div>
+                            <p class="text-slate-400 text-[10px] font-bold uppercase tracking-wider">With Sub-depts</p>
+                            <p class="text-3xl font-black stat-num mt-0.5 text-violet-600" th:text="${statWithChildren}">0</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Search / filter toolbar ── -->
+                <div class="anim anim-5 flex flex-wrap items-center justify-between gap-3">
+                    <form th:action="@{/admin/departments}" method="get" id="filter-form" class="flex items-center gap-2">
+                        <div class="relative">
+                            <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 text-[18px]">search</span>
+                            <input type="text" name="keyword"
+                                   th:value="${keyword}"
+                                   placeholder="Search by name or code…"
+                                   oninput="debounceSubmit()"
+                                   class="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-xs text-slate-700 w-64 shadow-sm
+                            focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+                            transition-all placeholder:text-slate-300"/>
+                        </div>
+                        <!-- preserve sort state -->
+                        <input type="hidden" name="sort" th:value="${sortField}"/>
+                        <input type="hidden" name="dir"  th:value="${sortDir}"/>
+                        <input type="hidden" name="page" value="0"/>
+                    </form>
+                    <p class="text-xs text-slate-400 flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[15px]">info</span>
+                        Click a card to view its members
+                    </p>
+                </div>
+
+                <!-- ── Department cards ── -->
+                <div class="anim anim-6">
+
+                    <!-- Empty state -->
+                    <th:block th:if="${departments == null or #lists.isEmpty(departments.content)}">
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-20 text-center">
+                            <div class="flex flex-col items-center gap-3">
+                                <div class="w-16 h-16 rounded-2xl bg-slate-100 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-slate-300 text-4xl">account_tree</span>
+                                </div>
+                                <p class="text-sm font-bold text-slate-500">No departments yet</p>
+                                <p class="text-xs text-slate-400">Create your first department to get started.</p>
+                                <button type="button" onclick="openAddModal()"
+                                        class="mt-2 flex items-center gap-1 text-xs font-semibold text-primary hover:underline">
+                                    <span class="material-symbols-outlined text-sm">add</span>New department
+                                </button>
+                            </div>
+                        </div>
+                    </th:block>
+
+                    <!-- Card grid -->
+                    <div th:unless="${departments == null or #lists.isEmpty(departments.content)}"
+                         class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+
+                        <div th:each="dept : ${departments.content}"
+                             th:data-id="${dept.id}"
+                             th:data-code="${dept.code}"
+                             th:data-name="${dept.name}"
+                             th:data-description="${dept.description}"
+                             th:data-parent-id="${dept.parentId}"
+                             th:data-parent-name="${dept.parentName}"
+                             th:data-manager-id="${dept.managerId}"
+                             th:data-manager-name="${dept.managerName}"
+                             th:data-manager-initials="${dept.managerInitials}"
+                             th:data-staff-count="${dept.staffCount}"
+                             th:data-created-at="${dept.createdAt}"
+                             th:data-updated-at="${dept.updatedAt}"
+                             class="dept-card card-hover bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden cursor-pointer group"
+                             onclick="openDetailPanel(this)">
+
+                            <!-- Top accent strip -->
+                            <div class="h-1 bg-primary/150 group-hover:bg-primary transition-colors"></div>
+
+                            <div class="p-5">
+                                <!-- Header -->
+                                <div class="flex items-start justify-between mb-3">
+                                    <div class="flex items-center gap-3">
+                                        <!-- Code badge -->
+                                        <div class="w-11 h-11 rounded-xl bg-primary/10 text-primary font-black text-sm flex items-center justify-center shrink-0 group-hover:bg-primary group-hover:text-white transition-colors uppercase"
+                                             th:text="${#strings.length(dept.code) > 3 ? #strings.substring(dept.code,0,3) : dept.code}">ENG</div>
+                                        <div>
+                                            <p class="text-sm font-black text-slate-800 leading-tight group-hover:text-primary transition-colors"
+                                               th:text="${dept.name}">Department</p>
+                                            <!-- Parent breadcrumb -->
+                                            <p th:if="${dept.parentName != null}"
+                                               class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-0.5">
+                                                <span class="material-symbols-outlined text-[12px]">subdirectory_arrow_right</span>
+                                                <span th:text="${dept.parentName}">Parent</span>
+                                            </p>
+                                            <p th:unless="${dept.parentName != null}"
+                                               class="text-[10px] text-slate-400 mt-0.5">Root department</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Action buttons (visible on hover) -->
+                                    <div class="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                         onclick="event.stopPropagation()">
+                                        <button type="button" onclick="openEditModalFromCard(this)"
+                                                class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-primary hover:bg-primary-light transition-colors"
+                                                title="Edit">
+                                            <span class="material-symbols-outlined text-[16px]">edit</span>
+                                        </button>
+                                        <button type="button" onclick="openDeleteModalFromCard(this)"
+                                                class="w-7 h-7 flex items-center justify-center rounded-lg text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
+                                                title="Delete">
+                                            <span class="material-symbols-outlined text-[16px]">delete</span>
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <!-- Description -->
+                                <p class="text-xs text-slate-500 leading-relaxed line-clamp-2 min-h-[2.5rem] mb-4"
+                                   th:text="${dept.description != null and not #strings.isEmpty(dept.description)
+                              ? dept.description : 'No description provided.'}">Description</p>
+
+                                <!-- Footer: staff + manager -->
+                                <div class="flex items-center justify-between pt-3 border-t border-slate-50">
+                                    <div class="flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-slate-300 text-[16px]">group</span>
+                                        <span class="text-xs font-semibold text-slate-600"
+                                              th:text="${dept.staffCount} + ' member' + (${dept.staffCount} != 1 ? 's' : '')">0 members</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5">
+                                        <div class="w-5 h-5 rounded-full bg-primary/10 text-primary text-[9px] font-bold flex items-center justify-center overflow-hidden shrink-0">
+                                            <img th:if="${dept.managerAvatarUrl != null}"
+                                                 th:src="${dept.managerAvatarUrl}"
+                                                 class="w-full h-full object-cover"
+                                                 onerror="this.style.display='none'"/>
+                                            <span th:text="${dept.managerInitials ?: '?'}">?</span>
+                                        </div>
+                                        <span class="text-[11px] text-slate-500 max-w-[100px] truncate"
+                                              th:text="${dept.managerName ?: 'No manager'}">Manager</span>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Pagination ── -->
+                <div class="anim anim-7 flex items-center justify-between"
+                     th:if="${totalPages > 1}">
+          <span class="text-xs text-slate-400"
+                th:text="|Showing ${currentPage * pageSize + 1}–${(currentPage + 1) * pageSize <= totalElements ? (currentPage + 1) * pageSize : totalElements} of ${totalElements}|">
+            Showing 1–12 of 0
+          </span>
+                    <div class="flex items-center gap-1.5">
+
+                        <!-- Prev -->
+                        <a th:href="@{/admin/departments(keyword=${keyword?:''},sort=${sortField?:'name'},dir=${sortDir?:'asc'},page=${currentPage - 1})}"
+                           th:classappend="${currentPage == 0 ? 'opacity-30 pointer-events-none' : ''}"
+                           class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
+                            <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                        </a>
+
+                        <!-- Page numbers -->
+                        <th:block th:each="p : ${#numbers.sequence(
+                                      T(java.lang.Math).max(0, currentPage - 2),
+                                      T(java.lang.Math).min(totalPages - 1, currentPage + 2))}">
+                            <a th:href="@{/admin/departments(keyword=${keyword?:''},sort=${sortField?:'name'},dir=${sortDir?:'asc'},page=${p})}"
+                               th:text="${p + 1}"
+                               th:class="${p == currentPage}
+                   ? 'w-8 h-8 flex items-center justify-center rounded-xl bg-primary text-white text-xs font-bold shadow-md shadow-primary/25'
+                   : 'w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white text-slate-500 text-xs font-medium hover:bg-primary/5 transition-colors'">
+                            </a>
+                        </th:block>
+
+                        <!-- Next -->
+                        <a th:href="@{/admin/departments(keyword=${keyword?:''},sort=${sortField?:'name'},dir=${sortDir?:'asc'},page=${currentPage + 1})}"
+                           th:classappend="${currentPage + 1 >= totalPages ? 'opacity-30 pointer-events-none' : ''}"
+                           class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
+                            <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                        </a>
+                    </div>
+                </div>
+
+            </div><!-- /max-w-7xl -->
+        </div><!-- /scrollable -->
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- DETAIL SIDE PANEL                                         -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <div id="detail-panel"
+             class="absolute top-0 right-0 h-full w-96 bg-white border-l border-slate-100 shadow-2xl z-40 flex flex-col">
+
+            <!-- Panel header -->
+            <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100 shrink-0">
+                <div class="flex items-center gap-3">
+                    <div id="dp-icon"
+                         class="w-9 h-9 rounded-xl bg-primary/10 text-primary font-black text-sm flex items-center justify-center uppercase">??</div>
+                    <div>
+                        <p id="dp-name" class="text-sm font-black text-slate-800 leading-tight">—</p>
+                        <p id="dp-code" class="text-[10px] font-mono text-slate-400">—</p>
+                    </div>
+                </div>
+                <button type="button" onclick="closeDetailPanel()"
+                        class="w-7 h-7 flex items-center justify-center rounded-lg hover:bg-slate-100 text-slate-400 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <!-- Tabs -->
+            <div class="flex items-center gap-1 px-4 py-3 border-b border-slate-100 shrink-0">
+                <button id="tab-info-btn"   type="button" onclick="switchTab('info')"
+                        class="tab-btn active text-xs font-bold px-3 py-1.5 rounded-lg">Info</button>
+                <button id="tab-member-btn" type="button" onclick="switchTab('member')"
+                        class="tab-btn text-xs font-bold px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+                    Members
+                    <span id="tab-member-count"
+                          class="text-[10px] font-bold bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full">0</span>
+                </button>
+            </div>
+
+            <!-- Tab: Info -->
+            <div id="tab-info" class="flex-1 overflow-y-auto p-5 space-y-4">
+                <div class="bg-slate-50 rounded-xl px-4 py-3">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-1.5">Description</p>
+                    <p id="dp-desc" class="text-xs text-slate-600 leading-relaxed">—</p>
+                </div>
+                <div class="bg-slate-50 rounded-2xl divide-y divide-slate-100 overflow-hidden">
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">person</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Manager</p>
+                            <p id="dp-manager" class="text-xs font-semibold text-slate-700 mt-0.5 truncate">—</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">subdirectory_arrow_right</span>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Parent Department</p>
+                            <p id="dp-parent" class="text-xs font-semibold text-slate-700 mt-0.5 truncate">—</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">group</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Staff Count</p>
+                            <p id="dp-staff" class="text-xs font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">calendar_today</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Created At</p>
+                            <p id="dp-created" class="text-xs font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-3 px-4 py-3">
+                        <span class="material-symbols-outlined text-slate-300 text-[18px]">update</span>
+                        <div>
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wide">Updated At</p>
+                            <p id="dp-updated" class="text-xs font-semibold text-slate-700 mt-0.5">—</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Members -->
+            <div id="tab-member" class="flex-1 overflow-y-auto hidden">
+                <!-- Loading spinner -->
+                <div id="members-loading"
+                     class="hidden flex-col items-center justify-center h-40 gap-3 text-slate-400">
+                    <div class="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                    <p class="text-xs font-medium">Loading members…</p>
+                </div>
+                <!-- Empty -->
+                <div id="members-empty"
+                     class="hidden flex-col items-center justify-center p-12 gap-3 text-slate-400">
+                    <div class="w-14 h-14 rounded-2xl bg-slate-100 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-slate-300 text-3xl">person_off</span>
+                    </div>
+                    <p class="text-sm font-bold text-slate-500">No members yet</p>
+                    <p class="text-xs text-center text-slate-400">No users assigned to this department.</p>
+                </div>
+                <!-- Member list (populated by JS) -->
+                <div id="members-list" class="p-4 space-y-2"></div>
+            </div>
+
+            <!-- Panel footer -->
+            <div class="px-5 py-4 border-t border-slate-100 flex gap-2 shrink-0">
+                <button type="button" onclick="openEditFromPanel()"
+                        class="flex-1 flex items-center justify-center gap-2 py-2.5 bg-primary text-white text-xs font-bold rounded-xl hover:bg-primary/90 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[16px]">edit</span>Edit
+                </button>
+                <button type="button" onclick="openDeleteFromPanel()"
+                        class="w-10 h-10 flex items-center justify-center rounded-xl border border-slate-200 text-slate-400
+                       hover:text-rose-500 hover:bg-rose-50 hover:border-rose-200 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">delete</span>
+                </button>
+            </div>
+        </div><!-- /detail-panel -->
+
+    </main>
+</div><!-- /flex wrapper -->
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- ADD / EDIT MODAL                                          -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="modal-overlay"
+     class="overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div id="modal-box"
+         class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden border border-slate-100">
+
+        <!-- Modal header -->
+        <div class="flex items-center justify-between px-6 py-5 border-b border-slate-100">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center">
+                    <span id="modal-icon" class="material-symbols-outlined fill-icon text-primary text-[20px]">add_circle</span>
+                </div>
+                <h3 id="modal-title" class="text-base font-black text-slate-800">New Department</h3>
+            </div>
+            <button type="button" onclick="closeModal()"
+                    class="w-8 h-8 flex items-center justify-center rounded-xl hover:bg-slate-100 text-slate-400">
+                <span class="material-symbols-outlined text-[20px]">close</span>
+            </button>
+        </div>
+
+        <!--
+          th:object="${deptForm}"  →  Spring binds DepartmentFormDTO
+          th:action decides POST URL; controller handles both create & update via id field.
+        -->
+        <form th:action="@{/admin/departments/save}"
+              th:object="${deptForm}"
+              method="post"
+              id="dept-form">
+
+            <!-- CSRF -->
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <!-- Hidden id: empty = create, filled = update -->
+            <input type="hidden" th:field="*{id}" id="field-id"/>
+
+            <div class="p-6 space-y-4">
+
+                <!-- Name + Code -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide"
+                               th:for="field-name">
+                            Name <span class="text-rose-400">*</span>
+                        </label>
+                        <input type="text"
+                               th:field="*{name}"
+                               id="field-name"
+                               required
+                               placeholder="Engineering"
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm
+                          focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+                          transition-all placeholder:text-slate-300"/>
+                        <!-- Validation error -->
+                        <p th:if="${#fields.hasErrors('name')}"
+                           th:errors="*{name}"
+                           class="text-[10px] text-rose-500 mt-1"></p>
+                    </div>
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide"
+                               th:for="field-code">
+                            Code <span class="text-rose-400">*</span>
+                        </label>
+                        <input type="text"
+                               th:field="*{code}"
+                               id="field-code"
+                               required
+                               maxlength="50"
+                               placeholder="ENG"
+                               oninput="this.value=this.value.toUpperCase()"
+                               class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm font-mono uppercase
+                          focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+                          transition-all placeholder:text-slate-300"/>
+                        <p th:if="${#fields.hasErrors('code')}"
+                           th:errors="*{code}"
+                           class="text-[10px] text-rose-500 mt-1"></p>
+                    </div>
+                </div>
+
+                <!-- Description -->
+                <div>
+                    <label class="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide"
+                           th:for="field-desc">Description</label>
+                    <textarea th:field="*{description}"
+                              id="field-desc"
+                              rows="3"
+                              placeholder="Briefly describe this department's responsibilities…"
+                              class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm resize-none
+                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent
+                           transition-all placeholder:text-slate-300"></textarea>
+                </div>
+
+                <!-- Parent department + Manager -->
+                <div class="grid grid-cols-2 gap-3">
+
+                    <!-- Parent department -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide"
+                               th:for="field-parent">Parent Department</label>
+                        <select th:field="*{parentId}"
+                                id="field-parent"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">— None (Root) —</option>
+                            <!--
+                              th:selected is handled automatically by th:field binding.
+                              Disable the dept itself when editing to prevent self-referencing.
+                            -->
+                            <option th:each="d : ${allDepartments}"
+                                    th:value="${d.id}"
+                                    th:text="${d.name}"
+                                    th:disabled="${deptForm.id != null and deptForm.id == d.id}">Dept</option>
+                        </select>
+                    </div>
+
+                    <!-- Manager -->
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 mb-1.5 uppercase tracking-wide"
+                               th:for="field-manager">Manager</label>
+                        <select th:field="*{managerId}"
+                                id="field-manager"
+                                class="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-white text-sm
+                           focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                            <option value="">— No manager —</option>
+                            <option th:each="u : ${allManagers}"
+                                    th:value="${u.id}"
+                                    th:text="${u.fullName}">User</option>
+                        </select>
+                    </div>
+                </div>
+
+            </div><!-- /form body -->
+
+            <!-- Modal footer -->
+            <div class="flex items-center justify-end gap-3 px-6 py-4 border-t border-slate-100 bg-slate-50/50">
+                <button type="button" onclick="closeModal()"
+                        class="px-5 py-2.5 text-sm font-semibold text-slate-500 hover:bg-slate-100 rounded-xl transition-colors">
+                    Cancel
+                </button>
+                <button type="submit"
+                        class="flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-sm font-bold rounded-xl
+                       shadow-md shadow-primary/20 hover:bg-primary/90 transition-all active:scale-95">
+                    <span class="material-symbols-outlined text-[18px]">save</span>Save
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- DELETE CONFIRM MODAL                                      -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<div id="delete-modal"
+     class="overlay hidden fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm">
+    <div class="modal-box bg-white rounded-2xl shadow-2xl w-full max-w-sm mx-4 overflow-hidden border border-slate-100">
+        <div class="p-6 text-center">
+            <div class="w-16 h-16 rounded-2xl bg-rose-100 flex items-center justify-center mx-auto mb-4">
+                <span class="material-symbols-outlined fill-icon text-rose-500 text-4xl">delete_forever</span>
+            </div>
+            <h3 class="text-lg font-black text-slate-800 mb-1">Delete Department?</h3>
+            <p class="text-sm text-slate-400 mb-3">
+                You're about to permanently delete<br/>
+                <strong id="delete-name" class="text-slate-700"></strong>.
+            </p>
+            <!-- Warning: has members -->
+            <div id="delete-warning"
+                 class="hidden mb-4 flex items-start gap-2 p-3 bg-amber-50 border border-amber-200 rounded-xl text-left">
+                <span class="material-symbols-outlined fill-icon text-amber-500 text-[18px] shrink-0 mt-0.5">warning</span>
+                <p class="text-xs text-amber-700 font-medium">This department has members. Consider reassigning them first.</p>
+            </div>
+            <p class="text-xs text-rose-400 mb-6">This action cannot be undone.</p>
+            <div class="flex gap-3">
+                <button type="button" onclick="closeDeleteModal()"
+                        class="flex-1 px-4 py-2.5 text-sm font-semibold border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors text-slate-600">
+                    Cancel
+                </button>
+                <!--
+                  th:action is set dynamically by JS (delete-form.action = '/departments/delete/' + id)
+                  The hidden CSRF input is rendered by Thymeleaf at page load.
+                -->
+                <form id="delete-form" th:action="@{/admin/departments/delete/0}" method="post" class="flex-1">
+                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                    <button type="submit"
+                            class="w-full px-4 py-2.5 bg-rose-500 text-white text-sm font-bold rounded-xl
+                         hover:bg-rose-600 transition-all active:scale-95 flex items-center justify-center gap-2">
+                        <span class="material-symbols-outlined text-[17px]">delete</span>Delete
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Toast container -->
+<div id="toast-container" class="fixed bottom-6 right-6 z-[60] flex flex-col gap-2 pointer-events-none"></div>
+
+
+<!-- ══════════════════════════════════════════════════════════ -->
+<!-- JAVASCRIPT                                               -->
+<!-- ══════════════════════════════════════════════════════════ -->
+<script th:inline="javascript">
+    /*<![CDATA[*/
+
+    // ── Thymeleaf-inlined values ─────────────────────────────────
+    var _csrfToken  = /*[[${_csrf.token}]]*/ '';
+    var _csrfHeader = /*[[${_csrf.headerName}]]*/ 'X-CSRF-TOKEN';
+    var _ctxPath    = /*[[@{/}]]*/ '/';
+
+    // ── State ────────────────────────────────────────────────────
+    var _currentEl = null;
+
+    // ── Utilities ────────────────────────────────────────────────
+    function safe(val) {
+        return (val && val !== 'null' && val !== 'undefined') ? val : null;
+    }
+
+    function getData(el) {
+        return el.closest('[data-id]').dataset;
+    }
+
+    // ── Toast ─────────────────────────────────────────────────────
+    function showToast(msg, type) {
+        var cfg = {
+            success: { bg:'bg-emerald-600', icon:'check_circle' },
+            error:   { bg:'bg-rose-600',    icon:'error' },
+            info:    { bg:'bg-primary',     icon:'info' }
+        };
+        var c = cfg[type || 'success'];
+        var el = document.createElement('div');
+        el.className = 'toast pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-2xl shadow-xl text-sm font-semibold text-white ' + c.bg;
+        el.innerHTML = '<span class="material-symbols-outlined fill-icon text-[20px]">' + c.icon + '</span>' + msg;
+        document.getElementById('toast-container').appendChild(el);
+        setTimeout(function () {
+            el.classList.add('out');
+            setTimeout(function () { el.remove(); }, 300);
+        }, 3000);
+    }
+
+    // ── Flash message from controller ─────────────────────────────
+    (function () {
+        var msg = /*[[${successMsg}]]*/ null;
+        if (msg) showToast(msg, 'success');
+    })();
+
+    // ── Tab switch ────────────────────────────────────────────────
+    function switchTab(tab) {
+        var isInfo = (tab === 'info');
+        document.getElementById('tab-info').classList.toggle('hidden', !isInfo);
+        document.getElementById('tab-member').classList.toggle('hidden', isInfo);
+        document.getElementById('tab-info-btn').classList.toggle('active', isInfo);
+        document.getElementById('tab-member-btn').classList.toggle('active', !isInfo);
+        if (!isInfo && _currentEl) {
+            loadMembers(_currentEl.dataset.id);
+        }
+    }
+
+    // ── Fetch members ─────────────────────────────────────────────
+    function loadMembers(deptId) {
+        var loading = document.getElementById('members-loading');
+        var empty   = document.getElementById('members-empty');
+        var list    = document.getElementById('members-list');
+
+        loading.classList.remove('hidden');
+        loading.classList.add('flex');
+        empty.classList.add('hidden');
+        empty.classList.remove('flex');
+        list.innerHTML = '';
+
+        fetch(_ctxPath + 'admin/departments/' + deptId + '/members', {
+            headers: { 'Accept': 'application/json' }
+        })
+            .then(function (r) {
+                if (!r.ok) throw new Error('Network response was not ok');
+                return r.json();
+            })
+            .then(function (data) {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                document.getElementById('tab-member-count').textContent = data.length;
+
+                if (!data.length) {
+                    empty.classList.remove('hidden');
+                    empty.classList.add('flex');
+                    return;
+                }
+
+                var roleColors = {
+                    'ADMIN':     'bg-primary/10 text-primary',
+                    'MANAGER':   'bg-orange-100 text-orange-600',
+                    'EMPLOYEE':  'bg-sky-100 text-sky-600',
+                    'HR':        'bg-pink-100 text-pink-600'
+                };
+
+                data.forEach(function (u, i) {
+                    // NOTE: Script is th:inline="javascript" so avoid Thymeleaf inline pattern "[(...)]"
+                    var rc         = roleColors[ (u.role || '').toUpperCase() ] || 'bg-slate-100 text-slate-500';
+                    var statusDot  = u.status === 'ACTIVE' ? 'bg-emerald-400'
+                        : u.status === 'SUSPENDED' ? 'bg-rose-500'
+                            : 'bg-slate-400';
+                    var initials   = u.initials || (u.fullName ? u.fullName.charAt(0) : '?');
+
+                    var row = document.createElement('div');
+                    row.className = 'member-row flex items-center gap-3 p-3 bg-slate-50 rounded-xl hover:bg-primary/5 transition-colors';
+                    row.style.animationDelay = (i * 0.05) + 's';
+                    row.innerHTML =
+                        '<div class="relative shrink-0">' +
+                        '<div class="w-8 h-8 rounded-xl bg-primary/10 text-primary font-bold text-xs flex items-center justify-center overflow-hidden">' +
+                        (u.avatarUrl ? '<img src="' + u.avatarUrl + '" class="w-full h-full object-cover" onerror="this.style.display=\'none\'">' : '') +
+                        '<span>' + initials + '</span>' +
+                        '</div>' +
+                        '<span class="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-white ' + statusDot + '"></span>' +
+                        '</div>' +
+                        '<div class="flex-1 min-w-0">' +
+                        '<p class="text-xs font-semibold text-slate-800 truncate leading-tight">' + (u.fullName || '—') + '</p>' +
+                        '<p class="text-[10px] text-slate-400 truncate">' + (u.email || '') + '</p>' +
+                        '</div>' +
+                        '<span class="text-[10px] font-bold px-2 py-0.5 rounded-lg ' + rc + '">' + (u.role || '—') + '</span>';
+                    list.appendChild(row);
+                });
+            })
+            .catch(function () {
+                loading.classList.add('hidden');
+                loading.classList.remove('flex');
+                showToast('Failed to load members', 'error');
+            });
+    }
+
+    // ── Detail panel ──────────────────────────────────────────────
+    function openDetailPanel(el) {
+        _currentEl = el;
+        var d = el.dataset;
+
+        switchTab('info');
+
+        var code = (d.code || '??').substring(0, 3).toUpperCase();
+        document.getElementById('dp-icon').textContent    = code;
+        document.getElementById('dp-name').textContent    = d.name    || '—';
+        document.getElementById('dp-code').textContent    = d.code    || '—';
+        document.getElementById('dp-desc').textContent    = safe(d.description)  || 'No description provided.';
+        document.getElementById('dp-manager').textContent = safe(d.managerName)  || 'No manager assigned';
+        document.getElementById('dp-parent').textContent  = safe(d.parentName)   || 'Root department';
+        document.getElementById('dp-staff').textContent   = (d.staffCount || '0') + ' members';
+        document.getElementById('dp-created').textContent = safe(d.createdAt)    || '—';
+        document.getElementById('dp-updated').textContent = safe(d.updatedAt)    || '—';
+        document.getElementById('tab-member-count').textContent = d.staffCount   || '0';
+
+        document.getElementById('detail-panel').classList.add('open');
+    }
+
+    function closeDetailPanel() {
+        document.getElementById('detail-panel').classList.remove('open');
+        _currentEl = null;
+    }
+
+    // ── Add modal ─────────────────────────────────────────────────
+    function openAddModal() {
+        document.getElementById('modal-title').textContent = 'New Department';
+        document.getElementById('modal-icon').textContent  = 'add_circle';
+        document.getElementById('dept-form').reset();
+        document.getElementById('field-id').value = '';
+        document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    // ── Edit modal ────────────────────────────────────────────────
+    function openEditModal(id, name, code, desc, parentId, managerId) {
+        document.getElementById('modal-title').textContent = 'Edit Department';
+        document.getElementById('modal-icon').textContent  = 'edit';
+
+        document.getElementById('field-id').value       = id        || '';
+        document.getElementById('field-name').value     = name      || '';
+        document.getElementById('field-code').value     = code      || '';
+        document.getElementById('field-desc').value     = desc      || '';
+
+        var selParent  = document.getElementById('field-parent');
+        var selManager = document.getElementById('field-manager');
+        if (selParent)  selParent.value  = parentId  || '';
+        if (selManager) selManager.value = managerId || '';
+
+        document.getElementById('modal-overlay').classList.remove('hidden');
+    }
+
+    function openEditModalFromCard(btn) {
+        var d = getData(btn);
+        openEditModal(d.id, d.name, d.code, d.description, d.parentId, d.managerId);
+    }
+
+    function openEditFromPanel() {
+        if (!_currentEl) return;
+        var d = _currentEl.dataset;
+        closeDetailPanel();
+        openEditModal(d.id, d.name, d.code, d.description, d.parentId, d.managerId);
+    }
+
+    function closeModal() {
+        document.getElementById('modal-overlay').classList.add('hidden');
+    }
+
+    // ── Delete modal ──────────────────────────────────────────────
+    function openDeleteModal(id, name, staffCount) {
+        document.getElementById('delete-name').textContent = name || '—';
+        document.getElementById('delete-form').action = _ctxPath + 'departments/delete/' + id;
+        var warn = document.getElementById('delete-warning');
+        parseInt(staffCount) > 0 ? warn.classList.remove('hidden') : warn.classList.add('hidden');
+        document.getElementById('delete-modal').classList.remove('hidden');
+    }
+
+    function openDeleteModalFromCard(btn) {
+        var d = getData(btn);
+        openDeleteModal(d.id, d.name, d.staffCount || 0);
+    }
+
+    function openDeleteFromPanel() {
+        if (!_currentEl) return;
+        var d = _currentEl.dataset;
+        closeDetailPanel();
+        openDeleteModal(d.id, d.name, d.staffCount || 0);
+    }
+
+    function closeDeleteModal() {
+        document.getElementById('delete-modal').classList.add('hidden');
+    }
+
+    // ── Backdrop close ────────────────────────────────────────────
+    document.getElementById('modal-overlay').addEventListener('click', function (e) {
+        if (e.target === e.currentTarget) closeModal();
+    });
+    document.getElementById('delete-modal').addEventListener('click', function (e) {
+        if (e.target === e.currentTarget) closeDeleteModal();
+    });
+
+    // ── Search debounce ───────────────────────────────────────────
+    var _dt;
+    function debounceSubmit() {
+        clearTimeout(_dt);
+        _dt = setTimeout(function () {
+            document.getElementById('filter-form').submit();
+        }, 400);
+    }
+
+    /*]]>*/
+</script>
+</body>
+</html>

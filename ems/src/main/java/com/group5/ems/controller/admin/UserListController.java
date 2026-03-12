@@ -12,21 +12,15 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.util.List;
-import java.util.Optional;
 
 @Controller
 @RequestMapping("/admin")
 @RequiredArgsConstructor
-public class AdminController {
+public class UserListController {
 
     private final AdminService adminService;
 
-    @GetMapping("/dashboard")
-    @ResponseBody
-    public String dashboard() {
 
-        return "admin/dashboard";
-    }
 
     @GetMapping("/users")
     public String users(
@@ -59,7 +53,6 @@ public class AdminController {
         model.addAttribute("statInactive", adminService.getStatusInactive());
         model.addAttribute("statSuspended", adminService.getStatusSuspended());
 
-        model.addAttribute("departments", adminService.getDepartmentName());
 
         //paging
         Page<UserDTO> users = adminService.getUsersFilter(keyword, role, status, sort, dir, page, pageSize);
@@ -84,6 +77,8 @@ public class AdminController {
         }
         return "redirect:/admin/users";
     }
+
+
 
 
 }
