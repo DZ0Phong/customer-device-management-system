@@ -1,7 +1,18 @@
 package com.group5.ems.entity;
 
-import jakarta.persistence.*;
 import java.time.LocalDateTime;
+
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.Lob;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "candidate_cvs")
@@ -21,7 +32,7 @@ public class CandidateCv {
     private String fileType;
 
     @Lob
-    @Column(name = "file_data")
+    @Column(columnDefinition = "LONGBLOB")
     private byte[] fileData;
 
     @Column(name = "uploaded_at", updatable = false)

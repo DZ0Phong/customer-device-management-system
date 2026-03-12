@@ -1,6 +1,7 @@
 package com.group5.ems.dto.request;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 
 import org.springframework.web.multipart.MultipartFile;
 
@@ -17,6 +18,10 @@ public class ApplyJobRequestDTO {
     private String email;
     private String phone;
     private String address;
+    private String introduction;
+    private String linkedin;
+    private String portfolio;
+    private LocalDate dateOfBirth;
 
     private Integer yearsExperience;
     private BigDecimal expectedSalary;

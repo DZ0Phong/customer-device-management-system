@@ -153,6 +153,7 @@ public class GuestService {
 
         return candidateCvRepository.save(cv);
     }
+
     // view candidate cvs
     public List<CandidateCv> getCandidateCvs(Long candidateId) {
         return candidateCvRepository.findByCandidateId(candidateId);
@@ -194,10 +195,10 @@ public class GuestService {
                 request.getEmail(),
                 request.getPhone(),
                 request.getAddress(),
-                null,
-                null,
-                null,
-                null,
+                request.getDateOfBirth(),
+                request.getIntroduction(),
+                request.getLinkedin(),
+                request.getPortfolio(),
                 request.getYearsExperience(),
                 request.getExpectedSalary());
 
@@ -219,17 +220,17 @@ public class GuestService {
 
     public ApplicationResponseDTO trackApplicationDTO(String token) {
 
-    Application app = applicationRepository.findByTrackingToken(token);
+        Application app = applicationRepository.findByTrackingToken(token);
 
-    if (app == null) {
-        return null;
+        if (app == null) {
+            return null;
+        }
+
+        return new ApplicationResponseDTO(
+                app.getId(),
+                app.getCandidateId(),
+                app.getJobPostId(),
+                app.getCvId(),
+                app.getTrackingToken());
     }
-
-    return new ApplicationResponseDTO(
-            app.getId(),
-            app.getCandidateId(),
-            app.getJobPostId(),
-            app.getCvId(),
-            app.getTrackingToken());
-}
 }

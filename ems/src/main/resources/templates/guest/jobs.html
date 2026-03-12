@@ -1304,7 +1304,9 @@
         if (li) fd.append('linkedin', li);
         const port = document.getElementById('a-port').value.trim();
         if (port) fd.append('portfolio', port);
-        fd.append('file', _uploadedFile);
+        if (_uploadedFile) {
+          fd.append('file', _uploadedFile);
+        }
         fd.append('jobId', _selectedJob.id);
         fd.append('yearsExperience', document.getElementById('a-exp').value || 0);
         fd.append('expectedSalary', document.getElementById('a-sal').value || 0);
