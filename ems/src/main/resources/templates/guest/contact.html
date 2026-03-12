@@ -1,0 +1,351 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      th:replace="~{guest/layout :: layout('Contact Us', ~{::content}, 'contact')}">
+<body>
+<th:block th:fragment="content">
+<style>
+  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+  .anim-1{animation:fadeUp .6s ease both .05s}.anim-2{animation:fadeUp .6s ease both .15s}.anim-3{animation:fadeUp .6s ease both .25s}
+
+  .page-hero {
+    background:linear-gradient(135deg,#1414b8,#4f46e5);
+    padding:52px 24px 120px; position:relative; overflow:hidden;
+  }
+  .page-hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px);background-size:24px 24px;}
+  .page-hero::after{content:'';position:absolute;bottom:-2px;left:0;right:0;height:80px;background:var(--bg-light);clip-path:ellipse(60% 100% at 50% 100%);}
+  .page-hero-inner{max-width:1200px;margin:0 auto;position:relative;z-index:1;color:white;}
+  .breadcrumb{display:flex;align-items:center;gap:6px;font-size:12px;color:rgba(255,255,255,.6);margin-bottom:16px;}
+  .breadcrumb a{color:rgba(255,255,255,.6);text-decoration:none;} .breadcrumb a:hover{color:white;}
+
+  .section{max-width:1200px;margin:0 auto;padding:64px 24px;}
+
+  /* Layout */
+  .contact-layout{display:grid;grid-template-columns:340px 1fr;gap:32px;align-items:start;margin-top:-60px;}
+
+  /* Info card */
+  .contact-info-card{background:white;border-radius:18px;border:1px solid var(--border);overflow:hidden;position:sticky;top:84px;}
+  .contact-info-top{background:linear-gradient(135deg,var(--primary),var(--accent));padding:28px;color:white;}
+  .contact-info-top h3{font-size:18px;font-weight:800;margin-bottom:8px;}
+  .contact-info-top p{font-size:13px;color:rgba(255,255,255,.75);line-height:1.6;}
+  .contact-info-body{padding:22px;}
+  .cinfo-item{display:flex;align-items:flex-start;gap:14px;margin-bottom:20px;}
+  .cinfo-item:last-child{margin-bottom:0;}
+  .cinfo-icon{width:42px;height:42px;border-radius:11px;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .cinfo-label{font-size:11px;color:var(--text-muted);font-weight:600;margin-bottom:3px;}
+  .cinfo-val{font-size:14px;font-weight:600;}
+  .cinfo-val a{color:var(--text-dark);text-decoration:none;} .cinfo-val a:hover{color:var(--primary);}
+  .social-row{display:flex;gap:10px;margin-top:22px;}
+  .social-btn{width:38px;height:38px;border-radius:10px;background:var(--bg-light);border:1.5px solid var(--border);display:flex;align-items:center;justify-content:center;color:var(--text-mid);cursor:pointer;transition:all .15s;text-decoration:none;}
+  .social-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light);}
+
+  /* Form card */
+  .contact-form-card{background:white;border-radius:18px;border:1px solid var(--border);padding:32px;}
+  .contact-form-card h2{font-size:20px;font-weight:800;margin-bottom:6px;}
+  .contact-form-card .sub{font-size:13px;color:var(--text-muted);margin-bottom:26px;}
+  .form-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+  .form-group{display:flex;flex-direction:column;gap:5px;margin-bottom:16px;}
+  .form-group.full{grid-column:1/-1;}
+  .form-group label{font-size:12px;font-weight:600;color:var(--text-mid);}
+  .form-group input,.form-group textarea,.form-group select{border:1.5px solid var(--border);border-radius:11px;padding:11px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--text-dark);outline:none;background:var(--bg-light);transition:all .18s;}
+  .form-group input:focus,.form-group textarea:focus,.form-group select:focus{border-color:var(--primary);background:white;box-shadow:0 0 0 3px #1414b812;}
+  .form-group textarea{resize:vertical;min-height:130px;}
+  .char-count{font-size:11px;color:var(--text-muted);text-align:right;margin-top:3px;}
+  .btn-send{padding:13px 32px;border-radius:12px;background:var(--primary);color:white;font-size:15px;font-weight:700;border:none;cursor:pointer;transition:all .2s;display:inline-flex;align-items:center;gap:9px;}
+  .btn-send:hover{background:var(--primary-mid);transform:translateY(-1px);box-shadow:0 6px 20px -4px #1414b860;}
+  .btn-send:disabled{opacity:.6;cursor:not-allowed;transform:none;}
+
+  /* Map / office */
+  .offices-section{background:white;border-top:1px solid var(--border);}
+  .offices-grid{max-width:1200px;margin:0 auto;padding:64px 24px;display:grid;grid-template-columns:repeat(3,1fr);gap:20px;}
+  .office-card{background:var(--bg-light);border-radius:16px;border:1px solid var(--border);padding:24px;transition:all .2s;}
+  .office-card:hover{border-color:var(--primary);background:var(--primary-light);}
+  .office-flag{font-size:28px;margin-bottom:12px;}
+  .office-city{font-size:16px;font-weight:700;margin-bottom:4px;}
+  .office-addr{font-size:13px;color:var(--text-mid);line-height:1.6;}
+  .office-hq{display:inline-block;padding:3px 9px;border-radius:99px;font-size:11px;font-weight:700;background:var(--primary);color:white;margin-bottom:10px;}
+
+  /* FAQ */
+  .faq-grid{max-width:900px;margin:0 auto;}
+  .faq-item{background:white;border-radius:14px;border:1px solid var(--border);margin-bottom:12px;overflow:hidden;}
+  .faq-q{padding:18px 20px;font-size:14px;font-weight:600;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:12px;transition:background .15s;}
+  .faq-q:hover{background:var(--bg-light);}
+  .faq-q .icon{color:var(--text-muted);transition:transform .2s;flex-shrink:0;}
+  .faq-q.open .icon{transform:rotate(180deg);color:var(--primary);}
+  .faq-a{max-height:0;overflow:hidden;transition:max-height .3s ease;font-size:14px;color:var(--text-mid);line-height:1.75;}
+  .faq-a.open{max-height:300px;}
+  .faq-a-inner{padding:0 20px 18px;}
+
+  @media(max-width:900px){.contact-layout{grid-template-columns:1fr} .contact-info-card{position:static} .offices-grid{grid-template-columns:1fr 1fr}}
+  @media(max-width:600px){.form-row{grid-template-columns:1fr} .offices-grid{grid-template-columns:1fr}}
+</style>
+
+<!-- ── PAGE HERO ──────────────────────────────────────────── -->
+<div class="page-hero">
+  <div class="page-hero-inner">
+    <div class="breadcrumb">
+      <a th:href="@{/guest}">Home</a>
+      <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+      <span>Contact</span>
+    </div>
+    <h1 style="animation:fadeUp .5s ease both;">Get In Touch</h1>
+    <p style="animation:fadeUp .5s ease both .1s;color:rgba(255,255,255,.75);font-size:15px;max-width:500px;">
+      Have a question, or want to learn more about a role? We'd love to hear from you.
+    </p>
+  </div>
+</div>
+
+<!-- ── CONTACT LAYOUT ────────────────────────────────────── -->
+<div style="max-width:1200px;margin:0 auto;padding:0 24px 64px;">
+  <div class="contact-layout">
+
+    <!-- Info Card -->
+    <aside class="contact-info-card anim-1">
+      <div class="contact-info-top">
+        <h3>Contact Information</h3>
+        <p>Reach out anytime — our team is here to help.</p>
+      </div>
+      <div class="contact-info-body">
+        <!-- Contact Info (static) -->
+        <div class="cinfo-item">
+          <div class="cinfo-icon"><span class="material-symbols-outlined fill-icon">location_on</span></div>
+          <div>
+            <div class="cinfo-label">Headquarters</div>
+            <div class="cinfo-val">123 Business District, Hanoi, Vietnam</div>
+          </div>
+        </div>
+        <div class="cinfo-item">
+          <div class="cinfo-icon"><span class="material-symbols-outlined fill-icon">mail</span></div>
+          <div>
+            <div class="cinfo-label">Email Us</div>
+            <div class="cinfo-val"><a href="/cdn-cgi/l/email-protection#a3c0c2d1c6c6d1d0e3cbd1ced3d1cc8dc0ccce"><span class="__cf_email__" data-cfemail="a6c5c7d4c3c3d4d5e6ced4cbd6d4c988c5c9cb">[email&#160;protected]</span></a></div>
+          </div>
+        </div>
+        <div class="cinfo-item">
+          <div class="cinfo-icon"><span class="material-symbols-outlined fill-icon">phone</span></div>
+          <div>
+            <div class="cinfo-label">Call Us</div>
+            <div class="cinfo-val"><a href="tel:+842412345678">+84 24 1234 5678</a></div>
+          </div>
+        </div>
+        <div class="cinfo-item">
+          <div class="cinfo-icon"><span class="material-symbols-outlined fill-icon">schedule</span></div>
+          <div>
+            <div class="cinfo-label">Working Hours</div>
+            <div class="cinfo-val">Mon – Fri, 8:00 AM – 6:00 PM</div>
+          </div>
+        </div>
+        <div class="social-row">
+          <a href="#" class="social-btn" title="LinkedIn"><span class="material-symbols-outlined" style="font-size:18px">link</span></a>
+          <a href="#" class="social-btn" title="Facebook"><span class="material-symbols-outlined fill-icon" style="font-size:18px">public</span></a>
+          <a href="#" class="social-btn" title="Twitter"><span class="material-symbols-outlined" style="font-size:18px">alternate_email</span></a>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Form Card -->
+    <div class="contact-form-card anim-2">
+      <h2>Send Us a Message</h2>
+      <p class="sub">Fill out the form and our team will get back to you within 24 hours.</p>
+
+      <!-- Alert (JS-driven) -->
+      <div id="contact-success" style="display:none;background:#dcfce7;border:1px solid #bbf7d0;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:none;align-items:center;gap:10px;font-size:14px;color:#15803d;">
+        <span class="material-symbols-outlined fill-icon">check_circle</span>
+        <span id="contact-success-msg">Your message has been sent!</span>
+      </div>
+      <div id="contact-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;border-radius:12px;padding:14px 18px;margin-bottom:20px;display:none;align-items:center;gap:10px;font-size:14px;color:#dc2626;">
+        <span class="material-symbols-outlined fill-icon">error</span>
+        <span id="contact-error-msg">Something went wrong. Please try again.</span>
+      </div>
+
+      <form id="contact-form" onsubmit="submitContact(event)">
+        <div class="form-row">
+          <div class="form-group">
+            <label>Your Name *</label>
+            <input type="text" name="senderName" id="contact-name" placeholder="Nguyen Van A" required/>
+          </div>
+          <div class="form-group">
+            <label>Email Address *</label>
+            <input type="email" name="senderEmail" id="contact-email" placeholder="you@email.com" required/>
+          </div>
+          <div class="form-group">
+            <label>Phone Number</label>
+            <input type="tel" name="senderPhone" placeholder="+84 9xx xxx xxx"/>
+          </div>
+          <div class="form-group">
+            <label>Topic</label>
+            <select name="topic" style="appearance:none;cursor:pointer;">
+              <option value="">Select a topic</option>
+              <option value="job_inquiry">Job Inquiry</option>
+              <option value="application">Application Status</option>
+              <option value="general">General Question</option>
+              <option value="partnership">Partnership</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div class="form-group full">
+            <label>Message *</label>
+            <textarea name="message" id="msg-area" placeholder="How can we help you?" maxlength="1000" required oninput="updateCount()"></textarea>
+            <div class="char-count"><span id="char-count">0</span> / 1000</div>
+          </div>
+        </div>
+        <button type="submit" class="btn-send" id="send-btn">
+          <span class="material-symbols-outlined" style="font-size:18px">send</span> Send Message
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- ── OFFICES ────────────────────────────────────────────── -->
+<div class="offices-section">
+  <div style="max-width:1200px;margin:0 auto;padding:64px 24px;">
+    <p style="font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;">Our Locations</p>
+    <h2 style="font-size:26px;font-weight:800;margin-bottom:36px;">Find Us Around the Globe</h2>
+    <div class="offices-grid" style="padding:0;">
+      <div class="office-card">
+        <div class="office-flag">🇻🇳</div>
+        <span class="office-hq">HQ</span>
+        <div class="office-city">Hanoi, Vietnam</div>
+        <div class="office-addr">123 Business District, Ba Dinh, Hanoi<br/><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="1f7c7e6d7a7a6d6c5f776d726f6d70317c7072">[email&#160;protected]</a></div>
+      </div>
+      <div class="office-card">
+        <div class="office-flag">🇻🇳</div>
+        <div class="office-city">Ho Chi Minh City</div>
+        <div class="office-addr">456 Nguyen Van Linh, District 7<br/><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="39515a5479514b54494b56175a5654">[email&#160;protected]</a></div>
+      </div>
+      <div class="office-card">
+        <div class="office-flag">🇸🇬</div>
+        <div class="office-city">Singapore</div>
+        <div class="office-addr">1 Raffles Place, #20-61<br/><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="a3d0c4e3cbd1ced3d1cc8dc0ccce">[email&#160;protected]</a></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── FAQ ────────────────────────────────────────────────── -->
+<section>
+  <div class="section">
+    <p style="font-size:12px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px;text-align:center;">FAQ</p>
+    <h2 style="font-size:26px;font-weight:800;margin-bottom:8px;text-align:center;">Frequently Asked Questions</h2>
+    <p style="font-size:14px;color:var(--text-muted);margin-bottom:36px;text-align:center;">Common questions from candidates</p>
+    <div class="faq-grid">
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How do I apply for a job? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Go to the Jobs page, find a position you're interested in, and click "Apply". You'll need to fill in your personal information and upload your CV. The whole process takes about 5 minutes.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How can I track my application? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">After submitting your application, you'll receive a tracking token via email. You can use this token in the "Track Application" feature (available in the top navigation bar) to check your application status at any time.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          What file formats are accepted for CV upload? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">We accept CV files in PDF, DOC, and DOCX formats. The file size limit is 10 MB. We recommend PDF format to ensure your formatting is preserved.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          How long does the recruitment process take? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Our typical recruitment process involves CV screening (3–5 business days), technical/role-specific interview, and final interview with the hiring manager. The full process usually takes 2–4 weeks depending on the role.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Can I apply for multiple positions? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Yes, you can apply for multiple open positions. Each application is reviewed independently. We recommend tailoring your cover letter and highlighting relevant experience for each specific role.</div></div>
+      </div>
+      <div class="faq-item">
+        <div class="faq-q" onclick="toggleFaq(this)">
+          Do you offer remote work options? <span class="material-symbols-outlined icon">expand_more</span>
+        </div>
+        <div class="faq-a"><div class="faq-a-inner">Many of our roles offer hybrid or fully remote options. The work arrangement for each position is detailed in the job description. Our engineering and product teams are particularly flexible with remote work.</div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<script>
+  function toggleFaq(el) {
+    const ans = el.nextElementSibling;
+    const isOpen = ans.classList.contains('open');
+    document.querySelectorAll('.faq-a').forEach(a => a.classList.remove('open'));
+    document.querySelectorAll('.faq-q').forEach(q => q.classList.remove('open'));
+    if(!isOpen) { ans.classList.add('open'); el.classList.add('open'); }
+  }
+
+  function updateCount() {
+    const area = document.getElementById('msg-area');
+    if(area) document.getElementById('char-count').textContent = area.value.length;
+  }
+
+  function submitContact(e) {
+    e.preventDefault();
+
+    const name    = document.getElementById('contact-name').value.trim();
+    const email   = document.getElementById('contact-email').value.trim();
+    const message = document.getElementById('msg-area').value.trim();
+
+    if(!name || !email || !message) {
+      showContactError('Please fill in all required fields.');
+      return;
+    }
+
+    const btn = document.getElementById('send-btn');
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner" style="border-color:rgba(255,255,255,.35);border-top-color:white;width:16px;height:16px;border-width:2px;display:inline-block;"></span> Sending...';
+
+    fetch('/guest/contact/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        senderName: name,
+        senderEmail: email,
+        senderPhone: document.querySelector('[name="senderPhone"]').value,
+        topic: document.querySelector('[name="topic"]').value,
+        message: message
+      })
+    })
+            .then(res => res.text())
+            .then(data => {
+
+              btn.disabled = false;
+              btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Message';
+
+              document.getElementById('contact-form').reset();
+              document.getElementById('char-count').textContent = '0';
+
+              const box = document.getElementById('contact-success');
+              box.style.display = 'flex';
+
+              setTimeout(() => {
+                box.style.display = 'none';
+              }, 4000);
+
+            })
+            .catch(err => {
+
+              btn.disabled = false;
+              btn.innerHTML = '<span class="material-symbols-outlined">send</span> Send Message';
+
+              showContactError("Failed to send message");
+
+            });
+  }
+
+  function showContactError(msg) {
+    const box = document.getElementById('contact-error');
+    document.getElementById('contact-error-msg').textContent = msg;
+    box.style.display = 'flex';
+    setTimeout(() => box.style.display = 'none', 4000);
+  }
+</script>
+</th:block>
+</body>
+</html>

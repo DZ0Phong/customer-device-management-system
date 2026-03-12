@@ -1,9 +1,11 @@
 package com.group5.ems.repository;
 
-import com.group5.ems.entity.JobPost;
-import org.springframework.data.jpa.repository.JpaRepository;
-
 import java.util.List;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+
+import com.group5.ems.entity.JobPost;
 
 public interface JobPostRepository extends JpaRepository<JobPost, Long> {
 
@@ -16,3 +18,13 @@ public interface JobPostRepository extends JpaRepository<JobPost, Long> {
     int countByStatus(String status);
 }
 
+    @Query("SELECT COUNT(DISTINCT j.departmentId) FROM JobPost j")
+    long countDistinctDepartment();
+
+    @Query("""
+            SELECT COUNT(j)
+            FROM JobPost j
+            WHERE j.departmentId = :deptId
+            """)
+    long countByDepartment(Long deptId);
+}
