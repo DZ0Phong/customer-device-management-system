@@ -66,4 +66,10 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     @Query("select count(e) from Employee  e join e.user u where e.hireDate <= :date and u.status = :status")
     long countHireUpToByStatus(@Param("date") LocalDate localDate,@Param("status") String status);
 
+    // Thêm vào EmployeeRepository
+    @Query("SELECT MONTH(e.hireDate), COUNT(e) FROM Employee e " +
+            "WHERE YEAR(e.hireDate) = :year " +
+            "GROUP BY MONTH(e.hireDate) ORDER BY MONTH(e.hireDate)")
+    List<Object[]> countHiringByMonth(@Param("year") int year);
+
 }
