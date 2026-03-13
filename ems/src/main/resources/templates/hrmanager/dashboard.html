@@ -344,13 +344,13 @@
                     <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                         <h4 class="text-lg font-bold">Recent Activity</h4>
                         <div class="flex gap-2">
-                            <a th:href="@{/dashboard(activityFilter='all')}"
+                            <a th:href="@{/hrmanager/dashboard(activityFilter='all')}"
                                 th:classappend="${activityFilter == 'all' or activityFilter == null ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}"
                                 class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors">All</a>
-                            <a th:href="@{/dashboard(activityFilter='pending')}"
+                            <a th:href="@{/hrmanager/dashboard(activityFilter='pending')}"
                                 th:classappend="${activityFilter == 'pending' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}"
                                 class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors">Pending</a>
-                            <a th:href="@{/dashboard(activityFilter='approved')}"
+                            <a th:href="@{/hrmanager/dashboard(activityFilter='approved')}"
                                 th:classappend="${activityFilter == 'approved' ? 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400' : 'text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800'}"
                                 class="px-3 py-1.5 text-xs font-bold rounded-md transition-colors">Approved</a>
                         </div>
@@ -585,7 +585,7 @@
                         bodyColor: isDark ? '#94a3b8' : '#475569',
                         padding: 12,
                         callbacks: {
-                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} người`
+                            label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} `
                         }
                     }
                 },
@@ -601,7 +601,7 @@
                             color: tickColor,
                             font: { family: 'Inter', size: 12 },
                             stepSize: 10,
-                            callback: val => val + ' người'
+                            callback: val => val
                         }
                     }
                 }

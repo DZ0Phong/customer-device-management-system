@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+
 @Controller
 @RequestMapping("/hrmanager")
 @RequiredArgsConstructor
@@ -23,13 +24,16 @@ public class HrManagerController {
     private final PayrollApprovalService payrollApprovalService;
 
     @GetMapping({"", "/", "/dashboard"})
-    public String dashboard(Model model) {
+    public String dashboard(Model model,
+                            @RequestParam(defaultValue = "all") String activityFilter) { // ✅ khai báo ở đây
         model.addAttribute("kpi",              dashboardService.getKpiData());
-        model.addAttribute("chartMonths",      dashboardService.getChartMonths());
+        model.addAttribute("chartLabels",      dashboardService.getChartMonths());
+        model.addAttribute("hiringData",       dashboardService.getHiringData());
+        model.addAttribute("attritionData",    dashboardService.getAttritionData());
         model.addAttribute("upcomingEvents",   dashboardService.getUpcomingEvents());
-        model.addAttribute("recentActivities", dashboardService.getRecentActivities());
+        model.addAttribute("activityFilter",   activityFilter); // ✅ dùng được rồi
         model.addAttribute("activePage",       "dashboard");
-        return "hrmanager/dashboard";
+        model.addAttribute("recentActivities", dashboardService.getRecentActivities(activityFilter));        return "hrmanager/dashboard";
     }
 
     @GetMapping("/leave-approval")
