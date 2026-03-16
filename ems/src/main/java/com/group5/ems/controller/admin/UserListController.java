@@ -50,6 +50,7 @@ public class UserListController {
         //get dept
         model.addAttribute("departments",adminService.getDepartmentName());
 
+        model.addAttribute("departmentCount", adminService.getAllDepartmentsCount());
         model.addAttribute("statTotal", adminService.getStatusTotal());
         model.addAttribute("statActive", adminService.getStatusActive());
         model.addAttribute("statInactive", adminService.getStatusInactive());
