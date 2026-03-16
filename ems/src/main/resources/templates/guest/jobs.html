@@ -911,8 +911,12 @@
         </div>
 
         <div id="jobs-list">
-          <div th:each="job : ${jobs}" class="job-card-full" th:data-dept="${job.departmentId?.toString()}"
-            th:data-status="${job.status}" th:data-title="${job.title}" th:data-id="${job.id}">
+          <div th:each="job : ${jobs}" class="job-card-full" th:data-id="${job.id}" th:data-title="${job.title}"
+            th:data-dept="${job.department?.name ?: ''}" th:data-deptid="${job.departmentId?.toString()}"
+            th:data-position="${job.position?.name ?: ''}" th:data-status="${job.status}"
+            th:data-salarymin="${job.salaryMin ?: 0}" th:data-salarymax="${job.salaryMax ?: 0}"
+            th:data-closedate="${job.closeDate}" th:data-description="${job.description ?: ''}"
+            th:data-requirements="${job.requirements ?: ''}" th:data-benefits="${job.benefits ?: ''}">
             <div class="job-icon-wrap">
               <span class="material-symbols-outlined fill-icon">work</span>
             </div>

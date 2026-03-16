@@ -14,8 +14,6 @@ public class ApplicationResponseDTO {
     private Long jobId;
     private Long cvId;
     private String trackingToken;
-
-    // ── Thêm các field này ──
     private String status;
     private String appliedAt;
     private JobPostInfo jobPost;

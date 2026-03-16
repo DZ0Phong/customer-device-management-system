@@ -28,10 +28,10 @@ public class EmailService {
         mail.setTo("trantrungd83@gmail.com");
         mail.setSubject("New Contact Message: " + topic);
         mail.setText(
-            "Name: " + name + "\n" +
-            "Email: " + email + "\n" +
-            "Phone: " + phone + "\n\n" +
-            "Message:\n" + message);
+                "Name: " + name + "\n" +
+                        "Email: " + email + "\n" +
+                        "Phone: " + phone + "\n\n" +
+                        "Message:\n" + message);
         mailSender.send(mail);
     }
 
@@ -43,7 +43,7 @@ public class EmailService {
                 .orElseThrow(() -> new RuntimeException("Email template not found: " + templateCode));
 
         String subject = replacePlaceholders(template.getSubject(), variables);
-        String body    = replacePlaceholders(template.getBody(), variables);
+        String body = replacePlaceholders(template.getBody(), variables);
 
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(toEmail);
