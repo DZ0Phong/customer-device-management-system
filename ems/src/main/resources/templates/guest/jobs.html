@@ -1147,17 +1147,24 @@
       function applyFilters() {
         const cards = document.querySelectorAll('.job-card-full');
         let visible = 0;
+
         cards.forEach(c => {
-          const dept = c.dataset.dept;
+
+          const dept = c.dataset.deptid;
           const status = c.dataset.status;
           const title = c.dataset.title?.toLowerCase() || '';
+
           const deptMatch = activeDept === 'all' || dept === activeDept;
           const statusMatch = activeStatus === 'all' || status === activeStatus;
           const searchMatch = !searchQ || title.includes(searchQ);
+
           const show = deptMatch && statusMatch && searchMatch;
+
           c.style.display = show ? 'flex' : 'none';
+
           if (show) visible++;
         });
+
         document.getElementById('count-display').textContent = visible;
         document.getElementById('empty-state').style.display = visible === 0 ? 'block' : 'none';
       }
