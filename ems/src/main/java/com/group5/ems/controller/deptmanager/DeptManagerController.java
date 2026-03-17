@@ -7,12 +7,17 @@ import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 
+import com.group5.ems.service.deptmanager.AttendanceService;
+import com.group5.ems.service.deptmanager.LeaveService;
+
 @Controller
 @RequestMapping("/dept-manager")
 @RequiredArgsConstructor
 public class DeptManagerController {
 
     private final DeptManagerService deptManagerService;
+    private final LeaveService leaveService;
+    private final AttendanceService attendanceService;
 
     @GetMapping({ "", "/", "/dashboard" })
     public String dashboard(Model model) {
@@ -37,14 +42,14 @@ public class DeptManagerController {
 
     @GetMapping("/leave-approval")
     public String leaveApproval(Model model) {
-        model.addAttribute("data", deptManagerService.getLeaveApprovalData());
+        model.addAttribute("data", leaveService.getLeaveApprovalData());
         return "deptmanager/leave-approval";
     }
 
     @GetMapping("/attendance-review")
     public String attendanceReview(Model model) {
-        model.addAttribute("data", deptManagerService.getDashboardMockData());
-        return "deptmanager/dashboard"; // Placeholder
+        model.addAttribute("data", attendanceService.getAttendanceReviewData());
+        return "deptmanager/attendance-review";
     }
 
     @GetMapping("/performance-review")
