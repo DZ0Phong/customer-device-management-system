@@ -174,35 +174,26 @@
                         </div>
                     </div>
                     <!-- Week events list -->
-                    <div class="p-6">
-                        <th:block th:if="${weekEvents != null and !weekEvents.empty}">
-                            <div th:each="event : ${weekEvents}"
-                                 class="flex items-start gap-4 py-3 border-b border-slate-100 dark:border-slate-800 last:border-0">
-                                <div th:classappend="${event.colorClass}"
-                                     class="px-3 py-1 rounded-lg text-xs font-bold min-w-[80px] text-center"
-                                     th:text="${event.timeLabel}">Time</div>
-                                <div class="flex-1">
-                                    <p class="text-sm font-bold" th:text="${event.title}">Event</p>
-                                    <p class="text-xs text-slate-500" th:text="${event.departmentName}">Department</p>
-                                </div>
-                                <div class="flex gap-2">
-                                    <button th:onclick="|openEditModal([[${event.id}]], [[${event.title}]], [[${event.description}]], [[${event.startDate}]], [[${event.endDate}]], [[${event.startTime}]], [[${event.endTime}]], [[${event.type}]], [[${event.color}]], [[${event.isAllDay}]])|"
-                                            class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
-                                        <span class="material-symbols-outlined text-sm">edit</span>
-                                    </button>
-                                    <button th:onclick="|confirmDelete([[${event.id}]], [[${event.title}]])|"
-                                            class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
-                                        <span class="material-symbols-outlined text-sm">delete</span>
-                                    </button>
-                                </div>
-                            </div>
-                        </th:block>
-                        <th:block th:if="${weekEvents == null or weekEvents.empty}">
-                            <div class="flex flex-col items-center justify-center py-12 text-slate-400">
-                                <span class="material-symbols-outlined text-4xl mb-2">event_busy</span>
-                                <p class="text-sm font-medium">No events this week</p>
-                            </div>
-                        </th:block>
+                    <div class="flex gap-2">
+                        <button th:attr="data-id=${event.id},
+                     data-title=${event.title},
+                     data-description=${event.description},
+                     data-start-date=${event.startDate},
+                     data-end-date=${event.endDate},
+                     data-start-time=${event.startTime},
+                     data-end-time=${event.endTime},
+                     data-type=${event.type},
+                     data-color=${event.color},
+                     data-all-day=${event.isAllDay}"
+                                onclick="openEditFromBtn(this)"
+                                class="p-1.5 text-slate-400 hover:text-primary hover:bg-primary/10 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">edit</span>
+                        </button>
+                        <button th:attr="data-id=${event.id}, data-title=${event.title}"
+                                onclick="confirmDeleteFromBtn(this)"
+                                class="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-sm">delete</span>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -356,193 +347,196 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    var calendarMonth        = /*[[${currentMonth}]]*/ 1;
+    var calendarYear         = /*[[${currentYear}]]*/ 2026;
+    var calendarView         = /*[[${view}]]*/ 'month';
+    var calendarEvents       = /*[[${events}]]*/ [];
+    var calendarFlashMessage = /*[[${flashMessage}]]*/ null;
+    var calendarFlashType    = /*[[${flashType}]]*/ 'success';
 
-    // ── Data từ backend ──────────────────────────────────────────────────────
-    const currentMonth = /*[[${currentMonth}]]*/ new Date().getMonth() + 1;
-    const currentYear  = /*[[${currentYear}]]*/ new Date().getFullYear();
-    const currentView  = /*[[${view}]]*/ 'month';
-    const events       = /*[[${events}]]*/ [];
-
-    const flashMessage = /*[[${flashMessage}]]*/ null;
-    const flashType    = /*[[${flashType}]]*/ 'success';
-
-    // ── Month names ──────────────────────────────────────────────────────────
-    const MONTHS = ['January','February','March','April','May','June',
+    var MONTHS = ['January','February','March','April','May','June',
         'July','August','September','October','November','December'];
-    const DAYS   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 
-    // ── Set period label ──────────────────────────────────────────────────────
     document.getElementById('currentPeriodLabel').textContent =
-        currentView === 'week'
-            ? `Week of ${MONTHS[currentMonth - 1]} ${currentYear}`
-            : `${MONTHS[currentMonth - 1]} ${currentYear}`;
+        calendarView === 'week'
+            ? 'Week of ' + MONTHS[calendarMonth - 1] + ' ' + calendarYear
+            : MONTHS[calendarMonth - 1] + ' ' + calendarYear;
 
-    // ── Build Month Grid ──────────────────────────────────────────────────────
     function buildMonthGrid() {
-        const grid = document.getElementById('monthGrid');
+        var grid = document.getElementById('monthGrid');
         if (!grid) return;
 
-        const today    = new Date();
-        const firstDay = new Date(currentYear, currentMonth - 1, 1).getDay();
-        const daysInMonth = new Date(currentYear, currentMonth, 0).getDate();
-        const daysInPrevMonth = new Date(currentYear, currentMonth - 1, 0).getDate();
+        var today         = new Date();
+        var firstDay      = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+        var daysInMonth   = new Date(calendarYear, calendarMonth, 0).getDate();
+        var daysInPrev    = new Date(calendarYear, calendarMonth - 1, 0).getDate();
+        var html          = '';
 
-        let html = '';
-
-        // Previous month days
-        for (let i = firstDay - 1; i >= 0; i--) {
-            const day = daysInPrevMonth - i;
-            html += `<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">
-                    <span class="text-xs font-bold text-slate-400">${day}</span>
-                 </div>`;
+        // Ngày tháng trước
+        for (var i = firstDay - 1; i >= 0; i--) {
+            var d = daysInPrev - i;
+            html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">'
+                + '<span class="text-xs font-bold text-slate-400">' + d + '</span>'
+                + '</div>';
         }
 
-        // Current month days
-        for (let d = 1; d <= daysInMonth; d++) {
-            const isToday = d === today.getDate() && currentMonth === today.getMonth() + 1 && currentYear === today.getFullYear();
-            const dateStr = `${currentYear}-${String(currentMonth).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+        // Ngày tháng hiện tại
+        for (var d = 1; d <= daysInMonth; d++) {
+            var isToday  = d === today.getDate()
+                && calendarMonth === today.getMonth() + 1
+                && calendarYear  === today.getFullYear();
+            var mm       = String(calendarMonth).padStart(2, '0');
+            var dd       = String(d).padStart(2, '0');
+            var dateStr  = calendarYear + '-' + mm + '-' + dd;
+            var dayEvts  = calendarEvents.filter(function(e) { return e.startDate === dateStr; });
+            var ringCls  = isToday ? 'ring-2 ring-primary ring-inset' : '';
 
-            // Filter events for this day
-            const dayEvents = events.filter(e => e.startDate === dateStr);
+            var numBadge = isToday
+                ? '<span class="text-xs font-bold bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">' + d + '</span>'
+                : '<span class="text-xs font-bold text-slate-700 dark:text-slate-300">' + d + '</span>';
 
-            const todayClass = isToday ? 'ring-2 ring-primary ring-inset' : '';
+            var evtsHtml = '';
+            var shown    = dayEvts.slice(0, 3);
+            for (var j = 0; j < shown.length; j++) {
+                var ev = shown[j];
+                var evJson = JSON.stringify(ev).replace(/'/g, "\\'");
+                evtsHtml += '<div class="text-[10px] font-bold px-1.5 py-0.5 rounded truncate cursor-pointer ' + getEventBgClass(ev.color) + '"'
+                    + ' onclick="event.stopPropagation(); openEditModalFromData(\'' + evJson + '\')"'
+                    + ' title="' + (ev.title || '') + '">'
+                    + (ev.title || '')
+                    + '</div>';
+            }
+            if (dayEvts.length > 3) {
+                evtsHtml += '<div class="text-[10px] text-slate-400 font-medium px-1">+' + (dayEvts.length - 3) + ' more</div>';
+            }
 
-            html += `<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors ${todayClass}"
-                      onclick="openAddModalWithDate('${dateStr}')">
-                    <div class="flex justify-between items-start mb-1">
-                        <span class="text-xs font-bold ${isToday ? 'bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center' : 'text-slate-700 dark:text-slate-300'}">${d}</span>
-                    </div>
-                    <div class="space-y-1">
-                        ${dayEvents.slice(0, 3).map(e => `
-                            <div class="text-[10px] font-bold px-1.5 py-0.5 rounded truncate cursor-pointer ${getEventBgClass(e.color)}"
-                                 onclick="event.stopPropagation(); openEditModalFromData(${JSON.stringify(e).replace(/"/g, '&quot;')})"
-                                 title="${e.title}">
-                                ${e.title}
-                            </div>
-                        `).join('')}
-                        ${dayEvents.length > 3 ? `<div class="text-[10px] text-slate-400 font-medium px-1">+${dayEvents.length - 3} more</div>` : ''}
-                    </div>
-                 </div>`;
+            html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 cursor-pointer hover:bg-slate-50 transition-colors ' + ringCls + '"'
+                + ' onclick="openAddModalWithDate(\'' + dateStr + '\')">'
+                + '<div class="flex justify-between items-start mb-1">' + numBadge + '</div>'
+                + '<div class="space-y-1">' + evtsHtml + '</div>'
+                + '</div>';
         }
 
-        // Next month days
-        const totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
-        for (let d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
-            html += `<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">
-                    <span class="text-xs font-bold text-slate-400">${d}</span>
-                 </div>`;
+        // Ngày tháng sau
+        var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+        for (var d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
+            html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">'
+                + '<span class="text-xs font-bold text-slate-400">' + d + '</span>'
+                + '</div>';
         }
 
         grid.innerHTML = html;
     }
 
     function getEventBgClass(color) {
-        const map = {
-            blue:    'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300',
-            purple:  'bg-purple-100 text-purple-700 dark:bg-purple-900/40 dark:text-purple-300',
-            emerald: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300',
-            amber:   'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300',
-            rose:    'bg-rose-100 text-rose-700 dark:bg-rose-900/40 dark:text-rose-300',
+        var map = {
+            blue:    'bg-blue-100 text-blue-700',
+            purple:  'bg-purple-100 text-purple-700',
+            emerald: 'bg-emerald-100 text-emerald-700',
+            amber:   'bg-amber-100 text-amber-700',
+            rose:    'bg-rose-100 text-rose-700'
         };
         return map[color] || map.blue;
     }
 
-    if (currentView === 'month' || !currentView) buildMonthGrid();
+    if (calendarView === 'month' || !calendarView) buildMonthGrid();
 
-    // ── Modal helpers ─────────────────────────────────────────────────────────
     function openModal() {
-        const modal = document.getElementById('eventModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        var m = document.getElementById('eventModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
     }
-
     function closeModal() {
-        const modal = document.getElementById('eventModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        var m = document.getElementById('eventModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
         document.getElementById('eventForm').reset();
         document.getElementById('eventId').value = '';
         document.getElementById('timeFields').style.display = '';
     }
-
     function openAddModal() {
         document.getElementById('modalTitle').textContent = 'Add Event';
         document.getElementById('eventForm').action = '/hrmanager/calendar/create';
         openModal();
     }
-
     function openAddModalWithDate(dateStr) {
         openAddModal();
         document.getElementById('eventStartDate').value = dateStr;
         document.getElementById('eventEndDate').value   = dateStr;
     }
-
-    function openEditModalFromData(event) {
+    function openEditModalFromData(evStr) {
+        var ev = typeof evStr === 'string' ? JSON.parse(evStr) : evStr;
         document.getElementById('modalTitle').textContent = 'Edit Event';
         document.getElementById('eventForm').action = '/hrmanager/calendar/update';
-        document.getElementById('eventId').value          = event.id;
-        document.getElementById('eventTitle').value       = event.title || '';
-        document.getElementById('eventDescription').value = event.description || '';
-        document.getElementById('eventStartDate').value   = event.startDate || '';
-        document.getElementById('eventEndDate').value     = event.endDate || '';
-        document.getElementById('eventStartTime').value   = event.startTime || '';
-        document.getElementById('eventEndTime').value     = event.endTime || '';
-        document.getElementById('eventType').value        = event.type || 'MEETING';
-        document.getElementById('eventColor').value       = event.color || 'blue';
-        document.getElementById('eventAllDay').checked    = event.isAllDay || false;
-        toggleTimeFields(event.isAllDay || false);
+        document.getElementById('eventId').value          = ev.id;
+        document.getElementById('eventTitle').value       = ev.title || '';
+        document.getElementById('eventDescription').value = ev.description || '';
+        document.getElementById('eventStartDate').value   = ev.startDate || '';
+        document.getElementById('eventEndDate').value     = ev.endDate || '';
+        document.getElementById('eventStartTime').value   = ev.startTime || '';
+        document.getElementById('eventEndTime').value     = ev.endTime || '';
+        document.getElementById('eventType').value        = ev.type || 'MEETING';
+        document.getElementById('eventColor').value       = ev.color || 'blue';
+        document.getElementById('eventAllDay').checked    = ev.isAllDay || false;
+        toggleTimeFields(ev.isAllDay || false);
         openModal();
     }
-
-    function openEditModal(id, title, description, startDate, endDate, startTime, endTime, type, color, isAllDay) {
-        openEditModalFromData({ id, title, description, startDate, endDate, startTime, endTime, type, color, isAllDay });
+    function openEditModal(id, title, desc, sd, ed, st, et, type, color, allDay) {
+        openEditModalFromData({ id:id, title:title, description:desc, startDate:sd, endDate:ed, startTime:st, endTime:et, type:type, color:color, isAllDay:allDay });
     }
-
-    function toggleTimeFields(isAllDay) {
-        document.getElementById('timeFields').style.display = isAllDay ? 'none' : '';
+    function toggleTimeFields(allDay) {
+        document.getElementById('timeFields').style.display = allDay ? 'none' : '';
     }
-
-    // Close modal on backdrop click
     document.getElementById('eventModal').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
 
-    // ── Delete Modal ──────────────────────────────────────────────────────────
     function confirmDelete(id, name) {
-        document.getElementById('deleteEventId').value  = id;
+        document.getElementById('deleteEventId').value = id;
         document.getElementById('deleteEventName').textContent = name;
-        const modal = document.getElementById('deleteModal');
-        modal.classList.remove('hidden');
-        modal.classList.add('flex');
+        var m = document.getElementById('deleteModal');
+        m.classList.remove('hidden'); m.classList.add('flex');
     }
-
     function closeDeleteModal() {
-        const modal = document.getElementById('deleteModal');
-        modal.classList.add('hidden');
-        modal.classList.remove('flex');
+        var m = document.getElementById('deleteModal');
+        m.classList.add('hidden'); m.classList.remove('flex');
     }
-
     document.getElementById('deleteModal').addEventListener('click', function(e) {
         if (e.target === this) closeDeleteModal();
     });
 
-    // ── Toast ─────────────────────────────────────────────────────────────────
     function showToast(message, type) {
-        const toast = document.getElementById('toast');
-        const icon  = document.getElementById('toast-icon');
-        const msg   = document.getElementById('toast-msg');
+        var toast = document.getElementById('toast');
+        var icon  = document.getElementById('toast-icon');
+        var msg   = document.getElementById('toast-msg');
         msg.textContent  = message;
         icon.textContent = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
         toast.className  = toast.className.replace(/bg-\S+/g, '');
         toast.classList.add(type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-700');
-        toast.classList.remove('hidden');
-        toast.classList.add('flex');
-        setTimeout(() => { toast.classList.add('hidden'); toast.classList.remove('flex'); }, 3200);
+        toast.classList.remove('hidden'); toast.classList.add('flex');
+        setTimeout(function() { toast.classList.add('hidden'); toast.classList.remove('flex'); }, 3200);
     }
 
-    if (flashMessage) showToast(flashMessage, flashType);
+    function openEditFromBtn(btn) {
+        openEditModalFromData({
+            id:          btn.dataset.id,
+            title:       btn.dataset.title,
+            description: btn.dataset.description,
+            startDate:   btn.dataset.startDate,
+            endDate:     btn.dataset.endDate,
+            startTime:   btn.dataset.startTime,
+            endTime:     btn.dataset.endTime,
+            type:        btn.dataset.type,
+            color:       btn.dataset.color,
+            isAllDay:    btn.dataset.allDay === 'true'
+        });
+    }
 
+    function confirmDeleteFromBtn(btn) {
+        confirmDelete(btn.dataset.id, btn.dataset.title);
+    }
+
+    if (calendarFlashMessage) showToast(calendarFlashMessage, calendarFlashType);
     /*]]>*/
 </script>
+
 </body>
 </html>

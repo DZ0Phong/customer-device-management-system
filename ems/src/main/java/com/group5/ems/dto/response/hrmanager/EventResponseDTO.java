@@ -5,9 +5,6 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDate;
-import java.time.LocalTime;
-
 @Data
 @Builder
 @NoArgsConstructor
@@ -16,19 +13,17 @@ public class EventResponseDTO {
     private Long id;
     private String title;
     private String description;
-    private LocalDate startDate;
-    private LocalDate endDate;
-    private LocalTime startTime;
-    private LocalTime endTime;
+    private String startDate;      // "2026-03-18"
+    private String endDate;
+    private String startTime;      // "09:00"
+    private String endTime;
     private String type;
     private String color;
     private Boolean isAllDay;
     private String creatorName;
     private String departmentName;
-
-    // Formatted cho hiển thị
-    private String monthLabel;   // "MAR"
-    private String dayLabel;     // "17"
-    private String timeLabel;    // "09:00 AM - 11:00 AM"
-    private String colorClass;   // "bg-blue-50 dark:bg-blue-900/20 text-blue-600"
+    private String monthLabel;     // "MAR"
+    private String dayLabel;       // "18"
+    private String timeLabel;      // "09:00 AM - 11:00 AM"
+    private String colorClass;     // "bg-blue-50 text-blue-600"
 }
