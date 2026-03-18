@@ -1,18 +1,13 @@
 package com.group5.ems.controller.hr;
 
-import com.group5.ems.dto.response.HrDashboardMetricsDTO;
-import com.group5.ems.dto.response.HrEmployeeDTO;
-import com.group5.ems.dto.response.HrEmployeeDetailDTO;
-import com.group5.ems.dto.response.HrLeaveRequestDTO;
-import com.group5.ems.dto.response.HrPayrollSummaryDTO;
-import com.group5.ems.dto.response.HrRequestDTO;
-import com.group5.ems.entity.Department;
-import com.group5.ems.repository.DepartmentRepository;
-import com.group5.ems.service.hr.HrDashboardService;
-import lombok.RequiredArgsConstructor;
+import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.util.List;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -22,8 +17,29 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.util.List;
+import com.group5.ems.dto.response.HrDashboardMetricsDTO;
+import com.group5.ems.dto.response.HrEmployeeDTO;
+import com.group5.ems.dto.response.HrEmployeeDetailDTO;
+import com.group5.ems.dto.response.HrLeaveRequestDTO;
+import com.group5.ems.dto.response.HrPayrollSummaryDTO;
+import com.group5.ems.dto.response.HrRequestDTO;
+import com.group5.ems.entity.Department;
+import com.group5.ems.entity.JobPost;
+import com.group5.ems.repository.DepartmentRepository;
+import com.group5.ems.repository.JobPostRepository;
+import com.group5.ems.repository.PositionRepository;
+import com.group5.ems.service.hr.HrAttendanceService;
+import com.group5.ems.service.hr.HrDashboardService;
+import com.group5.ems.service.hr.HrEmployeeService;
+import com.group5.ems.service.hr.HrLeaveService;
+import com.group5.ems.service.hr.HrPayrollService;
+import com.group5.ems.service.hr.HrPerformanceService;
+import com.group5.ems.service.hr.HrRecruitmentService;
+import com.group5.ems.service.hr.HrRequestService;
+
+import lombok.RequiredArgsConstructor;
 
 @Controller
 @RequestMapping("/hr")
@@ -34,14 +50,16 @@ public class HrController {
     private static final int EMPLOYEE_PAGE_SIZE = 16;
 
     private final HrDashboardService dashboardService;
-    private final com.group5.ems.service.hr.HrEmployeeService employeeService;
-    private final com.group5.ems.service.hr.HrLeaveService leaveService;
-    private final com.group5.ems.service.hr.HrPayrollService payrollService;
-    private final com.group5.ems.service.hr.HrAttendanceService attendanceService;
-    private final com.group5.ems.service.hr.HrRecruitmentService recruitmentService;
-    private final com.group5.ems.service.hr.HrPerformanceService performanceService;
-    private final com.group5.ems.service.hr.HrRequestService requestService;
+    private final HrEmployeeService employeeService;
+    private final HrLeaveService leaveService;
+    private final HrPayrollService payrollService;
+    private final HrAttendanceService attendanceService;
     private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
+    private final JobPostRepository jobPostRepository;
+    private final HrRecruitmentService recruitmentService;
+    private final HrPerformanceService performanceService;
+    private final HrRequestService requestService;
 
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model) {
@@ -132,10 +150,6 @@ public class HrController {
         return "hr/payroll";
     }
 
-    @GetMapping("/recruitment")
-    public String recruitment(Model model) {
-        return "hr/recruitment";
-    }
 
     @GetMapping("/performance")
     public String performance(Model model) {
@@ -159,10 +173,74 @@ public class HrController {
         return "hr/requests";
     }
 
-    @PostMapping("/requests/{id}/approve")
-    public String approveRequest(@PathVariable Long id) {
-        requestService.approveRequest(id);
-        return "redirect:/hr/requests";
+    // ── Recruitment ────────────────────────────────────────────────────────
+
+    @GetMapping("/recruitment")
+    public String recruitment(Model model) {
+        model.addAttribute("activeJobs",        recruitmentService.getActiveJobPosts());
+        model.addAttribute("totalOpenJobs",     recruitmentService.countOpenJobs());
+        model.addAttribute("recentApplicants",  recruitmentService.getRecentApplications());
+        model.addAttribute("totalApplications", recruitmentService.countTotalApplications());
+        model.addAttribute("departments",       departmentRepository.findAll());
+        model.addAttribute("positions",         positionRepository.findAll());
+        return "hr/recruitment";
+    }
+
+    /**
+     * Create a new job post.
+     * action  → status OPEN
+     * action  → status DRAFT
+     */
+    @PostMapping("/recruitment/jobs/create")
+    public String createJobPost(
+            @RequestParam String title,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) Long positionId,
+            @RequestParam(required = false) String description,
+            @RequestParam(required = false) String requirements,
+            @RequestParam(required = false) String benefits,
+            @RequestParam(required = false) BigDecimal salaryMin,
+            @RequestParam(required = false) BigDecimal salaryMax,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate openDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate closeDate,
+            @RequestParam(defaultValue = "draft") String action,
+            RedirectAttributes redirectAttributes) {
+
+        JobPost job = new JobPost();
+        job.setTitle(title);
+        job.setDepartmentId(departmentId);
+        job.setPositionId(positionId);
+        job.setDescription(description);
+        job.setRequirements(requirements);
+        job.setBenefits(benefits);
+        job.setSalaryMin(salaryMin);
+        job.setSalaryMax(salaryMax);
+        job.setOpenDate(openDate != null ? openDate : LocalDate.now());
+        job.setCloseDate(closeDate);
+        job.setStatus("publish".equals(action) ? "OPEN" : "DRAFT");
+
+        jobPostRepository.save(job);
+
+        String msg = "publish".equals(action)
+                ? "Job post \"" + title + "\" published successfully!"
+                : "Job post \"" + title + "\" saved as draft.";
+        redirectAttributes.addFlashAttribute("successMessage", msg);
+
+        return "redirect:/hr/recruitment";
+    }
+
+    @PostMapping("/recruitment/applications/stage")
+    public String updateApplicationStage(
+            @RequestParam Long applicationId,
+            @RequestParam String stage,
+            @RequestParam(required = false, defaultValue = "") String note,
+            RedirectAttributes redirectAttributes) {
+
+        recruitmentService.updateApplicationStage(applicationId, stage, note);
+        redirectAttributes.addFlashAttribute("successMessage",
+                "Application moved to stage: " + stage);
+
+        return "redirect:/hr/recruitment";
     }
 
     @PostMapping("/requests/{id}/reject")

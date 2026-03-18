@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{guest/layout :: layout('My Applications', ~{::content}, '')}">
+      th:replace="~{home/layout :: layout('My Applications', ~{::content}, '')}">
 <body>
 <th:block th:fragment="content">
 <style>
@@ -98,7 +98,7 @@
 <div class="page-hero">
   <div class="page-hero-inner">
     <div class="breadcrumb">
-      <a th:href="@{/guest}">Home</a>
+      <a th:href="@{/home}">Home</a>
       <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
       <span>My Applications</span>
     </div>
@@ -260,7 +260,7 @@
               <span class="material-symbols-outlined" style="font-size:13px">content_copy</span>
             </span>
             <a th:if="${app.jobPost != null}"
-               th:href="@{/guest/jobs/__${app.jobPost.id}__}"
+               th:href="@{/home/jobs/__${app.jobPost.id}__}"
                style="display:inline-flex;align-items:center;gap:5px;font-size:13px;font-weight:600;color:var(--primary);text-decoration:none;">
               View Job <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
             </a>
@@ -278,7 +278,7 @@
       <p style="font-size:14px;max-width:340px;margin:0 auto 24px;">
         You haven't applied for any positions yet. Browse our open roles and submit your first application!
       </p>
-      <a th:href="@{/guest/jobs}"
+      <a th:href="@{/home/jobs}"
          style="display:inline-flex;align-items:center;gap:8px;padding:12px 24px;border-radius:12px;background:var(--primary);color:white;font-size:14px;font-weight:600;text-decoration:none;">
         <span class="material-symbols-outlined">work</span> Browse Open Jobs
       </a>

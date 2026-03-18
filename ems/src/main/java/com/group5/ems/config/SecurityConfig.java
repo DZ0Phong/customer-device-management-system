@@ -21,11 +21,11 @@ public class SecurityConfig {
         http
 
         .csrf(csrf -> csrf
-                .ignoringRequestMatchers("/guest/**")
+                .ignoringRequestMatchers("/home/**")
             )
         
         .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/login", "/error", "/guest", "/guest/**","/access-denied").permitAll()
+                .requestMatchers("/login", "/error", "/home", "/home/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/employee/**").hasRole("EMPLOYEE")
                 .requestMatchers("/dept-manager/**").hasRole("DEPT_MANAGER")
