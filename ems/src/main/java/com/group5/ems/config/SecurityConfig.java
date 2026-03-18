@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .anyRequest().authenticated()).formLogin(form -> form
                         .loginPage("/login")
                         .successHandler(customeLoginSuccessHandler).permitAll())
+                .exceptionHandling(exception -> exception
+                        .accessDeniedPage("/access-denied")
+                )
          .logout(logout -> logout
          .logoutUrl("/logout")
          .logoutSuccessUrl("/login?logout")

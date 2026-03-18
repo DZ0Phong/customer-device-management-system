@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.Query;
 
 import com.group5.ems.entity.Application;
 
+
 public interface ApplicationRepository extends JpaRepository<Application, Long> {
 
         List<Application> findByJobPostId(Long jobPostId);

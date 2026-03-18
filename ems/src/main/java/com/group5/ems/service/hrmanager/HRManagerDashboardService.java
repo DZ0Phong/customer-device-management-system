@@ -18,6 +18,11 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
+
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -26,6 +31,7 @@ public class HRManagerDashboardService {
     private final EmployeeRepository employeeRepository;
     private final RequestRepository requestRepository;
     private final JobPostRepository jobPostRepository;
+    private final CalendarService calendarService; // ← thêm
     
     public DashboardKpiResponseDTO getKpiData() {
         DashboardKpiResponseDTO kpi = new DashboardKpiResponseDTO();
@@ -60,28 +66,80 @@ public class HRManagerDashboardService {
         
         return kpi;
     }
-    
+
     public List<String> getChartMonths() {
-        return Arrays.asList("Jan", "Feb", "Mar", "Apr", "May", "Jun");
+        List<String> months = new ArrayList<>();
+        LocalDate now = LocalDate.now();
+        DateTimeFormatter fmt = DateTimeFormatter.ofPattern("MMM");
+
+        for (int i = 5; i >= 0; i--) {
+            months.add(now.minusMonths(i).format(fmt));
+        }
+        return months; // ví dụ: ["Oct", "Nov", "Dec", "Jan", "Feb", "Mar"]
     }
-    
+
     public List<UpcomingEventDTO> getUpcomingEvents() {
-        return Arrays.asList(
-            new UpcomingEventDTO("New Employee Orientation", "OCT", "12", "09:00 AM - 11:00 AM", "blue"),
-            new UpcomingEventDTO("Q3 Performance Reviews", "OCT", "14", "All Day", "purple"),
-            new UpcomingEventDTO("Benefits Enrollment Ends", "OCT", "15", "05:00 PM Deadline", "emerald")
-        );
+        return calendarService.getUpcomingEvents()
+                .stream()
+                .map(e -> new UpcomingEventDTO(
+                        e.getTitle(),
+                        e.getMonthLabel(),
+                        e.getDayLabel(),
+                        e.getTimeLabel(),
+                        e.getColor()
+                ))
+                .collect(Collectors.toList());
     }
-    
-    public List<RecentActivityDTO> getRecentActivities() {
-        // Lấy các request gần đây nhất
+
+    public List<RecentActivityDTO> getRecentActivities(String filter) {
         LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
-        List<Request> recentRequests = requestRepository.findRecentActivities(sevenDaysAgo.atStartOfDay());
-        
-        return recentRequests.stream()
-            .limit(10)
-            .map(this::mapToRecentActivityDTO)
-            .collect(Collectors.toList());
+        List<Request> requests;
+
+        if ("pending".equals(filter)) {
+            requests = requestRepository.findByStatus("PENDING");
+        } else if ("approved".equals(filter)) {
+            requests = requestRepository.findByStatus("APPROVED");
+        } else {
+            requests = requestRepository.findRecentActivities(sevenDaysAgo.atStartOfDay());
+        }
+
+        return requests.stream()
+                .limit(10)
+                .map(this::mapToRecentActivityDTO)
+                .collect(Collectors.toList());
+    }
+
+    public List<Integer> getHiringData() {
+        int currentYear = LocalDate.now().getYear();
+        List<Object[]> rawData = employeeRepository.countHiringByMonth(currentYear);
+
+        // Tạo mảng 6 tháng gần nhất, mặc định = 0
+        int currentMonth = LocalDate.now().getMonthValue();
+        int[] months = new int[6];
+        for (int i = 0; i < 6; i++) {
+            months[i] = currentMonth - 5 + i; // tháng từ 6 tháng trước đến hiện tại
+            if (months[i] <= 0) months[i] += 12; // xử lý năm trước
+        }
+
+        // Map data từ DB vào đúng vị trí tháng
+        Map<Integer, Integer> hiringMap = new HashMap<>();
+        for (Object[] row : rawData) {
+            int month = ((Number) row[0]).intValue();
+            int count = ((Number) row[1]).intValue();
+            hiringMap.put(month, count);
+        }
+
+        // Trả về list 6 tháng
+        List<Integer> result = new ArrayList<>();
+        for (int month : months) {
+            result.add(hiringMap.getOrDefault(month, 0));
+        }
+        return result;
+    }
+
+    public List<Integer> getAttritionData() {
+        // TODO: tính từ DB sau khi có termination_date
+        return Arrays.asList(12, 18, 10, 22, 15, 20);
     }
     
     private RecentActivityDTO mapToRecentActivityDTO(Request request) {
@@ -115,19 +173,18 @@ public class HRManagerDashboardService {
             request.getStatus()
         );
     }
-    
+
     private String getInitials(String fullName) {
-        if (fullName == null || fullName.trim().isEmpty()) return "N/A";
-        
+        if (fullName == null || fullName.trim().isEmpty()) return "NA";
+
         String[] parts = fullName.trim().split("\\s+");
-        StringBuilder initials = new StringBuilder();
-        
-        for (String part : parts) {
-            if (!part.isEmpty()) {
-                initials.append(part.charAt(0));
-            }
+
+        // Chỉ lấy chữ cái đầu của từ đầu và từ cuối
+        if (parts.length == 1) {
+            return parts[0].substring(0, Math.min(2, parts[0].length())).toUpperCase();
         }
-        
-        return initials.toString().toUpperCase();
+
+        return String.valueOf(parts[0].charAt(0)).toUpperCase()
+                + String.valueOf(parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 }

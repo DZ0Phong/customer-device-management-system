@@ -34,6 +34,8 @@ public class HrEmployeeServiceTest {
     void setUp() {
         User user1 = new User();
         user1.setFullName("John Doe");
+        user1.setEmail("john.doe@company.local");
+        user1.setPhone("012-345-6789");
 
         Department dept1 = new Department();
         dept1.setName("Engineering");
@@ -60,7 +62,7 @@ public class HrEmployeeServiceTest {
 
         // Assert
         assertEquals(1, result.size());
-        
+
         HrEmployeeDTO dto = result.get(0);
         assertEquals("EMP-001", dto.code());
         assertEquals("Active", dto.status());
@@ -68,5 +70,7 @@ public class HrEmployeeServiceTest {
         assertEquals("Developer", dto.position());
         assertEquals("John Doe", dto.fullName());
         assertEquals("JD", dto.initials());
+        assertEquals("john.doe@company.local", dto.email());
+        assertEquals("012-345-6789", dto.phone());
     }
 }
