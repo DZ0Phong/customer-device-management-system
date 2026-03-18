@@ -573,7 +573,7 @@
   <!-- ═══ NAVBAR ════════════════════════════════════════════════ -->
   <nav>
     <div class="nav-inner">
-      <a th:href="@{/guest}" class="nav-logo">
+      <a th:href="@{/home}" class="nav-logo">
         <div class="nav-logo-icon">
           <span class="material-symbols-outlined" style="font-size:20px">corporate_fare</span>
         </div>
@@ -584,12 +584,12 @@
       </a>
 
       <div class="nav-links">
-        <a th:href="@{/guest}" class="nav-link" th:classappend="${activePage == 'home'}    ? 'active' : ''">Home</a>
-        <a th:href="@{/guest/jobs}" class="nav-link"
+        <a th:href="@{/home}" class="nav-link" th:classappend="${activePage == 'home'}    ? 'active' : ''">Home</a>
+        <a th:href="@{/home/jobs}" class="nav-link"
           th:classappend="${activePage == 'jobs'}    ? 'active' : ''">Jobs</a>
-        <a th:href="@{/guest/about}" class="nav-link"
+        <a th:href="@{/home/about}" class="nav-link"
           th:classappend="${activePage == 'about'}   ? 'active' : ''">About</a>
-        <a th:href="@{/guest/contact}" class="nav-link"
+        <a th:href="@{/home/contact}" class="nav-link"
           th:classappend="${activePage == 'contact'} ? 'active' : ''">Contact</a>
       </div>
 
@@ -624,16 +624,16 @@
         </div>
         <div class="footer-col">
           <h4>Quick Links</h4>
-          <a th:href="@{/guest}">Home</a>
-          <a th:href="@{/guest/jobs}">Open Jobs</a>
-          <a th:href="@{/guest/about}">About Us</a>
-          <a th:href="@{/guest/contact}">Contact</a>
+          <a th:href="@{/home}">Home</a>
+          <a th:href="@{/home/jobs}">Open Jobs</a>
+          <a th:href="@{/home/about}">About Us</a>
+          <a th:href="@{/home/contact}">Contact</a>
         </div>
         <div class="footer-col">
           <h4>For Candidates</h4>
-          <a th:href="@{/guest/jobs}">Browse Jobs</a>
+          <a th:href="@{/home/jobs}">Browse Jobs</a>
           <a href="#" onclick="openTrackModal();return false;">Track Application</a>
-          <a th:href="@{/guest/contact}">Get Help</a>
+          <a th:href="@{/home/contact}">Get Help</a>
         </div>
         <div class="footer-col">
           <h4>For Employees</h4>
@@ -742,7 +742,7 @@
       document.getElementById('btn-cancel-app').classList.add('hidden');
       _trackedToken = null;
 
-      fetch('/guest/track/api/' + encodeURIComponent(token), { headers: { 'Accept': 'application/json' } })
+      fetch('/home/track/api/' + encodeURIComponent(token), { headers: { 'Accept': 'application/json' } })
         .then(r => {
           if (r.status === 404 || r.status === 204) return null;
           if (!r.ok) return null;
@@ -830,7 +830,7 @@
       btn.disabled = true;
       btn.innerHTML = '<div class="spinner"></div> Cancelling...';
 
-      fetch('/guest/application/delete/' + _trackedToken, { method: 'POST' })
+      fetch('/home/application/delete/' + _trackedToken, { method: 'POST' })
         .then(r => r.text())
         .then(() => {
           closeConfirm();

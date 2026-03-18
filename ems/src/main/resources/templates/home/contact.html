@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{guest/layout :: layout('Contact Us', ~{::content}, 'contact')}">
+      th:replace="~{home/layout :: layout('Contact Us', ~{::content}, 'contact')}">
 <body>
 <th:block th:fragment="content">
 <style>
@@ -83,7 +83,7 @@
 <div class="page-hero">
   <div class="page-hero-inner">
     <div class="breadcrumb">
-      <a th:href="@{/guest}">Home</a>
+      <a th:href="@{/home}">Home</a>
       <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
       <span>Contact</span>
     </div>
@@ -299,7 +299,7 @@
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner" style="border-color:rgba(255,255,255,.35);border-top-color:white;width:16px;height:16px;border-width:2px;display:inline-block;"></span> Sending...';
 
-    fetch('/guest/contact/send', {
+    fetch('/home/contact/send', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json'

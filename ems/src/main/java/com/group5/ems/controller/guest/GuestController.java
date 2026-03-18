@@ -31,7 +31,7 @@ import com.group5.ems.service.guest.JobPostService;
 import lombok.RequiredArgsConstructor;
 
 @Controller
-@RequestMapping("/guest")
+@RequestMapping("/home")
 @RequiredArgsConstructor
 public class GuestController {
 
@@ -53,7 +53,7 @@ public class GuestController {
         model.addAttribute("info",
                 companyService.getPublicCompanyInfo());
 
-        return "guest/company-info";
+        return "home/company-info";
     }
 
     // =============================
@@ -68,7 +68,7 @@ public class GuestController {
         model.addAttribute("applications",
                 applicationService.getApplicationsByCandidate(candidateId));
 
-        return "guest/applications";
+        return "home/applications";
     }
 
     // =============================
@@ -107,7 +107,7 @@ public class GuestController {
         model.addAttribute("cvs",
                 candidateCvService.getCandidateCvs(candidateId));
 
-        return "guest/candidate-cv";
+        return "home/candidate-cv";
     }
 
     // =============================
@@ -131,7 +131,7 @@ public class GuestController {
         model.addAttribute("deptCount",
                 jobPostService.countJobsByDepartment(null));
 
-        return "guest/index";
+        return "home/index";
     }
 
     // =============================
@@ -156,7 +156,7 @@ public class GuestController {
         model.addAttribute("deptCounts", deptCounts);
         model.addAttribute("openCount", jobs.size());
 
-        return "guest/jobs";
+        return "home/jobs";
     }
 
     @GetMapping("/jobs/department/{id}")
@@ -173,7 +173,7 @@ public class GuestController {
         model.addAttribute("openCount",
                 jobPostService.getOpenJobs().size());
 
-        return "guest/jobs";
+        return "home/jobs";
     }
 
     // =============================
@@ -188,7 +188,7 @@ public class GuestController {
         JobPost job = jobPostService.getJobDetail(id);
 
         if (job == null) {
-            return "redirect:/guest/jobs";
+            return "redirect:/home/jobs";
         }
 
         model.addAttribute("jobs",
@@ -202,7 +202,7 @@ public class GuestController {
 
         model.addAttribute("openJobId", id);
 
-        return "guest/jobs";
+        return "home/jobs";
     }
 
     // =============================
@@ -215,7 +215,7 @@ public class GuestController {
         model.addAttribute("companyInfoList",
                 companyService.getPublicCompanyInfo());
 
-        return "guest/about";
+        return "home/about";
     }
 
     // =============================
@@ -224,7 +224,7 @@ public class GuestController {
 
     @GetMapping("/contact")
     public String contact() {
-        return "guest/contact";
+        return "home/contact";
     }
 
     @PostMapping("/contact/send")

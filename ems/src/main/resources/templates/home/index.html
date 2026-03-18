@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{guest/layout :: layout('Home', ~{::content}, 'home')}">
+      th:replace="~{home/layout :: layout('Home', ~{::content}, 'home')}">
 <body>
 <th:block th:fragment="content">
 <style>
@@ -123,10 +123,10 @@
       <h1 class="anim-2">Find Your Dream<br/><span>Career With Us</span></h1>
       <p class="anim-3">Join a team of passionate professionals. Explore open positions across all departments and take the next step in your career journey.</p>
       <div class="hero-actions anim-4">
-        <a th:href="@{/guest/jobs}" class="btn-hero-primary">
+        <a th:href="@{/home/jobs}" class="btn-hero-primary">
           <span class="material-symbols-outlined">work</span> Browse Open Jobs
         </a>
-        <a th:href="@{/guest/about}" class="btn-hero-secondary">
+        <a th:href="@{/home/about}" class="btn-hero-secondary">
           <span class="material-symbols-outlined">info</span> Learn About Us
         </a>
       </div>
@@ -199,7 +199,7 @@
         <p class="section-eyebrow">Opportunities</p>
         <h2 class="section-title" style="margin-bottom:0;">Featured Open Positions</h2>
       </div>
-      <a th:href="@{/guest/jobs}" style="font-size:14px;font-weight:600;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:5px;">
+      <a th:href="@{/home/jobs}" style="font-size:14px;font-weight:600;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:5px;">
         View all jobs <span class="material-symbols-outlined" style="font-size:16px">arrow_forward</span>
       </a>
     </div>
@@ -220,7 +220,7 @@
                   th:text="'$' + ${#numbers.formatDecimal(job.salaryMin,0,'COMMA',0,'POINT')} + ' – $' + ${#numbers.formatDecimal(job.salaryMax,0,'COMMA',0,'POINT')}">$2,000 – $4,000</span>
             <span th:if="${job.salaryMin == null}">Negotiable</span>
           </div>
-          <a th:href="@{/guest/jobs/__${job.id}__}"
+          <a th:href="@{/home/jobs/__${job.id}__}"
              style="font-size:12px;font-weight:600;color:var(--primary);text-decoration:none;display:flex;align-items:center;gap:4px;">
             View <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
           </a>
@@ -232,7 +232,7 @@
       </div>
     </div>
     <div style="text-align:center;" th:if="${!#lists.isEmpty(featuredJobs)}">
-      <a th:href="@{/guest/jobs}" class="btn-view-all">
+      <a th:href="@{/home/jobs}" class="btn-view-all">
         <span class="material-symbols-outlined">work</span> See All Open Positions
       </a>
     </div>
@@ -245,10 +245,10 @@
     <h2>Ready to Start Your Journey?</h2>
     <p>Browse our open roles and apply in minutes. Your next opportunity is just a few clicks away.</p>
     <div class="btns">
-      <a th:href="@{/guest/jobs}" class="btn-hero-primary">
+      <a th:href="@{/home/jobs}" class="btn-hero-primary">
         <span class="material-symbols-outlined">work</span> Browse Jobs
       </a>
-      <a th:href="@{/guest/contact}" class="btn-hero-secondary">
+      <a th:href="@{/home/contact}" class="btn-hero-secondary">
         <span class="material-symbols-outlined">mail</span> Contact Us
       </a>
     </div>

@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-  th:replace="~{guest/layout :: layout('Open Jobs', ~{::content}, 'jobs')}">
+  th:replace="~{home/layout :: layout('Open Jobs', ~{::content}, 'jobs')}">
 
 <body>
   <script>
@@ -853,7 +853,7 @@
     <div class="page-hero">
       <div class="page-hero-inner">
         <div class="breadcrumb">
-          <a th:href="@{/guest}">Home</a>
+          <a th:href="@{/home}">Home</a>
           <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
           <span>Open Jobs</span>
         </div>
@@ -1314,7 +1314,7 @@
         fd.append('yearsExperience', document.getElementById('a-exp').value || 0);
         fd.append('expectedSalary', document.getElementById('a-sal').value || 0);
 
-        fetch('/guest/apply-full', { method: 'POST', body: fd })
+        fetch('/home/apply-full', { method: 'POST', body: fd })
           .then(async r => {
 
             if (!r.ok) {
