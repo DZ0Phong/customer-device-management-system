@@ -13,11 +13,9 @@ import java.util.Optional;
 
 public interface EmployeeRepository extends JpaRepository<Employee, Long> {
 
-    Optional<Employee> findByEmployeeCode(String employeeCode);
 
     Optional<Employee> findByUserId(Long userId);
 
-    List<Employee> findByDepartmentId(Long departmentId);
 
     @Query("select e from Employee e join fetch e.user u where e.departmentId = :departmentId")
     List<Employee> findByDepartmentIdWithUser(@Param("departmentId") Long departmentId);
@@ -71,5 +69,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
             "WHERE YEAR(e.hireDate) = :year " +
             "GROUP BY MONTH(e.hireDate) ORDER BY MONTH(e.hireDate)")
     List<Object[]> countHiringByMonth(@Param("year") int year);
+
+    @Query("SELECT e FROM Employee e JOIN FETCH e.user u")
+    List<Employee> findAllWithUser();
+
+    @Query("SELECT DISTINCT e FROM Employee e JOIN FETCH e.user u " +
+           "JOIN UserRole ur ON ur.userId = u.id " +
+           "JOIN ur.role r WHERE r.code IN :roleCodes")
+    List<Employee> findEmployeesByRoleCodes(@Param("roleCodes") List<String> roleCodes);
 
 }

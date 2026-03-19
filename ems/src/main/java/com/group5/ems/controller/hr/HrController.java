@@ -24,10 +24,12 @@ import com.group5.ems.dto.response.HrEmployeeDTO;
 import com.group5.ems.dto.response.HrEmployeeDetailDTO;
 import com.group5.ems.dto.response.HrLeaveRequestDTO;
 import com.group5.ems.dto.response.HrPayrollSummaryDTO;
+import com.group5.ems.dto.response.HrPerformanceDTO;
 import com.group5.ems.dto.response.HrRequestDTO;
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.JobPost;
 import com.group5.ems.repository.DepartmentRepository;
+import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.JobPostRepository;
 import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.service.hr.HrAttendanceService;
@@ -38,6 +40,7 @@ import com.group5.ems.service.hr.HrPayrollService;
 import com.group5.ems.service.hr.HrPerformanceService;
 import com.group5.ems.service.hr.HrRecruitmentService;
 import com.group5.ems.service.hr.HrRequestService;
+import com.group5.ems.service.admin.AdminService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -57,9 +60,11 @@ public class HrController {
     private final DepartmentRepository departmentRepository;
     private final PositionRepository positionRepository;
     private final JobPostRepository jobPostRepository;
+    private final EmployeeRepository employeeRepository;
     private final HrRecruitmentService recruitmentService;
     private final HrPerformanceService performanceService;
     private final HrRequestService requestService;
+    private final AdminService adminService;
 
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model) {
@@ -69,6 +74,7 @@ public class HrController {
         model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("openJobs", metrics.openJobPosts());
         model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/dashboard";
     }
 
@@ -88,6 +94,7 @@ public class HrController {
         model.addAttribute("search", search);
         model.addAttribute("department", department);
         model.addAttribute("status", status);
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
         // Load departments for filter dropdown
         List<Department> departments = departmentRepository.findAll();
@@ -106,6 +113,7 @@ public class HrController {
     @GetMapping("/attendance")
     public String attendance(Model model) {
         model.addAttribute("attendances", attendanceService.getAllAttendances());
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/attendance";
     }
 
@@ -115,6 +123,7 @@ public class HrController {
         HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
         model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
         model.addAttribute("pendingLeaves", leaveService.getPendingLeaves());
 
@@ -143,6 +152,7 @@ public class HrController {
     @GetMapping("/payroll")
     public String payroll(Model model) {
         model.addAttribute("payslips", payrollService.getAllPayslips());
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
         HrPayrollSummaryDTO summary = payrollService.getPayrollSummary();
         model.addAttribute("payrollSummary", summary);
@@ -151,10 +161,64 @@ public class HrController {
     }
 
 
+    // ── Performance ────────────────────────────────────────────────────────
+
     @GetMapping("/performance")
-    public String performance(Model model) {
+    public String performance(Model model,
+                              @RequestParam(defaultValue = "0") int page,
+                              @RequestParam(required = false) String search,
+                              @RequestParam(required = false) String status,
+                              @RequestParam(required = false) Long departmentId,
+                               @RequestParam(required = false) Long reviewerId,
+                              @RequestParam(required = false) String reviewYear,
+                              @RequestParam(required = false) String reviewPeriodType,
+                              @RequestParam(required = false) BigDecimal minScore,
+                              @RequestParam(required = false) BigDecimal maxScore,
+                              @RequestParam(required = false) BigDecimal minPotential,
+                              @RequestParam(required = false) BigDecimal maxPotential) {
+        String reviewPeriod = null;
+        if (reviewYear != null && !reviewYear.isEmpty()) {
+            if (reviewPeriodType != null && !reviewPeriodType.isEmpty()) {
+                reviewPeriod = reviewPeriodType.equals("Annual") ? "YEAR_" + reviewYear : reviewPeriodType + "_" + reviewYear;
+            } else {
+                reviewPeriod = "YEAR_" + reviewYear; 
+            }
+        }
+        Pageable pageable = PageRequest.of(page, 12);
+        Page<HrPerformanceDTO> reviewPage = performanceService.getReviews(search, status, departmentId, reviewerId, reviewPeriod, minScore, maxScore, minPotential, maxPotential, pageable);
+
+        model.addAttribute("appraisals", reviewPage.getContent());
+        model.addAttribute("currentPage", page);
+        model.addAttribute("totalPages", reviewPage.getTotalPages());
+        model.addAttribute("totalItems", reviewPage.getTotalElements());
+        model.addAttribute("search", search);
+        model.addAttribute("status", status);
+        model.addAttribute("departmentId", departmentId);
+        model.addAttribute("reviewerId", reviewerId);
+        model.addAttribute("reviewYear", reviewYear);
+        model.addAttribute("reviewPeriodType", reviewPeriodType);
+        model.addAttribute("minScore", minScore);
+        model.addAttribute("maxScore", maxScore);
+        model.addAttribute("minPotential", minPotential);
+        model.addAttribute("maxPotential", maxPotential);
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
+        // For filters & create modal
+        model.addAttribute("employees", employeeRepository.findAllWithUser());
+        model.addAttribute("reviewers", employeeRepository.findEmployeesByRoleCodes(List.of("HR", "HR_MANAGER")));
+        model.addAttribute("departments", departmentRepository.findAll());
+        model.addAttribute("reviewPeriods", performanceService.getDistinctReviewPeriods());
+
         return "hr/performance";
     }
+
+    @GetMapping("/performance/{id}")
+    @ResponseBody
+    public ResponseEntity<?> performanceDetail(@PathVariable Long id) {
+        return performanceService.getReviewById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
+    }
+
 
     @GetMapping("/requests")
     public String requests(Model model,

@@ -11,6 +11,9 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
+import com.group5.ems.service.common.LogService;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -25,12 +28,8 @@ import org.springframework.transaction.annotation.Transactional;
 public class HrEmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final LogService logService;
 
-    public List<HrEmployeeDTO> getAllEmployees() {
-        return employeeRepository.findAll().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
 
     public Page<HrEmployeeDTO> searchEmployees(String search, String department, String status, Pageable pageable) {
         String searchParam = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
@@ -41,6 +40,8 @@ public class HrEmployeeService {
         List<HrEmployeeDTO> dtos = page.getContent().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+        
+        logService.log(AuditAction.ACCESS, AuditEntityType.EMPLOYEE, null);
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
@@ -109,7 +110,7 @@ public class HrEmployeeService {
             }
         }
 
-        return HrEmployeeDetailDTO.builder()
+        HrEmployeeDetailDTO dto = HrEmployeeDetailDTO.builder()
                 .id(employee.getId())
                 .initials(initials.toUpperCase())
                 .fullName(fullName)
@@ -130,7 +131,11 @@ public class HrEmployeeService {
                 .contractEnd(contractEnd)
                 .contractStatus(contractStatus)
                 .build();
+        
+        logService.log(AuditAction.ACCESS, AuditEntityType.EMPLOYEE, employee.getId());
+        return dto;
     }
+
 
     private HrEmployeeDTO mapToDTO(Employee employee) {
         String initials = "";
