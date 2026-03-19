@@ -15,9 +15,12 @@ import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/hrmanager")
@@ -43,6 +46,15 @@ public class HrManagerController {
         model.addAttribute("activityFilter",   activityFilter);
         model.addAttribute("activePage",       "dashboard");
         return "hrmanager/dashboard";
+    }
+
+    // ── Dashboard Activities API (AJAX) ───────────────────────────────────────
+    @GetMapping("/dashboard/activities")
+    @ResponseBody
+    public Map<String, Object> getActivities(@RequestParam(defaultValue = "all") String filter,
+                                             @RequestParam(defaultValue = "0") int page,
+                                             @RequestParam(defaultValue = "10") int size) {
+        return dashboardService.getRecentActivitiesWithPagination(filter, page, size);
     }
 
     // ── Leave Approval ────────────────────────────────────────────────────────
@@ -86,17 +98,14 @@ public class HrManagerController {
     @GetMapping("/calendar")
     public String calendar(Model model,
                            @RequestParam(required = false) Integer month,
-                           @RequestParam(required = false) Integer year,
-                           @RequestParam(defaultValue = "month") String view) {
+                           @RequestParam(required = false) Integer year) {
         LocalDate now = LocalDate.now();
         int currentMonth = month != null ? month : now.getMonthValue();
         int currentYear  = year  != null ? year  : now.getYear();
 
         model.addAttribute("events",       calendarService.getEventsByMonth(currentMonth, currentYear));
-        model.addAttribute("weekEvents",   calendarService.getEventsByWeek(now));
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("currentYear",  currentYear);
-        model.addAttribute("view",         view);
         model.addAttribute("activePage",   "calendar");
         return "hrmanager/calendar";
     }

@@ -10,10 +10,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 public class PayrollSummaryDTO {
-    private int pendingCount;
+    private Integer pendingCount;
     private String pendingChangeLabel;
-    private boolean pendingChangePositive;
-
-    private String totalValueFormatted;   // "€450,230"
-    private int employeesCovered;
+    private Boolean pendingChangePositive;
+    private String totalValueFormatted;
+    private Integer employeesCovered;
 }
