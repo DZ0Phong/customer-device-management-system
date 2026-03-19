@@ -7,5 +7,13 @@ public enum AuditEntityType {
     ROLE,
     AUTH,
     SYSTEM,
-    EVENT
+    EVENT,
+    EMPLOYEE,
+    LEAVE,
+    ATTENDANCE,
+    PAYROLL,
+    PERFORMANCE,
+    CANDIDATE,
+    JOB_POST,
+    REQUEST
 }

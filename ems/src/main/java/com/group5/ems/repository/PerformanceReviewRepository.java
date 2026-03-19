@@ -1,21 +1,74 @@
 package com.group5.ems.repository;
 
 import com.group5.ems.entity.PerformanceReview;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
-import java.util.Optional;
 
 public interface PerformanceReviewRepository extends JpaRepository<PerformanceReview, Long> {
 
+    // ── Existing methods (used by employee role — DO NOT REMOVE) ──
     List<PerformanceReview> findByEmployeeId(Long employeeId);
 
-    Optional<PerformanceReview> findByEmployeeIdAndReviewPeriod(Long employeeId, String reviewPeriod);
 
-    List<PerformanceReview> findByReviewerId(Long reviewerId);
     List<PerformanceReview> findByEmployeeIdOrderByCreatedAtDesc(Long employeeId);
-    Optional<PerformanceReview> findTopByEmployeeIdOrderByCreatedAtDesc(Long employeeId);
 
-    // Added for Department Manager dashboard
+    // ── New methods for HR role ──────────────────────────────────
+
+    /** Search + status + advanced filters with pagination */
+    @Query(value = "SELECT pr FROM PerformanceReview pr " +
+           "JOIN FETCH pr.employee e " +
+           "JOIN FETCH e.user u " +
+           "LEFT JOIN FETCH e.department d " +
+           "LEFT JOIN FETCH pr.reviewer r " +
+           "LEFT JOIN FETCH r.user ru " +
+           "WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:status IS NULL OR pr.status = :status) " +
+           "AND (:departmentId IS NULL OR e.department.id = :departmentId) " +
+           "AND (:reviewerId IS NULL OR pr.reviewerId = :reviewerId) " +
+           "AND (:reviewPeriod IS NULL OR pr.reviewPeriod = :reviewPeriod) " +
+           "AND (:minScore IS NULL OR pr.performanceScore >= :minScore) " +
+           "AND (:maxScore IS NULL OR pr.performanceScore <= :maxScore) " +
+           "AND (:minPotential IS NULL OR pr.potentialScore >= :minPotential) " +
+           "AND (:maxPotential IS NULL OR pr.potentialScore <= :maxPotential)",
+           countQuery = "SELECT count(pr) FROM PerformanceReview pr " +
+           "JOIN pr.employee e JOIN e.user u " +
+           "WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+           "AND (:status IS NULL OR pr.status = :status) " +
+           "AND (:departmentId IS NULL OR e.department.id = :departmentId) " +
+           "AND (:reviewerId IS NULL OR pr.reviewerId = :reviewerId) " +
+           "AND (:reviewPeriod IS NULL OR pr.reviewPeriod = :reviewPeriod) " +
+           "AND (:minScore IS NULL OR pr.performanceScore >= :minScore) " +
+           "AND (:maxScore IS NULL OR pr.performanceScore <= :maxScore) " +
+           "AND (:minPotential IS NULL OR pr.potentialScore >= :minPotential) " +
+           "AND (:maxPotential IS NULL OR pr.potentialScore <= :maxPotential)")
+    Page<PerformanceReview> searchAdvanced(
+            @Param("search") String search,
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("reviewerId") Long reviewerId,
+            @Param("reviewPeriod") String reviewPeriod,
+            @Param("minScore") java.math.BigDecimal minScore,
+            @Param("maxScore") java.math.BigDecimal maxScore,
+            @Param("minPotential") java.math.BigDecimal minPotential,
+            @Param("maxPotential") java.math.BigDecimal maxPotential,
+            Pageable pageable);
+
+    /** Count by status for stats cards */
+    long countByStatus(String status);
+
+    /** Get all distinct review periods for filtering */
+    @Query("SELECT DISTINCT pr.reviewPeriod FROM PerformanceReview pr ORDER BY pr.reviewPeriod DESC")
+    List<String> findDistinctReviewPeriods();
+
+    /** Get all distinct statuses for filtering */
+    @Query("SELECT DISTINCT pr.status FROM PerformanceReview pr ORDER BY pr.status")
+    List<String> findDistinctStatuses();
+
+    // ── New methods for Dept Manager role ────────────────────────
     List<PerformanceReview> findByEmployee_DepartmentIdOrderByUpdatedAtDesc(Long departmentId);
 }
