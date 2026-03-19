@@ -5,7 +5,10 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 
 import com.group5.ems.service.deptmanager.AttendanceService;
 import com.group5.ems.service.deptmanager.LeaveService;
@@ -49,8 +52,8 @@ public class DeptManagerController {
     }
 
     @GetMapping("/attendance-review")
-    public String attendanceReview(Model model) {
-        model.addAttribute("data", attendanceService.getAttendanceReviewData());
+    public String attendanceReview(@RequestParam(required = false, defaultValue = "0") int weekOffset, Model model) {
+        model.addAttribute("data", attendanceService.getAttendanceReviewData(weekOffset));
         return "deptmanager/attendance-review";
     }
 
@@ -58,5 +61,17 @@ public class DeptManagerController {
     public String performanceReview(Model model) {
         model.addAttribute("data", performanceService.getPerformanceReviewData());
         return "deptmanager/performance-review";
+    }
+
+    @PostMapping("/leave-approval/{id}/approve")
+    public String approveLeave(@PathVariable Long id) {
+        leaveService.approveLeaveRequest(id);
+        return "redirect:/dept-manager/leave-approval";
+    }
+
+    @PostMapping("/leave-approval/{id}/reject")
+    public String rejectLeave(@PathVariable Long id) {
+        leaveService.rejectLeaveRequest(id);
+        return "redirect:/dept-manager/leave-approval";
     }
 }

@@ -242,14 +242,27 @@
                             <input class="w-full rounded-xl border-slate-200 bg-slate-50 py-2 pl-10 pr-4 text-sm focus:border-primary focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:focus:border-primary" id="search-input" placeholder="Search employee..." type="text"/>
                         </div>
                         <div class="flex items-center gap-3">
-                            <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors">
-                                <span class="material-symbols-outlined text-[18px]">filter_list</span>
-                                Filter
-                            </button>
-                            <button class="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-medium text-slate-600 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors">
-                                <span class="material-symbols-outlined text-[18px]">sort</span>
-                                Sort
-                            </button>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">filter_list</span>
+                                <select id="filter-type-select" class="appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-8 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                                    <option value="all">All Types</option>
+                                    <option value="annual">Annual Leave</option>
+                                    <option value="sick">Sick Leave</option>
+                                    <option value="other">Other Leaves</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px] pointer-events-none">expand_more</span>
+                            </div>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px] pointer-events-none">sort</span>
+                                <select id="sort-select" class="appearance-none rounded-xl border border-slate-200 bg-white py-2 pl-10 pr-8 text-sm font-medium text-slate-600 hover:bg-slate-50 focus:outline-none focus:ring-1 focus:ring-primary dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 transition-colors cursor-pointer">
+                                    <option value="newest">Newest First</option>
+                                    <option value="oldest">Oldest First</option>
+                                    <option value="duration-desc">Duration (Longest)</option>
+                                    <option value="duration-asc">Duration (Shortest)</option>
+                                    <option value="name-asc">Name (A-Z)</option>
+                                </select>
+                                <span class="material-symbols-outlined absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-[16px] pointer-events-none">expand_more</span>
+                            </div>
                         </div>
                     </div>
 
@@ -272,7 +285,7 @@
                                         No leave requests found for your department.
                                     </td>
                                 </tr>
-                                <tr th:each="req : ${data.requests}" th:attr="data-status=${req.status}, data-name=${req.employee.name}" class="request-row hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
+                                <tr th:each="req : ${data.requests}" th:attr="data-id=${req.id}, data-duration=${req.durationDays}, data-type=${#strings.toLowerCase(req.typeDisplay)}, data-status=${req.status}, data-name=${req.employee.name}" class="request-row hover:bg-slate-50/50 dark:hover:bg-slate-800/50 transition-colors group">
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <img th:src="${req.employee.avatarUrl}" class="h-9 w-9 rounded-xl object-cover shadow-sm"/>
@@ -298,12 +311,16 @@
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex justify-end gap-1.5" th:if="${req.status == 'PENDING'}">
-                                            <button class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Reject">
-                                                <span class="material-symbols-outlined text-[18px]">close</span>
-                                            </button>
-                                            <button class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve">
-                                                <span class="material-symbols-outlined text-[18px]">check</span>
-                                            </button>
+                                            <form th:action="@{/dept-manager/leave-approval/{id}/reject(id=${req.id})}" method="post">
+                                                <button type="submit" class="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors" title="Reject">
+                                                    <span class="material-symbols-outlined text-[18px]">close</span>
+                                                </button>
+                                            </form>
+                                            <form th:action="@{/dept-manager/leave-approval/{id}/approve(id=${req.id})}" method="post">
+                                                <button type="submit" class="p-1.5 text-slate-400 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg transition-colors" title="Approve">
+                                                    <span class="material-symbols-outlined text-[18px]">check</span>
+                                                </button>
+                                            </form>
                                         </div>
                                         <div th:unless="${req.status == 'PENDING'}">
                                             <span class="text-xs text-slate-400 italic">Actioned</span>
@@ -337,23 +354,53 @@
             const tbody = document.getElementById('requests-tbody');
             const rows = Array.from(tbody.querySelectorAll('.request-row'));
 
+            const filterTypeSelect = document.getElementById('filter-type-select');
+            const sortSelect = document.getElementById('sort-select');
+
             let currentTab = 'all'; // all, approved, rejected
             let searchTerm = '';
+            let filterType = 'all';
+            let currentSort = 'newest';
 
             function filterRows() {
                 rows.forEach(row => {
                     const status = row.getAttribute('data-status').toLowerCase();
                     const name = row.getAttribute('data-name').toLowerCase();
+                    const type = row.getAttribute('data-type');
 
                     const matchesTab = currentTab === 'all' || status === currentTab;
                     const matchesSearch = name.includes(searchTerm);
+                    
+                    let matchesType = true;
+                    if (filterType === 'annual' && !type.includes('annual')) matchesType = false;
+                    if (filterType === 'sick' && !type.includes('sick')) matchesType = false;
+                    if (filterType === 'other' && (type.includes('annual') || type.includes('sick'))) matchesType = false;
 
-                    if (matchesTab && matchesSearch) {
+                    if (matchesTab && matchesSearch && matchesType) {
                         row.style.display = '';
                     } else {
                         row.style.display = 'none';
                     }
                 });
+
+                sortRows();
+            }
+
+            function sortRows() {
+                const visibleRows = rows.filter(r => r.style.display !== 'none');
+                
+                visibleRows.sort((a, b) => {
+                    if (currentSort === 'newest') return parseInt(b.getAttribute('data-id')) - parseInt(a.getAttribute('data-id'));
+                    if (currentSort === 'oldest') return parseInt(a.getAttribute('data-id')) - parseInt(b.getAttribute('data-id'));
+                    
+                    if (currentSort === 'duration-desc') return parseInt(b.getAttribute('data-duration')) - parseInt(a.getAttribute('data-duration'));
+                    if (currentSort === 'duration-asc') return parseInt(a.getAttribute('data-duration')) - parseInt(b.getAttribute('data-duration'));
+                    
+                    if (currentSort === 'name-asc') return a.getAttribute('data-name').localeCompare(b.getAttribute('data-name'));
+                    return 0;
+                });
+
+                visibleRows.forEach(r => tbody.appendChild(r));
             }
 
             tabs.forEach(tab => {
@@ -376,6 +423,20 @@
                 searchInput.addEventListener('input', (e) => {
                     searchTerm = e.target.value.toLowerCase();
                     filterRows();
+                });
+            }
+
+            if (filterTypeSelect) {
+                filterTypeSelect.addEventListener('change', (e) => {
+                    filterType = e.target.value;
+                    filterRows();
+                });
+            }
+
+            if (sortSelect) {
+                sortSelect.addEventListener('change', (e) => {
+                    currentSort = e.target.value;
+                    sortRows();
                 });
             }
         });

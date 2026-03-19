@@ -21,7 +21,7 @@ public class AttendanceService {
     private final AttendanceRepository attendanceRepository;
     private final DeptManagerUtilService utilService;
 
-    public Map<String, Object> getAttendanceReviewData() {
+    public Map<String, Object> getAttendanceReviewData(int weekOffset) {
         Map<String, Object> data = new HashMap<>();
         User currentUser = utilService.getCurrentUser();
         Map<String, String> managerMap = utilService.getManagerMap(currentUser);
@@ -40,7 +40,9 @@ public class AttendanceService {
         data.put("pendingApprovals", pendingApprovals);
 
         java.time.LocalDate today = java.time.LocalDate.now();
-        java.time.LocalDate fiveDaysAgo = today.minusDays(5);
+        java.time.LocalDate targetDate = today.plusWeeks(weekOffset);
+        java.time.LocalDate monday = targetDate.with(java.time.temporal.TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
+        java.time.LocalDate sunday = monday.plusDays(6);
 
         int onTimeCount = 0;
         int lateCount = 0;
@@ -55,7 +57,7 @@ public class AttendanceService {
                 empIds.add(emp.getId());
             }
 
-            List<com.group5.ems.entity.Attendance> attendances = attendanceRepository.findByEmployeeIdInAndWorkDateBetweenOrderByWorkDateAsc(empIds, fiveDaysAgo, today);
+            List<com.group5.ems.entity.Attendance> attendances = attendanceRepository.findByEmployeeIdInAndWorkDateBetweenOrderByWorkDateAsc(empIds, monday, sunday);
 
             // Map grouped by Employee ID
             Map<Long, List<com.group5.ems.entity.Attendance>> employeeAttendanceMap = new HashMap<>();
@@ -90,21 +92,23 @@ public class AttendanceService {
                 employeeAttendanceMap.computeIfAbsent(att.getEmployeeId(), k -> new ArrayList<>()).add(att);
             }
 
-            // Generate dates for the headers (last 5 work days approx)
-            List<java.time.LocalDate> last5Days = new ArrayList<>();
-            for (int i = 4; i >= 0; i--) {
-                last5Days.add(today.minusDays(i));
+            // Generate dates for the headers (Mon-Sun)
+            List<java.time.LocalDate> weekDays = new ArrayList<>();
+            for (int i = 0; i < 7; i++) {
+                weekDays.add(monday.plusDays(i));
             }
 
             List<String> dateHeaders = new ArrayList<>();
-            for (java.time.LocalDate d : last5Days) {
+            for (java.time.LocalDate d : weekDays) {
                 dateHeaders.add(d.format(java.time.format.DateTimeFormatter.ofPattern("MMM dd")));
             }
             data.put("dateHeaders", dateHeaders);
+            data.put("weekOffset", weekOffset);
 
 
             for (Employee emp : dept.getEmployees()) {
                 Map<String, Object> empRow = new HashMap<>();
+                empRow.put("empCode", emp.getEmployeeCode() != null ? emp.getEmployeeCode() : ("EMP-" + emp.getId()));
                 empRow.put("name", emp.getUser() != null ? emp.getUser().getFullName() : "Employee");
                 empRow.put("avatarUrl", emp.getUser() != null && emp.getUser().getAvatarUrl() != null ? emp.getUser().getAvatarUrl() : "https://lh3.googleusercontent.com/aida-public/AB6AXuAx3bm_6ROku45Qad2UC6L8WqGYQTSxbQfGbrIsZyy-UW0G-0eeaUe05OzGGUPVXtUgSAXYY1km4lsQ8OMlKocQqnLvoWylgqv8HhjdOhc-kA7_Y9WGXOHncHiVIom2GDXi5UFfTRWNw-kIM5Tj5rLVJx3alhzAv1liLktNE8Zt65-kYJuInGPkWm85aD_STgeoCKnakLN1ZpxNfG-GLOhHh26_zxMgT8NQ21STEfw2DrFNb7ygWY6IQKmzRFuP-NmzVNfiEHO9zvA");
 
@@ -117,7 +121,7 @@ public class AttendanceService {
 
                 List<Map<String, String>> dailyStatus = new ArrayList<>();
 
-                for (java.time.LocalDate day : last5Days) {
+                for (java.time.LocalDate day : weekDays) {
                     boolean found = false;
                     for (com.group5.ems.entity.Attendance a : ematts) {
                         if (a.getWorkDate().equals(day)) {

@@ -125,4 +125,29 @@ public class LeaveService {
 
         return data;
     }
+
+    @Transactional
+    public void approveLeaveRequest(Long requestId) {
+        requestRepository.findById(requestId).ifPresent(req -> {
+            req.setStatus("APPROVED");
+            req.setApprovedAt(java.time.LocalDateTime.now());
+            User currentUser = utilService.getCurrentUser();
+            if (currentUser != null) {
+                req.setApprovedBy(currentUser.getId());
+            }
+            requestRepository.save(req);
+        });
+    }
+
+    @Transactional
+    public void rejectLeaveRequest(Long requestId) {
+        requestRepository.findById(requestId).ifPresent(req -> {
+            req.setStatus("REJECTED");
+            User currentUser = utilService.getCurrentUser();
+            if (currentUser != null) {
+                req.setApprovedBy(currentUser.getId());
+            }
+            requestRepository.save(req);
+        });
+    }
 }

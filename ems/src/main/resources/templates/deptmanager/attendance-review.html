@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>HRM Pro - Department Attendance Review</title>
+    <title>EMS Pro - Department Attendance Review</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
@@ -169,7 +169,7 @@
 
         <!-- Scrollable content -->
         <div class="flex-1 overflow-y-auto p-8 dot-grid">
-            <div class="max-w-6xl mx-auto space-y-8">
+            <div class="max-w-6xl mx-auto space-y-8 transition-opacity duration-200" id="attendance-container">
                 <!-- Title Section -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 anim">
                     <div>
@@ -177,8 +177,8 @@
                         <p class="text-slate-500 dark:text-slate-400 mt-1 font-medium">Weekly summary for <span th:text="${data.department != null ? data.department.name : 'Engineering Department'}">Engineering Department</span></p>
                     </div>
                     <div class="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-                        <button class="px-6 py-2 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-sm font-bold text-slate-900 dark:text-white transition-all">Weekly View</button>
-                        <button class="px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all">Daily View</button>
+                        <button id="btn-top-weekly" class="px-6 py-2 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-sm font-bold text-slate-900 dark:text-white transition-all">Weekly View</button>
+                        <button id="btn-top-daily" class="px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all">Daily View</button>
                     </div>
                 </div>
                 
@@ -237,32 +237,38 @@
                         <table class="w-full text-left">
                             <thead class="bg-slate-50 dark:bg-slate-800/50">
                                 <tr>
+                                    <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">ID</th>
                                     <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Employee</th>
-                                    <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Status</th>
                                     <th class="px-6 py-4 text-left text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">Avg Check-in</th>
                                     
                                     <th th:each="dateHeader, iterStat : ${data.dateHeaders}" 
-                                        th:text="${dateHeader}" 
-                                        th:classappend="${iterStat.index < 4} ? 'day-col' : ''"
-                                        class="px-6 py-4 text-center text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+                                        th:classappend="${iterStat.index < 6} ? 'day-col' : ''"
+                                        class="px-2 py-4 text-center text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                                        <div class="flex items-center justify-center gap-1">
+                                            <a th:if="${iterStat.index == 0}" href="javascript:void(0);" th:onclick="|fetchWeek(${data.weekOffset - 1})|" class="text-slate-400 hover:text-primary transition-colors inline-block p-1">
+                                                <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+                                            </a>
+                                            <span th:text="${dateHeader}"></span>
+                                            <a th:if="${iterStat.index == 6}" href="javascript:void(0);" th:onclick="|fetchWeek(${data.weekOffset + 1})|" class="text-slate-400 hover:text-primary transition-colors inline-block p-1">
+                                                <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+                                            </a>
+                                        </div>
                                     </th>
                                 </tr>
                             </thead>
                             <tbody class="divide-y divide-slate-100 dark:divide-slate-800 text-sm">
                                 <tr th:each="emp : ${data.attendanceTable}" class="hover:bg-slate-50 dark:hover:bg-slate-800/30 transition-colors">
+                                    <td class="px-6 py-4 font-medium text-slate-500 text-xs" th:text="${emp.empCode}">EMP-001</td>
                                     <td class="px-6 py-4">
                                         <div class="flex items-center gap-3">
                                             <div class="size-8 rounded-full bg-slate-200 dark:bg-slate-700 bg-cover" th:style="'background-image: url(' + ${emp.avatarUrl} + ')'"></div>
                                             <span class="font-bold" th:text="${emp.name}">Employee Name</span>
                                         </div>
                                     </td>
-                                    <td class="px-6 py-4">
-                                        <span class="px-2 py-1 rounded-full text-[10px] font-bold uppercase" th:classappend="${emp.statusClass}" th:text="${emp.weeklyStatus}">Status</span>
-                                    </td>
                                     <td class="px-6 py-4 text-slate-600 dark:text-slate-400 font-medium" th:text="${emp.avgCheckIn}">00:00 AM</td>
                                     <td th:each="ds, iterStat : ${emp.dailyStatus}" 
-                                        th:classappend="${iterStat.index < 4} ? 'day-col' : ''"
-                                        class="px-6 py-4 text-center">
+                                        th:classappend="${iterStat.index < 6} ? 'day-col' : ''"
+                                        class="px-2 py-4 text-center">
                                         <div class="flex justify-center">
                                             <span th:classappend="${ds.color}" class="material-symbols-outlined text-[20px]" th:text="${ds.icon}">
                                                 check_circle
@@ -332,73 +338,124 @@
     </div>
 
     <script th:inline="javascript">
-        document.addEventListener('DOMContentLoaded', () => {
+        let currentView = 'weekly';
+
+        async function fetchWeek(offset) {
+            const container = document.getElementById('attendance-container');
+            container.style.opacity = '0.5';
+            container.style.pointerEvents = 'none';
+            
+            try {
+                const response = await fetch(`/dept-manager/attendance-review?weekOffset=${offset}`);
+                const html = await response.text();
+                
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                
+                const newContainer = doc.getElementById('attendance-container');
+                container.innerHTML = newContainer.innerHTML;
+                
+                bindEvents();
+                setView(currentView); // restore view state
+                
+            } catch (e) {
+                console.error('Failed to fetch week data:', e);
+            } finally {
+                container.style.opacity = '1';
+                container.style.pointerEvents = 'auto';
+            }
+        }
+
+        function setView(view) {
+            currentView = view;
+            const btnWeekly = document.getElementById('btn-weekly-view');
+            const btnDaily = document.getElementById('btn-daily-view');
+            const btnTopWeekly = document.getElementById('btn-top-weekly');
+            const btnTopDaily = document.getElementById('btn-top-daily');
+            const dayCols = document.querySelectorAll('.day-col');
+
+            if (!btnWeekly) return; // Prevent missing elements
+
+            if (view === 'daily') {
+                btnDaily.className = 'px-4 py-2 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-colors';
+                btnWeekly.className = 'px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl transition-colors';
+                btnTopDaily.className = 'px-6 py-2 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-sm font-bold text-slate-900 dark:text-white transition-all';
+                btnTopWeekly.className = 'px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all';
+                dayCols.forEach(col => col.style.display = 'none');
+            } else {
+                btnWeekly.className = 'px-4 py-2 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-colors';
+                btnDaily.className = 'px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl transition-colors';
+                btnTopWeekly.className = 'px-6 py-2 rounded-lg bg-white dark:bg-slate-700 shadow-sm text-sm font-bold text-slate-900 dark:text-white transition-all';
+                btnTopDaily.className = 'px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all';
+                dayCols.forEach(col => col.style.display = '');
+            }
+        }
+
+        function bindEvents() {
             const btnWeekly = document.getElementById('btn-weekly-view');
             const btnDaily = document.getElementById('btn-daily-view');
             const btnExport = document.getElementById('btn-export');
-            const dayCols = document.querySelectorAll('.day-col');
-            const attendanceTable = /*[[${data.attendanceTable}]]*/ [];
-            
-            // View Toggling
-            function setView(view) {
-                if (view === 'daily') {
-                    btnDaily.className = 'px-4 py-2 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-colors';
-                    btnWeekly.className = 'px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl transition-colors';
-                    dayCols.forEach(col => col.style.display = 'none');
-                } else {
-                    btnWeekly.className = 'px-4 py-2 text-sm font-semibold text-primary bg-primary/10 rounded-xl transition-colors';
-                    btnDaily.className = 'px-4 py-2 text-sm font-semibold text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 rounded-xl transition-colors';
-                    dayCols.forEach(col => col.style.display = '');
-                }
-            }
+            const btnTopWeekly = document.getElementById('btn-top-weekly');
+            const btnTopDaily = document.getElementById('btn-top-daily');
 
-            btnWeekly.addEventListener('click', () => setView('weekly'));
-            btnDaily.addEventListener('click', () => setView('daily'));
+            if (btnWeekly) btnWeekly.addEventListener('click', () => setView('weekly'));
+            if (btnDaily) btnDaily.addEventListener('click', () => setView('daily'));
+            if (btnTopWeekly) btnTopWeekly.addEventListener('click', () => setView('weekly'));
+            if (btnTopDaily) btnTopDaily.addEventListener('click', () => setView('daily'));
 
-            // CSV Export
-            btnExport.addEventListener('click', () => {
-                if (!attendanceTable || attendanceTable.length === 0) {
-                    alert('No data to export.');
-                    return;
-                }
-
-                const headers = ['Employee Name', 'Weekly Status', 'Average Check-in', 'Lates', 'Absences'];
-                let csvContent = "data:text/csv;charset=utf-8," 
-                    + headers.join(",") + "\n";
-
-                attendanceTable.forEach(row => {
-                    // Count lates and absences from dailyStatus
-                    let lates = 0;
-                    let absences = 0;
-                    if (row.dailyStatus) {
-                        row.dailyStatus.forEach(ds => {
-                            if (ds.icon === 'schedule') lates++;
-                            if (ds.icon === 'cancel') absences++;
-                        });
+            // CSV Export logic via DOM parsing so it dynamically uses whatever's visible
+            if (btnExport) {
+                btnExport.addEventListener('click', () => {
+                    const rows = document.querySelectorAll('tbody tr');
+                    if (!rows || rows.length === 0) {
+                        alert('No data to export.');
+                        return;
                     }
 
-                    // Handle commas in names by quoting
-                    const safeName = `"${row.name.replace(/"/g, '""')}"`;
-                    
-                    const rowData = [
-                        safeName,
-                        row.weeklyStatus,
-                        row.avgCheckIn,
-                        lates,
-                        absences
-                    ];
-                    csvContent += rowData.join(",") + "\n";
-                });
+                    const headers = ['ID', 'Employee Name', 'Average Check-in', 'Lates', 'Absences'];
+                    let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
 
-                const encodedUri = encodeURI(csvContent);
-                const link = document.createElement("a");
-                link.setAttribute("href", encodedUri);
-                link.setAttribute("download", "attendance_summary.csv");
-                document.body.appendChild(link);
-                
-                link.click();
-                document.body.removeChild(link);
-            });
+                    rows.forEach(row => {
+                        if (row.cells.length < 3) return; // skip partial rows (e.g. empty states)
+                        
+                        const id = row.cells[0].innerText.trim();
+                        // Extract name ignoring avatar image
+                        const nameEl = row.cells[1].querySelector('.font-bold');
+                        const name = nameEl ? nameEl.innerText.trim() : row.cells[1].innerText.trim();
+                        const avgCheckIn = row.cells[2].innerText.trim();
+                        
+                        let lates = 0;
+                        let absences = 0;
+                        // cells 3 to 9 are the days
+                        for(let i = 3; i <= 9; i++) {
+                           if (row.cells[i]) {
+                               const icon = row.cells[i].innerText.trim();
+                               if (icon === 'schedule') lates++;
+                               if (icon === 'cancel') absences++;
+                           }
+                        }
+
+                        // Escape double quotes in name
+                        const safeName = `"${name.replace(/"/g, '""')}"`;
+                        const rowData = [id, safeName, avgCheckIn, lates, absences];
+                        csvContent += rowData.join(",") + "\n";
+                    });
+
+                    const encodedUri = encodeURI(csvContent);
+                    const link = document.createElement("a");
+                    link.setAttribute("href", encodedUri);
+                    link.setAttribute("download", "attendance_summary.csv");
+                    document.body.appendChild(link);
+                    
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            bindEvents();
+            setView(currentView);
         });
     </script>
 </body></html>
