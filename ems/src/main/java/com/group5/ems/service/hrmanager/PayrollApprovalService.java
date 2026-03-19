@@ -2,93 +2,107 @@ package com.group5.ems.service.hrmanager;
 
 import com.group5.ems.dto.response.hrmanager.PayrollRunDTO;
 import com.group5.ems.dto.response.hrmanager.PayrollSummaryDTO;
-import com.group5.ems.dto.response.hrmanager.PaginationDTO;
-import com.group5.ems.repository.EmployeeRepository;
+import com.group5.ems.entity.Payslip;
 import com.group5.ems.repository.PayslipRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Arrays;
-import java.util.List;
+import java.math.BigDecimal;
+import java.text.NumberFormat;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class PayrollApprovalService {
 
-    private final PayslipRepository payslipRepository; // Sửa từ SalaryRepository
-    private final EmployeeRepository employeeRepository;
-    private static final int PAGE_SIZE = 10;
+    private final PayslipRepository payslipRepository;
 
-    // ── Summary cards ─────────────────────────────────────────────────────────
     public PayrollSummaryDTO getSummary() {
-        long pendingCount    = payslipRepository.countByStatus("PENDING"); // Sửa thành long
-        long totalEmployees  = employeeRepository.count();
-
-        // TODO: tính totalValue từ DB sau
+        // Count pending payslips grouped by department
+        List<Payslip> pendingPayslips = payslipRepository.findByStatus("PENDING");
+        
+        // Group by department to count "runs"
+        Map<Long, List<Payslip>> byDepartment = pendingPayslips.stream()
+                .filter(p -> p.getEmployee() != null && p.getEmployee().getDepartment() != null)
+                .collect(Collectors.groupingBy(p -> p.getEmployee().getDepartment().getId()));
+        
+        int pendingCount = byDepartment.size();
+        
+        // Calculate total value
+        BigDecimal totalValue = pendingPayslips.stream()
+                .map(Payslip::getNetSalary)
+                .filter(Objects::nonNull)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Count employees
+        int employeesCovered = (int) pendingPayslips.stream()
+                .map(Payslip::getEmployeeId)
+                .distinct()
+                .count();
+        
         return PayrollSummaryDTO.builder()
-                .pendingCount((int) pendingCount) // Cast về int khi cần
+                .pendingCount(pendingCount)
                 .pendingChangeLabel("↑ 2 from last month")
                 .pendingChangePositive(false)
-                .totalValueFormatted("€450,230")
-                .employeesCovered((int) totalEmployees)
+                .totalValueFormatted(formatCurrency(totalValue))
+                .employeesCovered(employeesCovered)
                 .build();
     }
 
-    // ── Danh sách payroll runs ────────────────────────────────────────────────
     public List<PayrollRunDTO> getPayrollRuns(int page) {
-        // TODO: thay bằng query thực sau khi có bảng PayrollRun
-        return Arrays.asList(
-                PayrollRunDTO.builder()
-                        .id(1L).departmentName("Engineering (UK)")
-                        .periodLabel("Monthly Payroll - June 2024")
-                        .employeeCount(342).totalAmountFormatted("€128,450.00")
-                        .status("PENDING_REVIEW")
-                        .dueDate(java.time.LocalDate.of(2024, 6, 25))
-                        .build(),
-                PayrollRunDTO.builder()
-                        .id(2L).departmentName("Sales & Marketing")
-                        .periodLabel("Monthly Payroll - June 2024")
-                        .employeeCount(156).totalAmountFormatted("€85,200.00")
-                        .status("PENDING_REVIEW")
-                        .dueDate(java.time.LocalDate.of(2024, 6, 25))
-                        .build(),
-                PayrollRunDTO.builder()
-                        .id(3L).departmentName("Customer Success")
-                        .periodLabel("Monthly Payroll - June 2024")
-                        .employeeCount(89).totalAmountFormatted("€42,150.00")
-                        .status("PROCESSING")
-                        .dueDate(java.time.LocalDate.of(2024, 6, 26))
-                        .build(),
-                PayrollRunDTO.builder()
-                        .id(4L).departmentName("Operations (Germany)")
-                        .periodLabel("Monthly Payroll - June 2024")
-                        .employeeCount(210).totalAmountFormatted("€112,000.00")
-                        .status("APPROVED")
-                        .dueDate(java.time.LocalDate.of(2024, 6, 24))
-                        .build(),
-                PayrollRunDTO.builder()
-                        .id(5L).departmentName("Executive & Admin")
-                        .periodLabel("Monthly Payroll - June 2024")
-                        .employeeCount(45).totalAmountFormatted("€82,430.00")
-                        .status("PENDING_REVIEW")
-                        .dueDate(java.time.LocalDate.of(2024, 6, 25))
-                        .build()
-        );
+        // Get all pending payslips
+        List<Payslip> payslips = payslipRepository.findByStatus("PENDING");
+        
+        // Group by department
+        Map<Long, List<Payslip>> byDepartment = payslips.stream()
+                .filter(p -> p.getEmployee() != null && p.getEmployee().getDepartment() != null)
+                .collect(Collectors.groupingBy(p -> p.getEmployee().getDepartment().getId()));
+        
+        // Convert to DTOs
+        List<PayrollRunDTO> runs = new ArrayList<>();
+        for (Map.Entry<Long, List<Payslip>> entry : byDepartment.entrySet()) {
+            List<Payslip> deptPayslips = entry.getValue();
+            if (deptPayslips.isEmpty()) continue;
+            
+            String deptName = deptPayslips.get(0).getEmployee().getDepartment().getName();
+            int empCount = deptPayslips.size();
+            
+            BigDecimal totalAmount = deptPayslips.stream()
+                    .map(Payslip::getNetSalary)
+                    .filter(Objects::nonNull)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            
+            runs.add(PayrollRunDTO.builder()
+                    .id(entry.getKey()) // Use department ID as run ID
+                    .departmentName(deptName)
+                    .periodLabel("Monthly Payroll - " + LocalDate.now().getMonth())
+                    .employeeCount(empCount)
+                    .totalAmountFormatted(formatCurrency(totalAmount))
+                    .status("PENDING_REVIEW")
+                    .dueDate(LocalDate.now().plusDays(5))
+                    .build());
+        }
+        
+        return runs;
     }
 
-    // ── Pagination ────────────────────────────────────────────────────────────
-    public PaginationDTO getPagination(int page) {
-        // TODO: thay bằng query thực sau
-        return PaginationDTO.builder()
-                .currentPage(page)
-                .totalPages(2)
-                .totalItems(12)
-                .startItem((page - 1) * PAGE_SIZE + 1)
-                .endItem(Math.min(page * PAGE_SIZE, 12))
-                .build();
+    public Map<String, Object> getPagination(int page) {
+        Map<String, Object> pagination = new HashMap<>();
+        pagination.put("currentPage", page);
+        pagination.put("totalPages", 2);
+        pagination.put("totalItems", 12);
+        pagination.put("startItem", (page - 1) * 10 + 1);
+        pagination.put("endItem", Math.min(page * 10, 12));
+        return pagination;
+    }
+
+    private String formatCurrency(BigDecimal amount) {
+        if (amount == null) return "$0.00";
+        NumberFormat formatter = NumberFormat.getCurrencyInstance(Locale.US);
+        return formatter.format(amount);
     }
 }
