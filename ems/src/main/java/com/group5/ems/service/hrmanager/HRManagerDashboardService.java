@@ -109,6 +109,57 @@ public class HRManagerDashboardService {
                 .collect(Collectors.toList());
     }
 
+    public Map<String, Object> getRecentActivitiesWithPagination(String filter, int page, int size) {
+        LocalDate sevenDaysAgo = LocalDate.now().minusDays(7);
+        List<Request> allRequests;
+
+        if ("pending".equals(filter)) {
+            allRequests = requestRepository.findByStatusWithDetails("PENDING");
+        } else if ("approved".equals(filter)) {
+            allRequests = requestRepository.findByStatusWithDetails("APPROVED");
+        } else {
+            allRequests = requestRepository.findRecentActivities(sevenDaysAgo.atStartOfDay());
+        }
+
+        // Handle empty list
+        if (allRequests == null || allRequests.isEmpty()) {
+            Map<String, Object> result = new HashMap<>();
+            result.put("activities", new ArrayList<>());
+            result.put("currentPage", 0);
+            result.put("totalPages", 0);
+            result.put("totalElements", 0);
+            result.put("pageSize", size);
+            result.put("filter", filter);
+            return result;
+        }
+
+        // Manual pagination
+        int totalElements = allRequests.size();
+        int totalPages = (int) Math.ceil((double) totalElements / size);
+        
+        // Validate page number
+        if (page < 0) page = 0;
+        if (page >= totalPages) page = Math.max(0, totalPages - 1);
+        
+        int start = page * size;
+        int end = Math.min(start + size, totalElements);
+
+        List<RecentActivityDTO> activities = allRequests.subList(start, end)
+                .stream()
+                .map(this::mapToRecentActivityDTO)
+                .collect(Collectors.toList());
+
+        Map<String, Object> result = new HashMap<>();
+        result.put("activities", activities);
+        result.put("currentPage", page);
+        result.put("totalPages", totalPages);
+        result.put("totalElements", totalElements);
+        result.put("pageSize", size);
+        result.put("filter", filter);
+
+        return result;
+    }
+
     public List<Integer> getHiringData() {
         int currentYear = LocalDate.now().getYear();
         List<Object[]> rawData = employeeRepository.countHiringByMonth(currentYear);
