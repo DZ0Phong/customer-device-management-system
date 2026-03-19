@@ -9,7 +9,7 @@ public class AuthController {
 
     @GetMapping("/")
     public String index() {
-        return "redirect:/guest/jobs";  // landing page = guest portal
+        return "redirect:/home";  // landing page = guest portal
     }
 
     @GetMapping("/login")
