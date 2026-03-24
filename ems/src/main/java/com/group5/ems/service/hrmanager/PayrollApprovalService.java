@@ -80,8 +80,10 @@ public class PayrollApprovalService {
                             .periodLabel(periodLabel)
                             .employeeCount(deptPayslips.size())
                             .totalAmountFormatted(formatCurrency(total))
-                            .status("PENDING_REVIEW")
-                            .dueDate(LocalDate.now().plusDays(5))
+                            .status(first.getStatus() != null ? first.getStatus() : "PENDING")
+                            .dueDate(first.getPeriod() != null && first.getPeriod().getEndDate() != null 
+                                    ? first.getPeriod().getEndDate() 
+                                    : LocalDate.now().plusDays(5))
                             .build();
                 })
                 .collect(Collectors.toList());
