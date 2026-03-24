@@ -72,7 +72,7 @@ public class EmployeeController {
 
         model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
         model.addAttribute("balances", leaveService.getLeaveBalances(employee.getId()));
-        model.addAttribute("history", leaveService.getLeaveHistory(employee.getId()));
+        model.addAttribute("leaveHistory", leaveService.getLeaveHistory(employee.getId()));
 
         return "employee/leave";
     }

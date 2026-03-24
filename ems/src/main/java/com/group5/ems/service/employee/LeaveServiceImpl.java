@@ -13,6 +13,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
@@ -31,7 +32,6 @@ public class LeaveServiceImpl {
     public List<LeaveBalanceDTO> getLeaveBalances(Long employeeId) {
         List<Request> allLeaves = requestRepository.findByEmployeeIdAndLeaveTypeIsNotNull(employeeId);
 
-        // Tính balance cho từng loại leave
         List<LeaveBalanceDTO> balances = new ArrayList<>();
         balances.add(buildBalance("ANNUAL_LEAVE", 12.0, allLeaves));
         balances.add(buildBalance("SICK_LEAVE", 10.0, allLeaves));
@@ -42,18 +42,57 @@ public class LeaveServiceImpl {
 
     @Transactional(readOnly = true)
     public List<LeaveRequestDTO> getLeaveHistory(Long employeeId) {
-        return requestRepository.findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(employeeId)
+        return requestRepository.findByEmployeeIdAndLeaveTypeIsNotNull(employeeId)
                 .stream()
+                .sorted((a, b) -> b.getCreatedAt().compareTo(a.getCreatedAt()))
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
     @Transactional
     public void createLeaveRequest(Long employeeId, CreateLeaveRequestDTO dto) {
-        Employee employee = employeeRepository.findById(employeeId)
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        // ── Validate ngày ──────────────────────────────────
+        if (dto.getLeaveFrom() == null || dto.getLeaveTo() == null) {
+            throw new RuntimeException("Please select both start and end dates.");
+        }
 
-        // Map leaveType -> request_type code
+        if (dto.getLeaveFrom().isBefore(LocalDate.now())) {
+            throw new RuntimeException("Leave start date cannot be in the past.");
+        }
+
+        if (dto.getLeaveTo().isBefore(dto.getLeaveFrom())) {
+            throw new RuntimeException("End date must be after or equal to start date.");
+        }
+
+        // ── Kiểm tra trùng ngày ────────────────────────────
+        List<Request> existing = requestRepository.findByEmployeeIdAndLeaveTypeIsNotNull(employeeId);
+        boolean overlap = existing.stream()
+                .filter(r -> !"REJECTED".equals(r.getStatus()))
+                .filter(r -> r.getLeaveFrom() != null && r.getLeaveTo() != null)
+                .anyMatch(r ->
+                        !dto.getLeaveFrom().isAfter(r.getLeaveTo()) &&
+                                !dto.getLeaveTo().isBefore(r.getLeaveFrom())
+                );
+
+        if (overlap) {
+            throw new RuntimeException("You already have a leave request overlapping this period.");
+        }
+
+        // ── Kiểm tra balance ───────────────────────────────
+        double requestedDays = ChronoUnit.DAYS.between(dto.getLeaveFrom(), dto.getLeaveTo()) + 1;
+        List<LeaveBalanceDTO> balances = getLeaveBalances(employeeId);
+
+        balances.stream()
+                .filter(b -> b.getLeaveType().equals(dto.getLeaveType()))
+                .findFirst()
+                .ifPresent(b -> {
+                    if (requestedDays > b.getRemainingDays()) {
+                        throw new RuntimeException("Insufficient leave balance. You have "
+                                + (int) b.getRemainingDays() + " day(s) remaining.");
+                    }
+                });
+
+        // ── Map leaveType -> request_type code ────────────
         String requestTypeCode = switch (dto.getLeaveType()) {
             case "SICK_LEAVE" -> "LEAVE_SICK";
             case "PERSONAL_LEAVE" -> "LEAVE_UNPAID";
@@ -63,6 +102,7 @@ public class LeaveServiceImpl {
         RequestType requestType = requestTypeRepository.findByCode(requestTypeCode)
                 .orElseThrow(() -> new RuntimeException("Request type not found: " + requestTypeCode));
 
+        // ── Tạo request ────────────────────────────────────
         Request request = new Request();
         request.setEmployeeId(employeeId);
         request.setRequestTypeId(requestType.getId());
@@ -70,7 +110,7 @@ public class LeaveServiceImpl {
         request.setLeaveFrom(dto.getLeaveFrom());
         request.setLeaveTo(dto.getLeaveTo());
         request.setContent(dto.getContent());
-        request.setTitle(dto.getLeaveType().replace("_", " ") + " request");
+        request.setTitle(dto.getLeaveType().replace("_", " ") + " Request");
         request.setStatus("PENDING");
         request.setCreatedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
