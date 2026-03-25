@@ -11,5 +11,9 @@ public record PayrollRunSummaryDTO(
     int totalPayslips,
     BigDecimal companyTotalGross,
     BigDecimal companyTotalNet,
-    boolean isFullyApproved
+    boolean isFullyApproved,
+    String netVarianceIndicator,
+    int anomalyCount,
+    int negativeNetCount,
+    int highOvertimeCount
 ) {}

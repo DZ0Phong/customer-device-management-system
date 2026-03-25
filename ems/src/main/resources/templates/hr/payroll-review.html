@@ -32,32 +32,10 @@
 <div class="flex h-screen overflow-hidden">
 
     <!-- SIDEBAR (Simplified for context) -->
-    <aside class="w-72 bg-white border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
-        <div class="px-6 py-6 flex items-center gap-3 relative z-10">
-            <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
-                <span class="material-symbols-outlined text-[22px]">corporate_fare</span>
-            </div>
-            <div>
-                <h1 class="text-base font-black tracking-tight">EMS Pro</h1>
-                <p class="text-[11px] text-slate-400 font-medium">HR Workspace</p>
-            </div>
-        </div>
-
-        <nav class="flex-1 px-3 space-y-0.5 overflow-y-auto">
-            <p class="px-3 pb-1 pt-1 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Main</p>
-            <a th:href="@{/hr/dashboard}" class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group">
-                <span class="material-symbols-outlined text-[20px] text-slate-400 group-hover:text-primary transition-colors">dashboard</span>
-                <span class="text-sm font-medium">Dashboard</span>
-            </a>
-            <a th:href="@{/hr/payroll-periods}" class="nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl">
-                <span class="material-symbols-outlined fill-icon text-[20px]">date_range</span>
-                <span class="text-sm font-semibold">Payroll Periods</span>
-            </a>
-            <!-- Other Nav items omitted for brevity, should use layout in real app -->
-        </nav>
-    </aside>
+    <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SIDEBAR                                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <div th:replace="~{fragments/hr-sidebar :: sidebar('payroll-periods')}"></div>
 
     <!-- Main Content -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -111,9 +89,42 @@
                     </div>
                     <div class="bg-white shadow-sm border border-slate-200 rounded-xl p-6 hover:shadow-md transition-shadow">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Company Total Net</p>
-                        <p class="text-3xl font-black text-primary font-mono" 
-                           th:text="'$' + ${#numbers.formatDecimal(summary.companyTotalNet, 1, 'COMMA', 2, 'POINT')}">$0.00</p>
+                        <div class="flex items-end justify-between">
+                            <p class="text-3xl font-black text-primary font-mono" 
+                               th:text="'$' + ${#numbers.formatDecimal(summary.companyTotalNet, 1, 'COMMA', 2, 'POINT')}">$0.00</p>
+                            <span th:if="${summary.netVarianceIndicator != null}" 
+                                  th:classappend="${summary.netVarianceIndicator.startsWith('+')} ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'"
+                                  class="text-[10px] font-bold px-2 py-0.5 rounded-full mb-1"
+                                  th:text="${summary.netVarianceIndicator}">
+                                +2.4%
+                            </span>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Exception Filters -->
+                <div class="flex flex-wrap items-center gap-2 anim anim-3">
+                    <a th:href="@{/hr/payroll-review/{id}(id=${summary.periodId}, filter='all')}"
+                       th:classappend="${currentFilter == 'all' ? 'bg-slate-800 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-50'}"
+                       class="px-4 py-2 rounded-full text-xs font-bold transition-all">
+                        All (<span th:text="${summary.totalPayslips}">5000</span>)
+                    </a>
+                    <a th:href="@{/hr/payroll-review/{id}(id=${summary.periodId}, filter='anomalies')}"
+                       th:classappend="${currentFilter == 'anomalies' ? 'bg-rose-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-rose-50'}"
+                       class="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1 transition-all">
+                        <span class="material-symbols-outlined text-[14px]">warning</span>
+                        Anomalies (<span th:text="${summary.anomalyCount}">12</span>)
+                    </a>
+                    <a th:href="@{/hr/payroll-review/{id}(id=${summary.periodId}, filter='negative')}"
+                       th:classappend="${currentFilter == 'negative' ? 'bg-rose-600 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-rose-50'}"
+                       class="px-4 py-2 rounded-full text-xs font-bold transition-all">
+                        Negative Net Pay (<span th:text="${summary.negativeNetCount}">2</span>)
+                    </a>
+                    <a th:href="@{/hr/payroll-review/{id}(id=${summary.periodId}, filter='overtime')}"
+                       th:classappend="${currentFilter == 'overtime' ? 'bg-amber-500 text-white shadow-md' : 'bg-white text-slate-600 border border-slate-200 hover:bg-amber-50'}"
+                       class="px-4 py-2 rounded-full text-xs font-bold transition-all">
+                        High Overtime (<span th:text="${summary.highOvertimeCount}">10</span>)
+                    </a>
                 </div>
 
                 <!-- Data Table -->
@@ -129,6 +140,7 @@
                             <thead>
                             <tr class="bg-slate-50/80 sticky top-0 z-10 whitespace-nowrap">
                                 <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 italic">ID</th>
+                                <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">Alerts</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Employee</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">Gross Salary</th>
                                 <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">Deductions</th>
@@ -139,6 +151,13 @@
                             <tbody class="divide-y divide-slate-50">
                             <tr th:each="p : ${payslips.content}" class="hover:bg-primary/[2%] transition-colors">
                                 <td class="px-5 py-4 text-[10px] font-bold text-slate-300 font-mono italic" th:text="'#' + ${p.payslipId}">#1</td>
+                                <td class="px-5 py-4 text-center">
+                                    <div class="flex items-center justify-center gap-1">
+                                        <span th:if="${p.isNegativeNet}" title="Negative or Zero Net Pay" class="material-symbols-outlined text-rose-500 text-[18px] cursor-help">warning</span>
+                                        <span th:if="${p.isHighOvertime}" title="High Overtime" class="material-symbols-outlined text-amber-500 text-[18px] cursor-help">schedule_alert</span>
+                                        <span th:if="${!p.isNegativeNet && !p.isHighOvertime}" class="text-slate-200">-</span>
+                                    </div>
+                                </td>
                                 <td class="px-5 py-4">
                                     <div class="flex items-center gap-3">
                                         <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-xs"
@@ -158,7 +177,8 @@
                                           th:text="${#numbers.formatDecimal(p.totalDeductions, 1, 2)}">0.00</span>
                                 </td>
                                 <td class="px-5 py-4 text-right">
-                                    <span class="text-sm font-bold text-emerald-600 font-mono" 
+                                    <span th:classappend="${p.isNegativeNet} ? 'text-rose-600' : 'text-emerald-600'"
+                                          class="text-sm font-bold font-mono" 
                                           th:text="${#numbers.formatDecimal(p.netSalary, 1, 2)}">0.00</span>
                                 </td>
                                 <td class="px-5 py-4 text-center">
@@ -181,7 +201,12 @@
                 <div class="flex flex-col md:flex-row items-center justify-between gap-6 pb-12 anim anim-4">
                     <div th:replace="~{fragments/pagination :: pagination(pageData=${payslips}, baseUrl='/hr/payroll-review/' + ${periodId})}"></div>
 
-                    <div th:if="${!summary.isFullyApproved}">
+                    <div th:if="${!summary.isFullyApproved}" class="flex items-center gap-3">
+                        <a th:href="@{/hr/payroll-review/{periodId}/export-draft(periodId=${summary.periodId})}"
+                           class="inline-flex items-center gap-2 bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 rounded-xl px-6 py-3.5 shadow-sm transition-all text-sm font-bold active:scale-95">
+                            <span class="material-symbols-outlined text-[20px]">file_download</span>
+                            Download Draft Excel
+                        </a>
                         <button type="button" onclick="openModal()"
                                 class="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white rounded-xl px-10 py-3.5 shadow-xl shadow-green-100 hover:shadow-2xl hover:-translate-y-1 transition-all text-sm font-bold active:scale-95">
                             <span class="material-symbols-outlined text-[20px]">verified_user</span>

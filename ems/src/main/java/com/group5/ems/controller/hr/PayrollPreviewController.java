@@ -25,7 +25,6 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
  */
 @Controller
 @RequestMapping("/hr/payroll-preview")
-@PreAuthorize("hasAnyRole('ADMIN', 'HR_MANAGER')")
 @RequiredArgsConstructor
 public class PayrollPreviewController {
 
