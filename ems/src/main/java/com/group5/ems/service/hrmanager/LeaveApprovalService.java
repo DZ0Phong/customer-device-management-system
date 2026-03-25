@@ -162,8 +162,45 @@ public class LeaveApprovalService {
         }
         
         return requestPage.getContent().stream()
-                .map(LeaveRequestResponseDTO::new)
+                .map(request -> {
+                    LeaveRequestResponseDTO dto = new LeaveRequestResponseDTO(request);
+                    calculateLeaveBalance(dto, request);
+                    return dto;
+                })
                 .collect(Collectors.toList());
+    }
+    
+    /**
+     * Calculate leave balance for a request
+     */
+    private void calculateLeaveBalance(LeaveRequestResponseDTO dto, Request request) {
+        if (request.getEmployee() == null) {
+            dto.setCurrentBalance(0);
+            dto.setUsedThisYear(0);
+            dto.setAnnualQuota(20);
+            dto.setBalanceAfterApproval(0);
+            return;
+        }
+        
+        Long employeeId = request.getEmployeeId();
+        
+        // Count approved leave days this year
+        List<Request> approvedRequests = requestRepository.findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(employeeId);
+        int usedDays = approvedRequests.stream()
+                .filter(r -> "APPROVED".equals(r.getStatus()))
+                .filter(r -> r.getLeaveFrom() != null && r.getLeaveFrom().getYear() == java.time.LocalDate.now().getYear())
+                .mapToInt(r -> (int) java.time.temporal.ChronoUnit.DAYS.between(r.getLeaveFrom(), r.getLeaveTo()) + 1)
+                .sum();
+        
+        int annualQuota = 20;
+        int currentBalance = annualQuota - usedDays;
+        int requestDays = (int) dto.getDaysCount();
+        int balanceAfter = currentBalance - requestDays;
+        
+        dto.setCurrentBalance(currentBalance);
+        dto.setUsedThisYear(usedDays);
+        dto.setAnnualQuota(annualQuota);
+        dto.setBalanceAfterApproval(Math.max(0, balanceAfter));
     }
 
     /**
