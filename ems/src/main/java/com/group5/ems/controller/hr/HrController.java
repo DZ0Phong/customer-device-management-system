@@ -37,6 +37,7 @@ import com.group5.ems.dto.response.HrRequestDTO;
 import com.group5.ems.dto.response.InterviewerDTO;
 import com.group5.ems.entity.CandidateCv;
 import com.group5.ems.entity.Department;
+import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.JobPost;
 import com.group5.ems.repository.DepartmentRepository;
 import com.group5.ems.repository.EmployeeRepository;
@@ -45,6 +46,7 @@ import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.repository.UserRepository;
 import com.group5.ems.service.admin.AdminService;
 import com.group5.ems.service.hr.HrAttendanceService;
+import com.group5.ems.service.hr.HrBankDetailsService;
 import com.group5.ems.service.hr.HrDashboardService;
 import com.group5.ems.service.hr.HrEmployeeService;
 import com.group5.ems.service.hr.HrLeaveService;
@@ -77,6 +79,7 @@ public class HrController {
     private final HrPerformanceService performanceService;
     private final HrRequestService requestService;
     private final AdminService adminService;
+    private final HrBankDetailsService bankDetailsService;
 
     @GetMapping({ "", "/", "/dashboard" })
     public String dashboard(Model model) {
@@ -444,5 +447,44 @@ public class HrController {
         return userRepository.findByUsername(principal.getUsername())
                 .map(user -> user.getId())
                 .orElse(null);
+    }
+
+    // ── Bank Details Management ──────────────────────────────────────────
+
+    @GetMapping("/bank-details/{id}")
+    public String employeeBankDetails(@PathVariable Long id, Model model) {
+        Employee employee = employeeRepository.findByIdWithDetails(id)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        
+        model.addAttribute("employee", employee);
+        model.addAttribute("bankDetails", bankDetailsService.getMaskedBankDetails(id));
+        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
+        return "hr/bank-details";
+    }
+
+    @PostMapping("/bank-details/{employeeId}/{bankId}/set-primary")
+    public String setPrimaryBankDetail(@PathVariable Long employeeId,
+                                       @PathVariable Long bankId,
+                                       RedirectAttributes redirectAttributes) {
+        try {
+            bankDetailsService.setPrimaryAccount(employeeId, bankId);
+            redirectAttributes.addFlashAttribute("successMessage", "Primary account updated!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/bank-details/" + employeeId;
+    }
+
+    @PostMapping("/bank-details/{employeeId}/{bankId}/delete")
+    public String deleteBankDetail(@PathVariable Long employeeId,
+                                   @PathVariable Long bankId,
+                                   RedirectAttributes redirectAttributes) {
+        try {
+            bankDetailsService.deleteBankDetail(employeeId, bankId);
+            redirectAttributes.addFlashAttribute("successMessage", "Bank detail deleted!");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/bank-details/" + employeeId;
     }
 }
