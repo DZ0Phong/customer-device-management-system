@@ -6,6 +6,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface PayrollReviewService {
-    Page<PayslipReviewDTO> getPaginatedReview(Long periodId, Pageable pageable);
+    Page<PayslipReviewDTO> getPaginatedReview(Long periodId, String filter, Pageable pageable);
     PayrollRunSummaryDTO getRunSummary(Long periodId);
+    byte[] exportDraftCsv(Long periodId);
 }

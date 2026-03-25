@@ -57,12 +57,45 @@ public interface PayslipRepository extends JpaRepository<Payslip, Long> {
     // --- Task 4.1: Review Dashboard Queries ---
 
     @Query("SELECT new com.group5.ems.dto.hr.PayslipReviewDTO(" +
-            "p.id, e.employeeCode, u.fullName, p.totalGrossSalary, p.totalDeduction, p.netSalary, p.status) " +
+            "p.id, e.employeeCode, u.fullName, p.actualBaseSalary, p.totalGrossSalary, p.totalDeduction, p.netSalary, p.status, p.totalOtAmount, p.totalBonus) " +
             "FROM Payslip p " +
             "JOIN p.employee e " +
             "JOIN e.user u " +
             "WHERE p.periodId = :periodId")
     Page<PayslipReviewDTO> findReviewDTOByPeriodId(@Param("periodId") Long periodId, Pageable pageable);
+
+    @Query("SELECT new com.group5.ems.dto.hr.PayslipReviewDTO(" +
+            "p.id, e.employeeCode, u.fullName, p.actualBaseSalary, p.totalGrossSalary, p.totalDeduction, p.netSalary, p.status, p.totalOtAmount, p.totalBonus) " +
+            "FROM Payslip p " +
+            "JOIN p.employee e " +
+            "JOIN e.user u " +
+            "WHERE p.periodId = :periodId AND p.netSalary <= 0")
+    Page<PayslipReviewDTO> findReviewDTONegativeNetByPeriodId(@Param("periodId") Long periodId, Pageable pageable);
+
+    @Query("SELECT new com.group5.ems.dto.hr.PayslipReviewDTO(" +
+            "p.id, e.employeeCode, u.fullName, p.actualBaseSalary, p.totalGrossSalary, p.totalDeduction, p.netSalary, p.status, p.totalOtAmount, p.totalBonus) " +
+            "FROM Payslip p " +
+            "JOIN p.employee e " +
+            "JOIN e.user u " +
+            "WHERE p.periodId = :periodId AND p.totalOtAmount > :threshold")
+    Page<PayslipReviewDTO> findReviewDTOHighOvertimeByPeriodId(@Param("periodId") Long periodId, @Param("threshold") BigDecimal threshold, Pageable pageable);
+
+    @Query("SELECT new com.group5.ems.dto.hr.PayslipReviewDTO(" +
+            "p.id, e.employeeCode, u.fullName, p.actualBaseSalary, p.totalGrossSalary, p.totalDeduction, p.netSalary, p.status, p.totalOtAmount, p.totalBonus) " +
+            "FROM Payslip p " +
+            "JOIN p.employee e " +
+            "JOIN e.user u " +
+            "WHERE p.periodId = :periodId AND (p.netSalary <= 0 OR p.totalOtAmount > :threshold)")
+    Page<PayslipReviewDTO> findReviewDTOAnomaliesByPeriodId(@Param("periodId") Long periodId, @Param("threshold") BigDecimal threshold, Pageable pageable);
+
+    @Query("SELECT COUNT(p) FROM Payslip p WHERE p.periodId = :periodId AND p.netSalary <= 0")
+    int countNegativeNetByPeriodId(@Param("periodId") Long periodId);
+
+    @Query("SELECT COUNT(p) FROM Payslip p WHERE p.periodId = :periodId AND p.totalOtAmount > :threshold")
+    int countHighOvertimeByPeriodId(@Param("periodId") Long periodId, @Param("threshold") BigDecimal threshold);
+
+    @Query("SELECT COUNT(p) FROM Payslip p WHERE p.periodId = :periodId AND (p.netSalary <= 0 OR p.totalOtAmount > :threshold)")
+    int countAnomaliesByPeriodId(@Param("periodId") Long periodId, @Param("threshold") BigDecimal threshold);
 
     @Query("SELECT COUNT(p) FROM Payslip p WHERE p.periodId = :periodId AND p.status = 'PENDING'")
     long countPendingByPeriodId(@Param("periodId") Long periodId);
