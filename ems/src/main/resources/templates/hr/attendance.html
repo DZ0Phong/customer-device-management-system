@@ -40,128 +40,183 @@
 
         <!-- ─── Main ───────────────────────────────────────────────── -->
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
-            <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
-                <div>
-                    <h2 class="text-base font-black text-slate-900 leading-tight">Daily Attendance</h2>
-                    <p class="text-xs text-slate-400" th:text="${#dates.format(#dates.createNow(), 'EEEE, d MMMM yyyy')}">March 9, 2026</p>
-                </div>
-                <div class="flex items-center gap-3">
-                    <input type="date" class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm" value="2026-03-09">
-                    <button class="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30">
-                        <span class="material-symbols-outlined text-[18px]">download</span>
-                        Export Record
-                    </button>
-                </div>
-            </header>
-
-            <div class="flex-1 overflow-y-auto p-8 dot-grid">
-                <div class="max-w-7xl mx-auto space-y-6">
-                    
-                    <!-- Stats -->
-                    <div class="grid grid-cols-1 md:grid-cols-4 gap-4 anim anim-1">
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Present</p>
-                                <p class="text-3xl font-black text-emerald-600 mt-1">412</p>
-                            </div>
-                            <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500">
-                                <span class="material-symbols-outlined fill-icon">how_to_reg</span>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Late In</p>
-                                <p class="text-3xl font-black text-amber-500 mt-1">12</p>
-                            </div>
-                            <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
-                                <span class="material-symbols-outlined fill-icon">schedule</span>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">On Leave</p>
-                                <p class="text-3xl font-black text-blue-500 mt-1">15</p>
-                            </div>
-                            <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
-                                <span class="material-symbols-outlined fill-icon">beach_access</span>
-                            </div>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between">
-                            <div>
-                                <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Absent (No Notice)</p>
-                                <p class="text-3xl font-black text-rose-500 mt-1">4</p>
-                            </div>
-                            <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
-                                <span class="material-symbols-outlined fill-icon">person_off</span>
-                            </div>
-                        </div>
+            <form method="get" th:action="@{/hr/attendance}" id="filterForm" class="flex flex-col h-full m-0 p-0">
+                <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+                    <div>
+                        <h2 class="text-base font-black text-slate-900 leading-tight">Daily Attendance</h2>
+                        <p class="text-xs text-slate-400" th:text="${#temporals.format(date, 'EEEE, d MMMM yyyy')}">March 9, 2026</p>
                     </div>
+                    <div class="flex items-center gap-3">
+                        <input type="date" name="date" class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm" th:value="${date}" onchange="document.getElementById('filterForm').submit()">
+                        <button type="button" class="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30">
+                            <span class="material-symbols-outlined text-[18px]">download</span>
+                            Export Record
+                        </button>
+                    </div>
+                </header>
 
-                    <!-- Attendance Table -->
-                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden anim anim-1 flex flex-col">
-                        <div class="p-5 border-b border-slate-50 flex items-center justify-between">
-                            <h3 class="text-sm font-black text-slate-800">Todays Log</h3>
-                            <div class="flex gap-2">
-                                <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1 mr-2">
-                                    <span class="material-symbols-outlined text-slate-400 text-sm">search</span>
-                                    <input type="text" placeholder="Search employee..." class="bg-transparent border-none text-xs w-full focus:ring-0 p-0 text-slate-700">
+                <div class="flex-1 overflow-y-auto p-8 dot-grid">
+                    <div class="max-w-7xl mx-auto space-y-6">
+                        
+                        <!-- Stats -->
+                        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 anim anim-1">
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Present</p>
+                                    <p class="text-3xl font-black text-emerald-600 mt-1" th:text="${stats != null ? stats.presentCount() : 0}">412</p>
                                 </div>
-                                <select class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-7">
-                                    <option>Status: All</option>
-                                    <option>Present</option>
-                                    <option>Late</option>
-                                    <option>Absent</option>
-                                </select>
+                                <div class="w-12 h-12 bg-emerald-50 rounded-xl flex items-center justify-center text-emerald-500">
+                                    <span class="material-symbols-outlined fill-icon">how_to_reg</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Late In</p>
+                                    <p class="text-3xl font-black text-amber-500 mt-1" th:text="${stats != null ? stats.lateCount() : 0}">12</p>
+                                </div>
+                                <div class="w-12 h-12 bg-amber-50 rounded-xl flex items-center justify-center text-amber-500">
+                                    <span class="material-symbols-outlined fill-icon">schedule</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">On Leave</p>
+                                    <p class="text-3xl font-black text-blue-500 mt-1" th:text="${stats != null ? stats.leaveCount() : 0}">15</p>
+                                </div>
+                                <div class="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
+                                    <span class="material-symbols-outlined fill-icon">beach_access</span>
+                                </div>
+                            </div>
+                            <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm flex items-center justify-between hover:shadow-md transition-shadow">
+                                <div>
+                                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Absent / No Notice</p>
+                                    <p class="text-3xl font-black text-rose-500 mt-1" th:text="${stats != null ? stats.absentCount() : 0}">4</p>
+                                </div>
+                                <div class="w-12 h-12 bg-rose-50 rounded-xl flex items-center justify-center text-rose-500">
+                                    <span class="material-symbols-outlined fill-icon">person_off</span>
+                                </div>
                             </div>
                         </div>
-                        <div class="flex-1 overflow-auto">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50/70">
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Employee</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Department</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Check In</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Check Out</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Status</th>
-                                        <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Action</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="divide-y divide-slate-50">
-                                    <!-- Log Items -->
-                                    <tr th:each="att : ${attendances}" class="hover:bg-primary/[2%] transition-colors">
-                                        <td class="px-5 py-4">
-                                            <div class="flex items-center gap-2.5">
-                                                <div class="w-7 h-7 rounded-full bg-slate-100 font-bold text-slate-400 text-[10px] flex items-center justify-center">
-                                                    <span th:text="${att.initials}">JD</span>
-                                                </div>
-                                                <div>
-                                                    <p class="text-xs font-semibold text-slate-800" th:text="${att.employeeName}">Jane Doe</p>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td class="px-5 py-4"><span class="text-xs text-slate-500 font-medium" th:text="${att.department}">Engineering</span></td>
-                                        <td class="px-5 py-4">
-                                            <span th:if="${att.checkIn != null}" class="font-mono text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md" th:text="${att.checkIn}">08:55 AM</span>
-                                            <span th:if="${att.checkIn == null}" class="font-mono text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-dashed border-slate-200">--:-- --</span>
-                                        </td>
-                                        <td class="px-5 py-4">
-                                            <span th:if="${att.checkOut != null}" class="font-mono text-xs text-slate-700 bg-slate-100 px-2.5 py-1 rounded-md" th:text="${att.checkOut}">05:00 PM</span>
-                                            <span th:if="${att.checkOut == null}" class="font-mono text-xs text-slate-400 bg-slate-50 px-2.5 py-1 rounded-md border border-dashed border-slate-200">--:-- --</span>
-                                        </td>
-                                        <td class="px-5 py-4">
-                                            <span th:if="${att.status == 'PRESENT'}" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Present</span>
-                                            <span th:if="${att.status == 'LATE'}" class="text-[10px] font-bold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full">Late In</span>
-                                            <span th:if="${att.status == 'ABSENT'}" class="text-[10px] font-bold bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">Absent</span>
-                                        </td>
-                                        <td class="px-5 py-4"><button class="text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors"><span class="material-symbols-outlined text-[18px]">edit_square</span></button></td>
-                                    </tr>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
 
+                        <!-- Attendance Table -->
+                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden anim anim-1 flex flex-col">
+                            <div class="p-5 border-b border-slate-50 flex flex-wrap lg:flex-nowrap gap-4 items-center justify-between bg-slate-50/30">
+                                <h3 class="text-sm font-black text-slate-800 whitespace-nowrap">Today's Log</h3>
+                                <div class="flex flex-wrap items-center gap-2">
+                                    <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-1.5 shadow-sm">
+                                        <span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+                                        <input type="text" name="search" th:value="${search}" placeholder="Search name or ID..." class="bg-transparent border-none text-xs w-48 focus:ring-0 p-0 text-slate-700" onkeypress="if(event.key === 'Enter') document.getElementById('filterForm').submit()">
+                                    </div>
+                                    <select name="departmentId" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="">All Departments</option>
+                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${dept.id == departmentId}"></option>
+                                    </select>
+                                    <select name="status" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm" onchange="document.getElementById('filterForm').submit()">
+                                        <option value="">Status: All</option>
+                                        <option value="PRESENT" th:selected="${status == 'PRESENT'}">Present</option>
+                                        <option value="LATE" th:selected="${status == 'LATE'}">Late In</option>
+                                        <option value="ABSENT" th:selected="${status == 'ABSENT'}">Absent</option>
+                                        <option value="LEAVE" th:selected="${status == 'LEAVE'}">On Leave</option>
+                                    </select>
+                                    <button type="submit" class="bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold hover:bg-slate-700 transition">Filter</button>
+                                </div>
+                            </div>
+                            <div class="flex-1 overflow-auto">
+                                <table class="w-full text-left border-collapse whitespace-nowrap">
+                                    <thead>
+                                        <tr class="bg-slate-50 border-b border-slate-100">
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Employee</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Department</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check In</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Check Out</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
+                                            <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-center">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody class="divide-y divide-slate-50">
+                                        <!-- Empty State -->
+                                        <tr th:if="${#lists.isEmpty(attendances)}">
+                                            <td colspan="6" class="px-5 py-8 text-center text-slate-500">
+                                                <span class="material-symbols-outlined text-4xl text-slate-300 mb-2 block">event_busy</span>
+                                                <p class="text-sm font-medium">No attendance records found.</p>
+                                                <p class="text-xs text-slate-400 mt-1">Try adjusting your search criteria or date.</p>
+                                            </td>
+                                        </tr>
+                                        <!-- Log Items -->
+                                        <tr th:each="att : ${attendances}" class="hover:bg-primary/[2%] transition-colors group">
+                                            <td class="px-5 py-3">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-8 h-8 rounded-full bg-slate-100 font-bold text-slate-400 text-[10px] flex items-center justify-center shrink-0 border border-slate-200">
+                                                        <span th:text="${att.initials()}">JD</span>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-semibold text-slate-800 leading-tight group-hover:text-primary transition-colors" th:text="${att.fullName()}">Jane Doe</p>
+                                                        <p class="text-[10px] text-slate-400 font-mono mt-0.5" th:text="${att.employeeCode()}">EMP-1000</p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-5 py-3"><span class="text-xs text-slate-600 font-medium" th:text="${att.departmentName() != null ? att.departmentName() : 'Unassigned'}">Engineering</span></td>
+                                            <td class="px-5 py-3">
+                                                <span th:if="${att.checkIn() != null}" class="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-1 rounded-md" th:text="${#temporals.format(att.checkIn(), 'hh:mm a')}">08:55 AM</span>
+                                                <span th:if="${att.checkIn() == null}" class="font-mono text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-dashed border-slate-200">--:--</span>
+                                            </td>
+                                            <td class="px-5 py-3">
+                                                <span th:if="${att.checkOut() != null}" class="font-mono text-xs text-slate-700 bg-slate-100 px-2 py-1 rounded-md" th:text="${#temporals.format(att.checkOut(), 'hh:mm a')}">05:00 PM</span>
+                                                <span th:if="${att.checkOut() == null}" class="font-mono text-xs text-slate-400 bg-slate-50 px-2 py-1 rounded-md border border-dashed border-slate-200">--:--</span>
+                                            </td>
+                                            <td class="px-5 py-3">
+                                                <span th:if="${att.status() == 'PRESENT'}" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full border border-emerald-200">Present</span>
+                                                <span th:if="${att.status() == 'LATE'}" class="text-[10px] font-bold bg-amber-100 text-amber-700 px-2.5 py-1 rounded-full border border-amber-200">Late In</span>
+                                                <span th:if="${att.status() == 'ABSENT'}" class="text-[10px] font-bold bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full border border-rose-200">Absent</span>
+                                                <span th:if="${att.status() == 'LEAVE'}" class="text-[10px] font-bold bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full border border-blue-200">On Leave</span>
+                                                <span th:if="${att.status() == 'OFF'}" class="text-[10px] font-bold bg-slate-200 text-slate-600 px-2.5 py-1 rounded-full border border-slate-300">Off Day</span>
+                                            </td>
+                                            <td class="px-5 py-3 text-center">
+                                                <button type="button" class="text-slate-400 hover:text-primary hover:bg-primary/10 p-1.5 rounded-lg transition-colors" title="Edit Log">
+                                                    <span class="material-symbols-outlined text-[18px]">edit_square</span>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                            <!-- Pagination -->
+                            <div th:if="${totalPages > 1}" class="border-t border-slate-100 p-4 bg-slate-50 flex items-center justify-between shrink-0">
+                                <p class="text-xs text-slate-500 font-medium">
+                                    Showing <span class="font-bold text-slate-700" th:text="${currentPage * 16 + 1}">1</span> to
+                                    <span class="font-bold text-slate-700" th:text="${(currentPage + 1) * 16 > totalItems ? totalItems : (currentPage + 1) * 16}">16</span> of
+                                    <span class="font-bold text-slate-700" th:text="${totalItems}">100</span> entries
+                                </p>
+                                <div class="flex items-center gap-1">
+                                    <!-- Using javascript to update the page parameter in the URL while preserving other filters -->
+                                    <button type="button" th:disabled="${currentPage == 0}" th:onclick="|updatePage(${currentPage - 1})|" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed bg-transparent transition-colors shadow-sm">Prev</button>
+                                    
+                                    <span class="px-3 py-1.5 text-xs font-bold text-slate-800" th:text="${'Page ' + (currentPage + 1) + ' of ' + totalPages}">Page 1 of 5</span>
+                                    
+                                    <button type="button" th:disabled="${currentPage == totalPages - 1}" th:onclick="|updatePage(${currentPage + 1})|" class="px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-semibold text-slate-600 hover:bg-white disabled:opacity-50 disabled:cursor-not-allowed bg-transparent transition-colors shadow-sm">Next</button>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div>
                 </div>
-            </div>
+            </form>
+            
+            <script>
+                function updatePage(pageNumber) {
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('page', pageNumber);
+                    // Keep the current dates/filters from the inputs automatically since they are serialized if we submitted the form, 
+                    // but since pagination modifies URL directly, let's inject a hidden input and submit the form instead.
+                    let form = document.getElementById('filterForm');
+                    let pageInput = document.createElement('input');
+                    pageInput.type = 'hidden';
+                    pageInput.name = 'page';
+                    pageInput.value = pageNumber;
+                    form.appendChild(pageInput);
+                    form.submit();
+                }
+            </script>
         </main>
     </div>
 </body>
