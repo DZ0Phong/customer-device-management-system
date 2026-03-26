@@ -1,13 +1,8 @@
 package com.group5.ems.service.hr;
 
-import com.group5.ems.dto.response.HrAttendanceDTO;
-import com.group5.ems.entity.Attendance;
 import com.group5.ems.repository.AttendanceRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,42 +13,24 @@ public class HrAttendanceService {
 
     private final AttendanceRepository attendanceRepository;
 
-    public List<HrAttendanceDTO> getAllAttendances() {
-        return attendanceRepository.findAll().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
-
-    private HrAttendanceDTO mapToDTO(Attendance attendance) {
-        String initials = "";
-        String fullName = "Unknown";
-        String departmentName = "N/A";
-
-        if (attendance.getEmployee() != null) {
-            if (attendance.getEmployee().getUser() != null) {
-                fullName = attendance.getEmployee().getUser().getFullName() != null ? attendance.getEmployee().getUser().getFullName() : fullName;
-                if (!"Unknown".equals(fullName) && !fullName.trim().isEmpty()) {
-                    String[] names = fullName.trim().split("\\s+");
-                    initials += names[0].charAt(0);
-                    if (names.length > 1) {
-                        initials += names[names.length - 1].charAt(0);
-                    }
-                }
-            }
-            if (attendance.getEmployee().getDepartment() != null) {
-                departmentName = attendance.getEmployee().getDepartment().getName();
+    public org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> getAttendanceRecords(java.time.LocalDate workDate, String search, Long departmentId, String status, org.springframework.data.domain.Pageable pageable) {
+        if (search != null) search = search.trim();
+        if (status != null) {
+            status = status.trim();
+            if (status.equalsIgnoreCase("Status: All") || status.equalsIgnoreCase("All") || status.isEmpty()) {
+                status = null;
+            } else {
+               status = status.toUpperCase();
             }
         }
+        return attendanceRepository.findAttendanceDetails(workDate, departmentId, status, search, pageable);
+    }
 
-        return HrAttendanceDTO.builder()
-                .id(attendance.getId())
-                .employeeName(fullName)
-                .initials(initials.toUpperCase())
-                .department(departmentName)
-                .workDate(attendance.getWorkDate())
-                .checkIn(attendance.getCheckIn())
-                .checkOut(attendance.getCheckOut())
-                .status(attendance.getStatus())
-                .build();
+    public com.group5.ems.dto.response.HrAttendanceStatsDTO getAttendanceStats(java.time.LocalDate workDate) {
+        long presentCount = attendanceRepository.countByWorkDateAndStatus(workDate, "PRESENT");
+        long lateCount = attendanceRepository.countByWorkDateAndStatus(workDate, "LATE");
+        long leaveCount = attendanceRepository.countByWorkDateAndStatus(workDate, "LEAVE");
+        long absentCount = attendanceRepository.countByWorkDateAndStatus(workDate, "ABSENT");
+        return new com.group5.ems.dto.response.HrAttendanceStatsDTO(presentCount, lateCount, leaveCount, absentCount);
     }
 }
