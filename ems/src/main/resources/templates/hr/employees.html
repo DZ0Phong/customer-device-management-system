@@ -4,7 +4,7 @@
 <head>
     <meta charset="utf-8" />
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
-    <title>HRM Pro - Employees Directory</title>
+    <title>EMS Pro - Employees Directory</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet" />
@@ -73,7 +73,7 @@
                             </div>
                             <label>
                                 <select name="department"
-                                    class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm">
+                                    class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary pl-3 pr-8 py-1.5 bg-white text-slate-600 font-medium shadow-sm">
                                     <option value="">All Departments</option>
                                     <option th:each="dept : ${departments}" th:value="${dept.name}"
                                         th:text="${dept.name}" th:selected="${dept.name == department}">Dept</option>
@@ -81,7 +81,7 @@
                             </label>
                             <label>
                                 <select name="status"
-                                    class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-1.5 bg-white text-slate-600 font-medium shadow-sm">
+                                    class="text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary pl-3 pr-8 py-1.5 bg-white text-slate-600 font-medium shadow-sm">
                                     <option value="">Status: All</option>
                                     <option value="ACTIVE" th:selected="${status == 'ACTIVE'}">Active</option>
                                     <option value="ON_LEAVE" th:selected="${status == 'ON_LEAVE'}">On Leave</option>
@@ -374,6 +374,16 @@
         // Close modal on backdrop click
         document.getElementById('empModal').addEventListener('click', function (e) {
             if (e.target === this) closeModal();
+        });
+
+        // Check for viewId to auto-open modal
+        window.addEventListener('DOMContentLoaded', () => {
+            const params = new URLSearchParams(window.location.search);
+            const viewId = params.get('viewId');
+            if (viewId) {
+                openEmployeeModal(viewId);
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
         });
     </script>
 </body>
