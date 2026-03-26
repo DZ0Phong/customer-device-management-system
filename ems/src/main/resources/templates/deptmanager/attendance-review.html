@@ -6,7 +6,8 @@
     <title>EMS Pro - Department Attendance Review</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app-icons.css}"/>
+    <script defer th:src="@{/js/app-icons.js}"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -354,6 +355,10 @@
                 
                 const newContainer = doc.getElementById('attendance-container');
                 container.innerHTML = newContainer.innerHTML;
+
+                if (window.hydrateAppIcons) {
+                    window.hydrateAppIcons(container);
+                }
                 
                 bindEvents();
                 setView(currentView); // restore view state
@@ -389,6 +394,15 @@
                 btnTopDaily.className = 'px-6 py-2 rounded-lg text-sm font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-all';
                 dayCols.forEach(col => col.style.display = '');
             }
+        }
+
+        function getCellIconName(cell) {
+            const iconEl = cell ? cell.querySelector('.material-symbols-outlined') : null;
+            if (!iconEl) {
+                return '';
+            }
+
+            return (iconEl.dataset.iconName || iconEl.textContent || '').trim();
         }
 
         function bindEvents() {
@@ -429,7 +443,7 @@
                         // cells 3 to 9 are the days
                         for(let i = 3; i <= 9; i++) {
                            if (row.cells[i]) {
-                               const icon = row.cells[i].innerText.trim();
+                               const icon = getCellIconName(row.cells[i]);
                                if (icon === 'schedule') lates++;
                                if (icon === 'cancel') absences++;
                            }
