@@ -4,7 +4,6 @@ import com.group5.ems.dto.request.PeriodCreateReq;
 import com.group5.ems.entity.TimesheetPeriod;
 import com.group5.ems.exception.PeriodAlreadyLockedException;
 import com.group5.ems.exception.PeriodOverlapException;
-import com.group5.ems.service.admin.AdminService;
 import com.group5.ems.service.hr.TimesheetPeriodService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ public class TimesheetPeriodController {
     private static final int DEFAULT_PAGE_SIZE = 12;
 
     private final TimesheetPeriodService periodService;
-    private final AdminService adminService;
 
     /**
      * List all timesheet periods with pagination.
@@ -41,7 +39,6 @@ public class TimesheetPeriodController {
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", periodPage.getTotalPages());
         model.addAttribute("totalItems", periodPage.getTotalElements());
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
         // Empty form DTO for the creation form (only if not already added by redirect)
         if (!model.containsAttribute("periodCreateReq")) {
@@ -69,7 +66,6 @@ public class TimesheetPeriodController {
             model.addAttribute("currentPage", page);
             model.addAttribute("totalPages", periodPage.getTotalPages());
             model.addAttribute("totalItems", periodPage.getTotalElements());
-            model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
             model.addAttribute("showCreateForm", true);
             return "hr/payroll-periods";
         }
@@ -88,7 +84,6 @@ public class TimesheetPeriodController {
             model.addAttribute("currentPage", page);
             model.addAttribute("totalPages", periodPage.getTotalPages());
             model.addAttribute("totalItems", periodPage.getTotalElements());
-            model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
             model.addAttribute("showCreateForm", true);
             return "hr/payroll-periods";
         }

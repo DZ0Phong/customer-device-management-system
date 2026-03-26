@@ -93,10 +93,7 @@ public class HrController {
         HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
         model.addAttribute("dashMetrics", metrics);
         model.addAttribute("activeEmployees", metrics.activeEmployees());
-        model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
         model.addAttribute("openJobs", metrics.openJobPosts());
-        model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/dashboard";
     }
 
@@ -127,7 +124,6 @@ public class HrController {
         model.addAttribute("search", search);
         model.addAttribute("department", department);
         model.addAttribute("status", status);
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
         List<Department> departments = departmentRepository.findAll();
         model.addAttribute("departments", departments);
@@ -154,7 +150,7 @@ public class HrController {
     public String attendance(Model model,
                              @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
                              @RequestParam(required = false) String search,
-                             @RequestParam(required = false) Long departmentId,
+                             @RequestParam(required = false) String department,
                              @RequestParam(required = false) String status,
                              @RequestParam(defaultValue = "0") int page) {
         
@@ -163,7 +159,7 @@ public class HrController {
         model.addAttribute("stats", attendanceService.getAttendanceStats(queryDate));
         
         Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
-        org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> attendancePage = attendanceService.getAttendanceRecords(queryDate, search, departmentId, status, pageable);
+        org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> attendancePage = attendanceService.getAttendanceRecords(queryDate, search, department, status, pageable);
         
         model.addAttribute("attendances", attendancePage.getContent());
         model.addAttribute("currentPage", page);
@@ -172,21 +168,16 @@ public class HrController {
         
         model.addAttribute("date", queryDate);
         model.addAttribute("search", search);
-        model.addAttribute("departmentId", departmentId);
+        model.addAttribute("department", department);
         model.addAttribute("status", status);
         model.addAttribute("departments", departmentRepository.findAll());
         
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/attendance";
     }
 
     @GetMapping("/leave")
     public String leave(Model model,
             @RequestParam(defaultValue = "0") int page) {
-        HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
-        model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
-        model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         model.addAttribute("pendingLeaves", leaveService.getPendingLeaves());
 
         Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
@@ -210,14 +201,6 @@ public class HrController {
             @RequestParam(required = false) String reason) {
         leaveService.rejectLeave(id, reason != null ? reason : "Rejected by HR");
         return "redirect:/hr/leave";
-    }
-
-    @GetMapping("/payroll")
-    public String payroll(Model model) {
-        model.addAttribute("payslips", payrollService.getAllPayslips());
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
-        model.addAttribute("payrollSummary", payrollService.getPayrollSummary());
-        return "hr/payroll";
     }
 
     @GetMapping("/performance")
@@ -275,7 +258,6 @@ public class HrController {
         model.addAttribute("maxScore", maxScore);
         model.addAttribute("minPotential", minPotential);
         model.addAttribute("maxPotential", maxPotential);
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         model.addAttribute("employees", employeeRepository.findAllWithUser());
         model.addAttribute("reviewers", employeeRepository.findEmployeesByRoleCodes(List.of("HR", "HR_MANAGER")));
         model.addAttribute("departments", departmentRepository.findAll());
@@ -295,9 +277,6 @@ public class HrController {
     @GetMapping("/requests")
     public String requests(Model model,
             @RequestParam(defaultValue = "0") int page) {
-        HrDashboardMetricsDTO metrics = dashboardService.getDashboardMetrics();
-        model.addAttribute("pendingLeave", metrics.pendingLeaveRequests());
-        model.addAttribute("pendingRequests", metrics.pendingWorkflowRequests());
 
         Pageable pageable = PageRequest.of(page, PAGE_SIZE);
         Page<HrRequestDTO> requestPage = requestService.getAllWorkflowRequests(pageable);
@@ -574,7 +553,6 @@ public class HrController {
             model.addAttribute("bankDetailsForm", new BankDetailsFormDTO());
         }
         
-        model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/bank-details";
     }
 
@@ -598,7 +576,6 @@ public class HrController {
             model.addAttribute("totalItems", historyPage.getTotalElements());
             
             model.addAttribute("banks", vietQrApiClient.getSupportedBanks());
-            model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
             return "hr/bank-details";
         }
 
