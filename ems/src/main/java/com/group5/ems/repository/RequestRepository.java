@@ -1,7 +1,9 @@
 package com.group5.ems.repository;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -10,9 +12,6 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import com.group5.ems.entity.Request;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Optional;
 
 public interface RequestRepository extends JpaRepository<Request, Long> {
 
@@ -47,6 +46,17 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
         List<Request> findByEmployeeDepartmentIdAndRequestTypeCategoryOrderByCreatedAtDesc(Long departmentId,
                         String category);
+
+        @Query("SELECT r FROM Request r " +
+                        "WHERE r.employeeId IN :employeeIds " +
+                        "AND r.status = 'APPROVED' " +
+                        "AND r.leaveFrom IS NOT NULL " +
+                        "AND r.leaveTo IS NOT NULL " +
+                        "AND r.leaveFrom <= :rangeEnd " +
+                        "AND r.leaveTo >= :rangeStart")
+        List<Request> findApprovedLeaveRequestsByEmployeeIdsAndDateRange(@Param("employeeIds") List<Long> employeeIds,
+                        @Param("rangeStart") LocalDate rangeStart,
+                        @Param("rangeEnd") LocalDate rangeEnd);
 
         @Query("SELECT r FROM Request r " +
                         "JOIN FETCH r.employee e " +

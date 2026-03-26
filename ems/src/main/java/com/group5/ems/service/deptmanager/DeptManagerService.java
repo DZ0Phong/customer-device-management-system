@@ -10,6 +10,8 @@ import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.RequestType;
 import com.group5.ems.entity.Salary;
 import com.group5.ems.entity.User;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.repository.AttendanceRepository;
 import com.group5.ems.repository.DepartmentRepository;
 import com.group5.ems.repository.PerformanceReviewRepository;
@@ -18,6 +20,7 @@ import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.RequestTypeRepository;
 import com.group5.ems.repository.SalaryRepository;
+import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,17 +30,21 @@ import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.DayOfWeek;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -47,6 +54,8 @@ public class DeptManagerService {
 
     private static final String DEFAULT_AVATAR =
             "https://lh3.googleusercontent.com/aida-public/AB6AXuAx3bm_6ROku45Qad2UC6L8WqGYQTSxbQfGbrIsZyy-UW0G-0eeaUe05OzGGUPVXtUgSAXYY1km4lsQ8OMlKocQqnLvoWylgqv8HhjdOhc-kA7_Y9WGXOHncHiVIom2GDXi5UFfTRWNw-kIM5Tj5rLVJx3alhzAv1liLktNE8Zt65-kYJuInGPkWm85aD_STgeoCKnakLN1ZpxNfG-GLOhHh26_zxMgT8NQ21STEfw2DrFNb7ygWY6IQKmzRFuP-NmzVNfiEHO9zvA";
+    private static final LocalTime LATE_AFTER = LocalTime.of(9, 0);
+    private static final LocalTime ABSENT_AFTER = LocalTime.of(10, 30);
 
     private final DepartmentRepository departmentRepository;
     private final DeptManagerUtilService utilService;
@@ -57,6 +66,7 @@ public class DeptManagerService {
     private final PerformanceReviewRepository performanceReviewRepository;
     private final SalaryRepository salaryRepository;
     private final RequestApprovalHistoryRepository requestApprovalHistoryRepository;
+    private final LogService logService;
 
     public int getTeamSize(Long managerId) {
         return departmentRepository.findByManagerId(managerId).size();
@@ -310,6 +320,7 @@ public class DeptManagerService {
         request.setStatus("PENDING");
         Request savedRequest = requestRepository.save(request);
         saveHistory(savedRequest.getId(), managerEmployee.getUserId(), "SUBMITTED", "Submitted by Department Manager");
+        logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, savedRequest.getId(), managerEmployee.getUserId());
         return true;
     }
 
@@ -336,6 +347,7 @@ public class DeptManagerService {
         request.setStatus("PENDING");
         Request savedRequest = requestRepository.save(request);
         saveHistory(savedRequest.getId(), managerEmployee.getUserId(), "SUBMITTED", "Submitted by Department Manager");
+        logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, savedRequest.getId(), managerEmployee.getUserId());
         return true;
     }
 
@@ -368,23 +380,37 @@ public class DeptManagerService {
 
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
+        LocalDate today = LocalDate.now();
 
         Map<Long, List<Attendance>> grouped = attendanceRepository
                 .findByEmployeeIdInAndWorkDateBetweenOrderByWorkDateAsc(employeeIds, monday, sunday)
                 .stream()
                 .collect(Collectors.groupingBy(Attendance::getEmployeeId));
+        Map<Long, Set<LocalDate>> approvedLeaveDays = buildApprovedLeaveDays(employeeIds, monday, sunday);
 
         Map<Long, String> attendanceSummary = new HashMap<>();
         for (Employee employee : employees) {
             List<Attendance> attendances = grouped.getOrDefault(employee.getId(), List.of());
-            long present = attendances.stream().filter(att -> "PRESENT".equalsIgnoreCase(att.getStatus())).count();
-            long late = attendances.stream().filter(att -> "LATE".equalsIgnoreCase(att.getStatus())).count();
-            long absent = attendances.stream().filter(att -> "ABSENT".equalsIgnoreCase(att.getStatus())).count();
+            Set<LocalDate> leaveDays = approvedLeaveDays.getOrDefault(employee.getId(), Set.of());
+            long present = attendances.stream()
+                    .filter(att -> "PRESENT".equalsIgnoreCase(resolveDisplayStatus(att, leaveDays.contains(att.getWorkDate()))))
+                    .count();
+            long late = attendances.stream()
+                    .filter(att -> "LATE".equalsIgnoreCase(resolveDisplayStatus(att, leaveDays.contains(att.getWorkDate()))))
+                    .count();
+            long absent = attendances.stream()
+                    .filter(att -> "ABSENT".equalsIgnoreCase(resolveDisplayStatus(att, leaveDays.contains(att.getWorkDate()))))
+                    .count();
+            long expectedWorkingDays = countExpectedWorkingDays(monday, sunday, today);
+            long missingAbsences = Math.max(0, expectedWorkingDays - attendances.size() - leaveDays.size());
+            absent += missingAbsences;
 
             if (absent > 0) {
                 attendanceSummary.put(employee.getId(), "Absence (" + absent + ")");
             } else if (late > 0) {
                 attendanceSummary.put(employee.getId(), "Late (" + late + ")");
+            } else if (!leaveDays.isEmpty()) {
+                attendanceSummary.put(employee.getId(), "On Leave (" + leaveDays.size() + ")");
             } else if (present > 0) {
                 attendanceSummary.put(employee.getId(), "On track");
             } else {
@@ -402,24 +428,35 @@ public class DeptManagerService {
 
         LocalDate monday = LocalDate.now().with(TemporalAdjusters.previousOrSame(java.time.DayOfWeek.MONDAY));
         LocalDate sunday = monday.plusDays(6);
+        LocalDate today = LocalDate.now();
         List<Attendance> attendances = attendanceRepository
                 .findByEmployeeIdInAndWorkDateBetweenOrderByWorkDateAsc(employeeIds, monday, sunday);
+        Map<Long, Set<LocalDate>> approvedLeaveDays = buildApprovedLeaveDays(employeeIds, monday, sunday);
 
         long accountableRecords = attendances.stream()
-                .filter(att -> "PRESENT".equalsIgnoreCase(att.getStatus())
-                        || "LATE".equalsIgnoreCase(att.getStatus())
-                        || "ABSENT".equalsIgnoreCase(att.getStatus()))
+                .map(att -> resolveDisplayStatus(att, approvedLeaveDays.getOrDefault(att.getEmployeeId(), Set.of()).contains(att.getWorkDate())))
+                .filter(status -> "PRESENT".equalsIgnoreCase(status)
+                        || "LATE".equalsIgnoreCase(status)
+                        || "ABSENT".equalsIgnoreCase(status)
+                        || "LEAVE".equalsIgnoreCase(status))
                 .count();
         long attended = attendances.stream()
-                .filter(att -> "PRESENT".equalsIgnoreCase(att.getStatus())
-                        || "LATE".equalsIgnoreCase(att.getStatus()))
+                .map(att -> resolveDisplayStatus(att, approvedLeaveDays.getOrDefault(att.getEmployeeId(), Set.of()).contains(att.getWorkDate())))
+                .filter(status -> "PRESENT".equalsIgnoreCase(status)
+                        || "LATE".equalsIgnoreCase(status)
+                        || "LEAVE".equalsIgnoreCase(status))
                 .count();
+        long approvedLeaveCount = approvedLeaveDays.values().stream().mapToLong(Set::size).sum();
+        attended = Math.max(attended, approvedLeaveCount);
 
-        if (accountableRecords == 0) {
+        long expectedWorkingDays = countExpectedWorkingDays(monday, sunday, today) * employeeIds.size();
+        long finalAccountableRecords = Math.max(accountableRecords, expectedWorkingDays);
+
+        if (finalAccountableRecords == 0) {
             return "0%";
         }
 
-        long percentage = Math.round((double) attended * 100 / accountableRecords);
+        long percentage = Math.round((double) attended * 100 / finalAccountableRecords);
         return percentage + "%";
     }
 
@@ -517,6 +554,79 @@ public class DeptManagerService {
         item.put("percent", total > 0 ? String.valueOf(Math.max(6, Math.round((double) value * 100 / total))) : "0");
         item.put("colorClass", colorClass);
         return item;
+    }
+
+    private String resolveAttendanceStatus(Attendance attendance) {
+        if (attendance == null) {
+            return "ABSENT";
+        }
+        if (attendance.getCheckIn() != null) {
+            return resolveStatusByCheckIn(attendance.getCheckIn());
+        }
+        return attendance.getStatus() != null ? attendance.getStatus() : "ABSENT";
+    }
+
+    private String resolveStatusByCheckIn(LocalTime checkIn) {
+        if (checkIn == null) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(ABSENT_AFTER)) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(LATE_AFTER)) {
+            return "LATE";
+        }
+        return "PRESENT";
+    }
+
+    private String resolveDisplayStatus(Attendance attendance, boolean approvedLeaveDay) {
+        if (!approvedLeaveDay) {
+            return resolveAttendanceStatus(attendance);
+        }
+        if (attendance != null && attendance.getCheckIn() != null) {
+            return "PRESENT";
+        }
+        return "LEAVE";
+    }
+
+    private long countExpectedWorkingDays(LocalDate monday, LocalDate sunday, LocalDate today) {
+        LocalDate effectiveEnd = sunday.isBefore(today) ? sunday : today;
+        if (effectiveEnd.isBefore(monday)) {
+            return 0;
+        }
+
+        long count = 0;
+        LocalDate cursor = monday;
+        while (!cursor.isAfter(effectiveEnd)) {
+            DayOfWeek dayOfWeek = cursor.getDayOfWeek();
+            if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                count++;
+            }
+            cursor = cursor.plusDays(1);
+        }
+        return count;
+    }
+
+    private Map<Long, Set<LocalDate>> buildApprovedLeaveDays(List<Long> employeeIds, LocalDate rangeStart, LocalDate rangeEnd) {
+        Map<Long, Set<LocalDate>> leaveDays = new HashMap<>();
+        if (employeeIds.isEmpty()) {
+            return leaveDays;
+        }
+
+        List<Request> approvedLeaves = requestRepository.findApprovedLeaveRequestsByEmployeeIdsAndDateRange(employeeIds, rangeStart, rangeEnd);
+        for (Request leave : approvedLeaves) {
+            LocalDate start = leave.getLeaveFrom().isBefore(rangeStart) ? rangeStart : leave.getLeaveFrom();
+            LocalDate end = leave.getLeaveTo().isAfter(rangeEnd) ? rangeEnd : leave.getLeaveTo();
+            LocalDate cursor = start;
+            while (!cursor.isAfter(end)) {
+                DayOfWeek dayOfWeek = cursor.getDayOfWeek();
+                if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                    leaveDays.computeIfAbsent(leave.getEmployeeId(), key -> new HashSet<>()).add(cursor);
+                }
+                cursor = cursor.plusDays(1);
+            }
+        }
+        return leaveDays;
     }
 
     private Map<String, Object> buildPerformanceTrend(List<PerformanceReview> reviews) {

@@ -2,23 +2,34 @@ package com.group5.ems.service.deptmanager;
 
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.Employee;
+import com.group5.ems.entity.Request;
 import com.group5.ems.entity.User;
 import com.group5.ems.repository.AttendanceRepository;
+import com.group5.ems.repository.RequestRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalTime;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class AttendanceService {
 
+    private static final LocalTime LATE_AFTER = LocalTime.of(9, 0);
+    private static final LocalTime ABSENT_AFTER = LocalTime.of(10, 30);
+
     private final AttendanceRepository attendanceRepository;
+    private final RequestRepository requestRepository;
     private final DeptManagerUtilService utilService;
 
     public Map<String, Object> getAttendanceReviewData(int weekOffset) {
@@ -58,26 +69,36 @@ public class AttendanceService {
             }
 
             List<com.group5.ems.entity.Attendance> attendances = attendanceRepository.findByEmployeeIdInAndWorkDateBetweenOrderByWorkDateAsc(empIds, monday, sunday);
+            Map<Long, Set<LocalDate>> approvedLeaveDays = buildApprovedLeaveDays(empIds, monday, sunday);
 
             // Map grouped by Employee ID
             Map<Long, List<com.group5.ems.entity.Attendance>> employeeAttendanceMap = new HashMap<>();
             for (com.group5.ems.entity.Attendance att : attendances) {
-                if ("PRESENT".equalsIgnoreCase(att.getStatus())) onTimeCount++;
-                else if ("LATE".equalsIgnoreCase(att.getStatus())) lateCount++;
-                else if ("ABSENT".equalsIgnoreCase(att.getStatus())) absenceCount++;
+                boolean approvedLeaveDay = approvedLeaveDays.getOrDefault(att.getEmployeeId(), Set.of()).contains(att.getWorkDate());
+                String effectiveStatus = resolveAttendanceStatus(att);
+                String displayStatus = resolveDisplayStatus(att, approvedLeaveDay);
+                if ("PRESENT".equalsIgnoreCase(displayStatus)) {
+                    onTimeCount++;
+                } else if ("LATE".equalsIgnoreCase(displayStatus)) {
+                    lateCount++;
+                } else if ("ABSENT".equalsIgnoreCase(effectiveStatus) && !approvedLeaveDay) {
+                    absenceCount++;
+                }
 
                 // Tracking violations
-                if ("LATE".equalsIgnoreCase(att.getStatus()) || "ABSENT".equalsIgnoreCase(att.getStatus())) {
+                if (!approvedLeaveDay && ("LATE".equalsIgnoreCase(effectiveStatus) || "ABSENT".equalsIgnoreCase(effectiveStatus))) {
                     Map<String, String> violation = new HashMap<>();
                     String empName = att.getEmployee() != null && att.getEmployee().getUser() != null ? att.getEmployee().getUser().getFullName() : "Employee";
 
-                    if ("ABSENT".equalsIgnoreCase(att.getStatus())) {
+                    if ("ABSENT".equalsIgnoreCase(effectiveStatus)) {
                         violation.put("type", "Absence");
                         violation.put("icon", "person_off");
                         violation.put("colorClass", "bg-rose-50 border-rose-100 text-rose-500");
                         violation.put("bgClass", "bg-rose-500");
                         violation.put("title", empName + " - Absence");
-                        violation.put("description", "Absence on " + att.getWorkDate().format(java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd")) + ".");
+                        violation.put("description", att.getCheckIn() != null
+                                ? "Checked in after 10:30 at " + att.getCheckIn() + " on " + att.getWorkDate().format(java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd")) + "."
+                                : "Absence on " + att.getWorkDate().format(java.time.format.DateTimeFormatter.ofPattern("EEE MMM dd")) + ".");
                     } else {
                         violation.put("type", "Late Arrival");
                         violation.put("icon", "history");
@@ -113,9 +134,11 @@ public class AttendanceService {
                 empRow.put("avatarUrl", emp.getUser() != null && emp.getUser().getAvatarUrl() != null ? emp.getUser().getAvatarUrl() : "https://lh3.googleusercontent.com/aida-public/AB6AXuAx3bm_6ROku45Qad2UC6L8WqGYQTSxbQfGbrIsZyy-UW0G-0eeaUe05OzGGUPVXtUgSAXYY1km4lsQ8OMlKocQqnLvoWylgqv8HhjdOhc-kA7_Y9WGXOHncHiVIom2GDXi5UFfTRWNw-kIM5Tj5rLVJx3alhzAv1liLktNE8Zt65-kYJuInGPkWm85aD_STgeoCKnakLN1ZpxNfG-GLOhHh26_zxMgT8NQ21STEfw2DrFNb7ygWY6IQKmzRFuP-NmzVNfiEHO9zvA");
 
                 List<com.group5.ems.entity.Attendance> ematts = employeeAttendanceMap.getOrDefault(emp.getId(), new ArrayList<>());
+                Set<LocalDate> leaveDays = approvedLeaveDays.getOrDefault(emp.getId(), Set.of());
 
                 int eLate = 0;
                 int eAbsent = 0;
+                int eApprovedLeave = 0;
                 int totalCheckins = 0;
                 long totalMinutes = 0;
 
@@ -126,13 +149,19 @@ public class AttendanceService {
                     for (com.group5.ems.entity.Attendance a : ematts) {
                         if (a.getWorkDate().equals(day)) {
                             Map<String, String> dStat = new HashMap<>();
-                            if ("PRESENT".equalsIgnoreCase(a.getStatus())) {
+                            boolean approvedLeaveDay = leaveDays.contains(day);
+                            String displayStatus = resolveDisplayStatus(a, approvedLeaveDay);
+                            if ("PRESENT".equalsIgnoreCase(displayStatus)) {
                                 dStat.put("icon", "check_circle");
-                                dStat.put("color", "text-emerald-500");
-                            } else if ("LATE".equalsIgnoreCase(a.getStatus())) {
+                                dStat.put("color", approvedLeaveDay ? "text-emerald-500" : "text-emerald-500");
+                            } else if ("LATE".equalsIgnoreCase(displayStatus)) {
                                 dStat.put("icon", "schedule");
                                 dStat.put("color", "text-amber-500");
                                 eLate++;
+                            } else if ("LEAVE".equalsIgnoreCase(displayStatus)) {
+                                dStat.put("icon", "check_circle");
+                                dStat.put("color", "text-sky-500");
+                                eApprovedLeave++;
                             } else {
                                 dStat.put("icon", "cancel");
                                 dStat.put("color", "text-rose-500");
@@ -140,7 +169,7 @@ public class AttendanceService {
                             }
                             dailyStatus.add(dStat);
 
-                            if (a.getCheckIn() != null && ("PRESENT".equalsIgnoreCase(a.getStatus()) || "LATE".equalsIgnoreCase(a.getStatus()))) {
+                            if (a.getCheckIn() != null && ("PRESENT".equalsIgnoreCase(displayStatus) || "LATE".equalsIgnoreCase(displayStatus))) {
                                 totalCheckins++;
                                 totalMinutes += a.getCheckIn().getHour() * 60 + a.getCheckIn().getMinute();
                             }
@@ -150,10 +179,19 @@ public class AttendanceService {
                         }
                     }
                     if (!found) {
-                        // If no record, assume weekend or not recorded
                         Map<String, String> dStat = new HashMap<>();
-                        dStat.put("icon", "remove");
-                        dStat.put("color", "text-slate-300");
+                        if (leaveDays.contains(day)) {
+                            dStat.put("icon", "check_circle");
+                            dStat.put("color", "text-sky-500");
+                            eApprovedLeave++;
+                        } else if (isMissingAttendanceAbsence(day, today)) {
+                            dStat.put("icon", "cancel");
+                            dStat.put("color", "text-rose-500");
+                            eAbsent++;
+                        } else {
+                            dStat.put("icon", "remove");
+                            dStat.put("color", "text-slate-300");
+                        }
                         dailyStatus.add(dStat);
                     }
                 }
@@ -177,6 +215,9 @@ public class AttendanceService {
                 } else if (eLate > 0) {
                     empRow.put("weeklyStatus", "Late (x" + eLate + ")");
                     empRow.put("statusClass", "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400");
+                } else if (eApprovedLeave > 0) {
+                    empRow.put("weeklyStatus", "On Leave (x" + eApprovedLeave + ")");
+                    empRow.put("statusClass", "bg-sky-100 text-sky-700 dark:bg-sky-900/30 dark:text-sky-400");
                 } else {
                     empRow.put("weeklyStatus", "On Track");
                     empRow.put("statusClass", "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400");
@@ -198,5 +239,66 @@ public class AttendanceService {
         data.put("latestViolations", latestViolations);
 
         return data;
+    }
+
+    private String resolveAttendanceStatus(com.group5.ems.entity.Attendance attendance) {
+        if (attendance == null) {
+            return "ABSENT";
+        }
+        if (attendance.getCheckIn() != null) {
+            return resolveStatusByCheckIn(attendance.getCheckIn());
+        }
+        return attendance.getStatus() != null ? attendance.getStatus() : "ABSENT";
+    }
+
+    private String resolveStatusByCheckIn(LocalTime checkIn) {
+        if (checkIn == null) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(ABSENT_AFTER)) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(LATE_AFTER)) {
+            return "LATE";
+        }
+        return "PRESENT";
+    }
+
+    private String resolveDisplayStatus(com.group5.ems.entity.Attendance attendance, boolean approvedLeaveDay) {
+        if (!approvedLeaveDay) {
+            return resolveAttendanceStatus(attendance);
+        }
+        if (attendance != null && attendance.getCheckIn() != null) {
+            return "PRESENT";
+        }
+        return "LEAVE";
+    }
+
+    private boolean isMissingAttendanceAbsence(java.time.LocalDate day, java.time.LocalDate today) {
+        DayOfWeek dayOfWeek = day.getDayOfWeek();
+        boolean workingDay = dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY;
+        return workingDay && !day.isAfter(today);
+    }
+
+    private Map<Long, Set<LocalDate>> buildApprovedLeaveDays(List<Long> employeeIds, LocalDate rangeStart, LocalDate rangeEnd) {
+        Map<Long, Set<LocalDate>> leaveDays = new HashMap<>();
+        if (employeeIds.isEmpty()) {
+            return leaveDays;
+        }
+
+        List<Request> approvedLeaves = requestRepository.findApprovedLeaveRequestsByEmployeeIdsAndDateRange(employeeIds, rangeStart, rangeEnd);
+        for (Request leave : approvedLeaves) {
+            LocalDate start = leave.getLeaveFrom().isBefore(rangeStart) ? rangeStart : leave.getLeaveFrom();
+            LocalDate end = leave.getLeaveTo().isAfter(rangeEnd) ? rangeEnd : leave.getLeaveTo();
+            LocalDate cursor = start;
+            while (!cursor.isAfter(end)) {
+                DayOfWeek dayOfWeek = cursor.getDayOfWeek();
+                if (dayOfWeek != DayOfWeek.SATURDAY && dayOfWeek != DayOfWeek.SUNDAY) {
+                    leaveDays.computeIfAbsent(leave.getEmployeeId(), key -> new HashSet<>()).add(cursor);
+                }
+                cursor = cursor.plusDays(1);
+            }
+        }
+        return leaveDays;
     }
 }

@@ -4,8 +4,11 @@ import com.group5.ems.entity.Department;
 import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.PerformanceReview;
 import com.group5.ems.entity.User;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.PerformanceReviewRepository;
+import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -35,6 +38,7 @@ public class PerformanceService {
     private final DeptManagerUtilService utilService;
     private final PerformanceReviewRepository reviewRepository;
     private final EmployeeRepository employeeRepository;
+    private final LogService logService;
 
     public Map<String, Object> getPerformanceReviewData() {
         Map<String, Object> data = new HashMap<>();
@@ -181,7 +185,10 @@ public class PerformanceService {
         review.setAreasToImprove(trimToNull(areasToImprove));
         review.setStatus(normalizedStatus);
 
-        return reviewRepository.save(review).getId();
+        boolean creating = review.getId() == null;
+        PerformanceReview savedReview = reviewRepository.save(review);
+        logService.log(creating ? AuditAction.CREATE : AuditAction.UPDATE, AuditEntityType.PERFORMANCE, savedReview.getId());
+        return savedReview.getId();
     }
 
     public Map<String, Object> getReviewDetail(Long id) {

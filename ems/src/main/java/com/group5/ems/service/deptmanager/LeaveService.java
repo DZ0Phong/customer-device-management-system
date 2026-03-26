@@ -3,8 +3,11 @@ package com.group5.ems.service.deptmanager;
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.User;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
+import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,6 +26,7 @@ public class LeaveService {
     private final RequestRepository requestRepository;
     private final RequestApprovalHistoryRepository historyRepository;
     private final DeptManagerUtilService utilService;
+    private final LogService logService;
 
     public Map<String, Object> getLeaveApprovalData() {
         Map<String, Object> data = new HashMap<>();
@@ -152,6 +156,7 @@ public class LeaveService {
                 historyRepository.save(buildHistory(req.getId(), currentUser.getId(), "APPROVED", "Approved by Department Manager"));
             }
             requestRepository.save(req);
+            logService.log(AuditAction.UPDATE, AuditEntityType.LEAVE, req.getId());
             return true;
         }).orElse(false);
     }
@@ -172,6 +177,7 @@ public class LeaveService {
                 historyRepository.save(buildHistory(req.getId(), currentUser.getId(), "REJECTED", "Rejected by Department Manager"));
             }
             requestRepository.save(req);
+            logService.log(AuditAction.UPDATE, AuditEntityType.LEAVE, req.getId());
             return true;
         }).orElse(false);
     }
