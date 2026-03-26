@@ -1,0 +1,29 @@
+.material-symbols-outlined {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    vertical-align: middle;
+    flex-shrink: 0;
+}
+
+.material-symbols-outlined:not([data-icon-hydrated="true"]) {
+    visibility: hidden;
+}
+
+.material-symbols-outlined svg.app-icon {
+    width: 1em;
+    height: 1em;
+    display: block;
+    stroke: currentColor;
+    fill: none;
+    stroke-width: 1.9;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+}
+
+.material-symbols-outlined.fill-icon svg.app-icon,
+.material-symbols-outlined[data-filled="true"] svg.app-icon {
+    fill: currentColor;
+    stroke: none;
+}

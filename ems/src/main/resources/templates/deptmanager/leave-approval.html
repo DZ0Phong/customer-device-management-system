@@ -6,7 +6,8 @@
     <title>EMS Pro - Leave Approval</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app-icons.css}"/>
+    <script defer th:src="@{/js/app-icons.js}"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -175,6 +176,15 @@
                             <h2 class="text-slate-900 dark:text-white text-3xl font-black leading-tight tracking-tight mb-2">Team Leave Approvals</h2>
                             <p class="text-slate-500 text-sm max-w-2xl">Review, manage and take actions on leave applications submitted by your direct reports. Keeping your team balanced ensures operational continuity.</p>
                         </div>
+                    </div>
+                </div>
+
+                <div class="space-y-3">
+                    <div th:if="${param.success != null}" class="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                        Leave request updated successfully.
+                    </div>
+                    <div th:if="${param.error != null}" class="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        That request is outside your department or can no longer be reviewed.
                     </div>
                 </div>
 

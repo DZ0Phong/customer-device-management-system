@@ -1,13 +1,19 @@
 package com.group5.ems.service.deptmanager;
 
 import com.group5.ems.entity.Department;
+import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.User;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
+import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
+import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -18,7 +24,9 @@ import java.util.Map;
 public class LeaveService {
 
     private final RequestRepository requestRepository;
+    private final RequestApprovalHistoryRepository historyRepository;
     private final DeptManagerUtilService utilService;
+    private final LogService logService;
 
     public Map<String, Object> getLeaveApprovalData() {
         Map<String, Object> data = new HashMap<>();
@@ -31,6 +39,11 @@ public class LeaveService {
         if (dept != null) {
             requests = requestRepository.findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(dept.getId());
         }
+        requests = requests.stream()
+                .sorted(Comparator
+                        .comparing((com.group5.ems.entity.Request req) -> !"PENDING".equalsIgnoreCase(req.getStatus()))
+                        .thenComparing(com.group5.ems.entity.Request::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
 
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.YearMonth currentMonth = java.time.YearMonth.now();
@@ -127,27 +140,54 @@ public class LeaveService {
     }
 
     @Transactional
-    public void approveLeaveRequest(Long requestId) {
-        requestRepository.findById(requestId).ifPresent(req -> {
+    public boolean approveLeaveRequest(Long requestId) {
+        Department department = utilService.getCurrentManagedDepartment();
+        if (department == null) {
+            return false;
+        }
+
+        return requestRepository.findByIdAndEmployeeDepartmentIdAndLeaveTypeIsNotNull(requestId, department.getId()).map(req -> {
             req.setStatus("APPROVED");
             req.setApprovedAt(java.time.LocalDateTime.now());
+            req.setCurrentApproverId(null);
             User currentUser = utilService.getCurrentUser();
             if (currentUser != null) {
                 req.setApprovedBy(currentUser.getId());
+                historyRepository.save(buildHistory(req.getId(), currentUser.getId(), "APPROVED", "Approved by Department Manager"));
             }
             requestRepository.save(req);
-        });
+            logService.log(AuditAction.UPDATE, AuditEntityType.LEAVE, req.getId());
+            return true;
+        }).orElse(false);
     }
 
     @Transactional
-    public void rejectLeaveRequest(Long requestId) {
-        requestRepository.findById(requestId).ifPresent(req -> {
+    public boolean rejectLeaveRequest(Long requestId) {
+        Department department = utilService.getCurrentManagedDepartment();
+        if (department == null) {
+            return false;
+        }
+
+        return requestRepository.findByIdAndEmployeeDepartmentIdAndLeaveTypeIsNotNull(requestId, department.getId()).map(req -> {
             req.setStatus("REJECTED");
+            req.setCurrentApproverId(null);
             User currentUser = utilService.getCurrentUser();
             if (currentUser != null) {
                 req.setApprovedBy(currentUser.getId());
+                historyRepository.save(buildHistory(req.getId(), currentUser.getId(), "REJECTED", "Rejected by Department Manager"));
             }
             requestRepository.save(req);
-        });
+            logService.log(AuditAction.UPDATE, AuditEntityType.LEAVE, req.getId());
+            return true;
+        }).orElse(false);
+    }
+
+    private RequestApprovalHistory buildHistory(Long requestId, Long approverId, String action, String comment) {
+        RequestApprovalHistory history = new RequestApprovalHistory();
+        history.setRequestId(requestId);
+        history.setApproverId(approverId);
+        history.setAction(action);
+        history.setComment(comment);
+        return history;
     }
 }
