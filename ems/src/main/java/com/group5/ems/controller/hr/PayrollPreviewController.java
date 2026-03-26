@@ -3,7 +3,6 @@ package com.group5.ems.controller.hr;
 import com.group5.ems.dto.response.hr.EmployeeAggregationDTO;
 import com.group5.ems.dto.response.hr.PeriodSummaryDTO;
 import com.group5.ems.exception.PayrollPreviewNotFoundException;
-import com.group5.ems.service.admin.AdminService;
 import com.group5.ems.service.hr.PayrollAggregationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -31,7 +30,6 @@ public class PayrollPreviewController {
     private static final int DEFAULT_PAGE_SIZE = 15;
 
     private final PayrollAggregationService aggregationService;
-    private final AdminService adminService;
 
     /**
      * Displays the payroll preview dashboard for a given timesheet period.
@@ -51,7 +49,6 @@ public class PayrollPreviewController {
             model.addAttribute("employees", employeePage);
             model.addAttribute("periodSummary", periodSummary);
             model.addAttribute("periodId", periodId);
-            model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
 
             return "hr/payroll-preview";
         } catch (PayrollPreviewNotFoundException e) {
