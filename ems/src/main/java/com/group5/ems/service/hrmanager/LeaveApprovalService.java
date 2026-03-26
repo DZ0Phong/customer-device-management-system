@@ -140,12 +140,40 @@ public class LeaveApprovalService {
         stats.put("approvedThisMonth", countApprovedLeaveRequestsThisMonth());
         stats.put("totalRequests", requestRepository.count());
         
-        // Additional stats for template
-        stats.put("pendingChange", "+4 since yesterday"); // Mock data
-        stats.put("approvedTodayCount", 8); // Mock data  
-        stats.put("completionRate", 82); // Mock data
-        stats.put("onLeaveNowCount", 12); // Mock data
-        stats.put("nextReturnInfo", "Next return: Tomorrow"); // Mock data
+        // Get approved today count
+        LocalDateTime todayStart = LocalDateTime.now().withHour(0).withMinute(0).withSecond(0);
+        LocalDateTime todayEnd = LocalDateTime.now().withHour(23).withMinute(59).withSecond(59);
+        long approvedToday = requestRepository.countByStatusAndApprovedAtBetween("APPROVED", todayStart, todayEnd);
+        stats.put("approvedTodayCount", approvedToday);
+        
+        // Calculate completion rate (approved today / total requests today)
+        long totalRequestsToday = requestRepository.countByCreatedAtBetween(todayStart, todayEnd);
+        int completionRate = totalRequestsToday > 0 ? (int) ((approvedToday * 100) / totalRequestsToday) : 0;
+        stats.put("completionRate", completionRate);
+        
+        // Get on leave now count (approved requests where current date is between leaveFrom and leaveTo)
+        LocalDateTime now = LocalDateTime.now();
+        long onLeaveNow = requestRepository.countByStatusAndLeaveFromLessThanEqualAndLeaveToGreaterThanEqual(
+            "APPROVED", now.toLocalDate(), now.toLocalDate());
+        stats.put("onLeaveNowCount", onLeaveNow);
+        
+        // Get next return info (earliest leaveTo date after today)
+        List<Request> nextReturns = requestRepository.findByStatusAndLeaveToGreaterThanOrderByLeaveToAsc(
+            "APPROVED", now.toLocalDate());
+        if (!nextReturns.isEmpty()) {
+            Request nextReturn = nextReturns.get(0);
+            java.time.LocalDate returnDate = nextReturn.getLeaveTo();
+            long daysUntilReturn = java.time.temporal.ChronoUnit.DAYS.between(now.toLocalDate(), returnDate);
+            if (daysUntilReturn == 0) {
+                stats.put("nextReturnInfo", "Next return: Today");
+            } else if (daysUntilReturn == 1) {
+                stats.put("nextReturnInfo", "Next return: Tomorrow");
+            } else {
+                stats.put("nextReturnInfo", "Next return: " + daysUntilReturn + " days");
+            }
+        } else {
+            stats.put("nextReturnInfo", "No upcoming returns");
+        }
         
         return stats;
     }
@@ -165,10 +193,13 @@ public class LeaveApprovalService {
                 requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("PENDING", pageable);
                 break;
             case "approved":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("APPROVED", pageable);
+                requestPage = requestRepository.findApprovedRequestsOrderByApprovedAt(pageable);
                 break;
             case "rejected":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("REJECTED", pageable);
+                requestPage = requestRepository.findRejectedRequestsOrderByApprovedAt(pageable);
+                break;
+            case "history":
+                requestPage = requestRepository.findHistoryRequestsOrderByApprovedAt(pageable);
                 break;
             default:
                 requestPage = requestRepository.findAllRequestsWithoutLeaveTypeFilter(pageable);
@@ -271,10 +302,13 @@ public class LeaveApprovalService {
                 requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("PENDING", pageable);
                 break;
             case "approved":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("APPROVED", pageable);
+                requestPage = requestRepository.findApprovedRequestsOrderByApprovedAt(pageable);
                 break;
             case "rejected":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("REJECTED", pageable);
+                requestPage = requestRepository.findRejectedRequestsOrderByApprovedAt(pageable);
+                break;
+            case "history":
+                requestPage = requestRepository.findHistoryRequestsOrderByApprovedAt(pageable);
                 break;
             default:
                 requestPage = requestRepository.findAllRequestsWithoutLeaveTypeFilter(pageable);
