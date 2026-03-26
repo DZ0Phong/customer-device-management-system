@@ -196,12 +196,12 @@
                                         </div>
                                     </div>
                                 </td>
-                                <td class="px-6 py-4 text-sm font-medium text-slate-600" th:text="${review.cyclePeriod} ?: 'Not set'">YEAR_2026</td>
+                                <td class="px-6 py-4 text-sm font-medium text-slate-600" th:text="${review.cyclePeriod}">YEAR_2026</td>
                                 <td class="px-6 py-4 text-sm text-slate-600">
                                     <span th:if="${review.performanceScore != null}" th:text="${review.performanceScore + ' / ' + review.potentialScore}">3.00 / 3.00</span>
                                     <span th:if="${review.performanceScore == null}" class="text-slate-400">Pending input</span>
                                 </td>
-                                <td class="px-6 py-4 text-sm text-slate-500" th:text="${review.reviewerName} ?: 'Department Manager'">Department Manager</td>
+                                <td class="px-6 py-4 text-sm text-slate-500" th:text="${review.reviewerName}">Department Manager</td>
                                 <td class="px-6 py-4">
                                     <span class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-bold"
                                           th:classappend="${review.statusTheme}"

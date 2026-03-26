@@ -23,9 +23,12 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.NumberFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.YearMonth;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.TemporalAdjusters;
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -84,6 +87,8 @@ public class DeptManagerService {
         List<Employee> employees = safeEmployees(department);
         Map<Long, PerformanceReview> latestReviewByEmployee = getLatestReviewByEmployee(employees);
         Map<Long, String> weeklyAttendanceByEmployee = getWeeklyAttendanceByEmployee(employees);
+        List<PerformanceReview> departmentReviews = performanceReviewRepository
+                .findByEmployee_DepartmentIdOrderByUpdatedAtDesc(department.getId());
 
         int pendingApprovals = utilService.getPendingApprovalsCount(department);
         int activeCount = 0;
@@ -112,6 +117,7 @@ public class DeptManagerService {
         data.put("recentTeamActivities", buildRecentTeamActivities(employees, latestReviewByEmployee, weeklyAttendanceByEmployee));
         data.put("actionItems", buildDashboardActionItems(department, employees, latestReviewByEmployee));
         data.put("statusBreakdown", buildStatusBreakdown(activeCount, inactiveCount, suspendedCount));
+        data.put("performanceTrend", buildPerformanceTrend(departmentReviews));
 
         return data;
     }
@@ -497,18 +503,99 @@ public class DeptManagerService {
 
     private List<Map<String, String>> buildStatusBreakdown(int activeCount, int inactiveCount, int suspendedCount) {
         List<Map<String, String>> items = new ArrayList<>();
-        items.add(statusItem("Active", String.valueOf(activeCount), "bg-green-500"));
-        items.add(statusItem("On Leave / Inactive", String.valueOf(inactiveCount), "bg-amber-500"));
-        items.add(statusItem("Other", String.valueOf(suspendedCount), "bg-slate-500"));
+        int total = activeCount + inactiveCount + suspendedCount;
+        items.add(statusItem("Active", activeCount, total, "bg-green-500"));
+        items.add(statusItem("On Leave / Inactive", inactiveCount, total, "bg-amber-500"));
+        items.add(statusItem("Other", suspendedCount, total, "bg-slate-500"));
         return items;
     }
 
-    private Map<String, String> statusItem(String label, String value, String colorClass) {
+    private Map<String, String> statusItem(String label, int value, int total, String colorClass) {
         Map<String, String> item = new HashMap<>();
         item.put("label", label);
-        item.put("value", value);
+        item.put("value", String.valueOf(value));
+        item.put("percent", total > 0 ? String.valueOf(Math.max(6, Math.round((double) value * 100 / total))) : "0");
         item.put("colorClass", colorClass);
         return item;
+    }
+
+    private Map<String, Object> buildPerformanceTrend(List<PerformanceReview> reviews) {
+        Map<YearMonth, List<BigDecimal>> monthlyScores = new LinkedHashMap<>();
+        YearMonth currentMonth = YearMonth.now();
+        for (int i = 5; i >= 0; i--) {
+            monthlyScores.put(currentMonth.minusMonths(i), new ArrayList<>());
+        }
+
+        for (PerformanceReview review : reviews) {
+            if (review.getPerformanceScore() == null) {
+                continue;
+            }
+            LocalDateTime timestamp = review.getUpdatedAt() != null ? review.getUpdatedAt() : review.getCreatedAt();
+            if (timestamp == null) {
+                continue;
+            }
+            YearMonth month = YearMonth.from(timestamp);
+            if (monthlyScores.containsKey(month)) {
+                monthlyScores.get(month).add(review.getPerformanceScore());
+            }
+        }
+
+        DateTimeFormatter monthFormatter = DateTimeFormatter.ofPattern("MMM", Locale.ENGLISH);
+        List<Map<String, Object>> points = new ArrayList<>();
+        BigDecimal total = BigDecimal.ZERO;
+        int countedMonths = 0;
+        BigDecimal firstValue = null;
+        BigDecimal lastValue = null;
+
+        for (Map.Entry<YearMonth, List<BigDecimal>> entry : monthlyScores.entrySet()) {
+            BigDecimal average = averageScores(entry.getValue());
+            if (average != null) {
+                total = total.add(average);
+                countedMonths++;
+                if (firstValue == null) {
+                    firstValue = average;
+                }
+                lastValue = average;
+            }
+
+            Map<String, Object> point = new HashMap<>();
+            point.put("label", entry.getKey().format(monthFormatter).toUpperCase(Locale.ENGLISH));
+            point.put("value", average != null ? average : BigDecimal.ZERO);
+            points.add(point);
+        }
+
+        BigDecimal averageScore = countedMonths > 0
+                ? total.divide(BigDecimal.valueOf(countedMonths), 2, RoundingMode.HALF_UP)
+                : BigDecimal.ZERO;
+
+        BigDecimal changePercent = BigDecimal.ZERO;
+        if (firstValue != null && lastValue != null && firstValue.compareTo(BigDecimal.ZERO) > 0) {
+            changePercent = lastValue.subtract(firstValue)
+                    .divide(firstValue, 4, RoundingMode.HALF_UP)
+                    .multiply(BigDecimal.valueOf(100));
+        }
+
+        Map<String, Object> trend = new HashMap<>();
+        trend.put("points", points);
+        trend.put("averageScore", averageScore.setScale(0, RoundingMode.HALF_UP).toPlainString());
+        trend.put("averagePercent", averageScore.multiply(BigDecimal.valueOf(20)).setScale(0, RoundingMode.HALF_UP).toPlainString() + "%");
+        trend.put("changeText", formatSignedPercent(changePercent));
+        trend.put("changePositive", changePercent.compareTo(BigDecimal.ZERO) >= 0);
+        return trend;
+    }
+
+    private BigDecimal averageScores(List<BigDecimal> scores) {
+        if (scores == null || scores.isEmpty()) {
+            return null;
+        }
+        BigDecimal total = scores.stream().reduce(BigDecimal.ZERO, BigDecimal::add);
+        return total.divide(BigDecimal.valueOf(scores.size()), 2, RoundingMode.HALF_UP);
+    }
+
+    private String formatSignedPercent(BigDecimal percent) {
+        BigDecimal safePercent = percent != null ? percent.setScale(1, RoundingMode.HALF_UP) : BigDecimal.ZERO.setScale(1, RoundingMode.HALF_UP);
+        String sign = safePercent.compareTo(BigDecimal.ZERO) > 0 ? "+" : "";
+        return sign + safePercent.stripTrailingZeros().toPlainString() + "%";
     }
 
     private Map<String, String> actionItem(String title, String description, String href) {

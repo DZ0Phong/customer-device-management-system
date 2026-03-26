@@ -218,10 +218,23 @@ public class PerformanceService {
 
     private Map<String, Object> buildReviewRowFromEmployee(Employee employee) {
         Map<String, Object> row = new HashMap<>();
+        row.put("id", null);
         row.put("employeeId", employee.getId());
         row.put("employeeName", employee.getUser() != null ? employee.getUser().getFullName() : "Employee #" + employee.getId());
         row.put("employeeTitle", employee.getPosition() != null ? employee.getPosition().getName() : "Employee");
         row.put("avatarUrl", employee.getUser() != null ? employee.getUser().getAvatarUrl() : null);
+        row.put("cyclePeriod", "Not set");
+        row.put("reviewDate", "N/A");
+        row.put("status", "NOT_STARTED");
+        row.put("statusDisplay", "Not Started");
+        row.put("statusTheme", "bg-slate-100 text-slate-700 border-slate-200");
+        row.put("actionLabel", "Start Review");
+        row.put("actionMode", "create");
+        row.put("performanceScore", null);
+        row.put("potentialScore", null);
+        row.put("strengths", null);
+        row.put("areasToImprove", null);
+        row.put("reviewerName", "Department Manager");
         return row;
     }
 

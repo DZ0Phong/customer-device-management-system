@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,6 +35,11 @@ public class LeaveService {
         if (dept != null) {
             requests = requestRepository.findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(dept.getId());
         }
+        requests = requests.stream()
+                .sorted(Comparator
+                        .comparing((com.group5.ems.entity.Request req) -> !"PENDING".equalsIgnoreCase(req.getStatus()))
+                        .thenComparing(com.group5.ems.entity.Request::getCreatedAt, Comparator.nullsLast(Comparator.reverseOrder())))
+                .toList();
 
         java.time.LocalDate today = java.time.LocalDate.now();
         java.time.YearMonth currentMonth = java.time.YearMonth.now();
