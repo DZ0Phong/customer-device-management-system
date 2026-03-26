@@ -197,4 +197,30 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
     List<Request> findApprovedOvertime(@Param("empId") Long empId,
                                        @Param("startInstant") java.time.Instant startInstant,
                                        @Param("endInstant") java.time.Instant endInstant);
+
+    // Missing methods that are used by other services
+    List<Request> findByRequestType_CodeOrderByCreatedAtDesc(String code);
+    
+    long countByRequestType_CodeAndStatus(String code, String status);
+    
+    long countByStatusAndRequestTypeCodeIn(String status, List<String> codes);
+    
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "WHERE e.id IN :employeeIds " +
+           "AND r.status = 'APPROVED' " +
+           "AND r.leaveFrom <= :endDate " +
+           "AND r.leaveTo >= :startDate")
+    List<Request> findApprovedLeaveRequestsByEmployeeIdsAndDateRange(
+            @Param("employeeIds") List<Long> employeeIds,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate);
+    
+    @Query("SELECT r FROM Request r " +
+           "WHERE r.id = :id " +
+           "AND r.employee.department.id = :departmentId " +
+           "AND r.leaveType IS NOT NULL")
+    java.util.Optional<Request> findByIdAndEmployeeDepartmentIdAndLeaveTypeIsNotNull(
+            @Param("id") Long id,
+            @Param("departmentId") Long departmentId);
 }
