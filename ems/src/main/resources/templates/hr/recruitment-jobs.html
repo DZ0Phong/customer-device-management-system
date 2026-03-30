@@ -537,6 +537,7 @@
                                                 <!-- Edit -->
                                                 <button th:data-id="${job.id}" th:data-title="${job.jobTitle}"
                                                     th:data-dept="${job.department}"
+                                                    th:data-dept-id="${job.departmentId}"
                                                     th:data-position="${job.position ?: ''}"
                                                     th:data-status="${job.status}"
                                                     th:data-salary-min="${job.salaryMin != null ? job.salaryMin : 0}"
@@ -622,13 +623,13 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (VND)</label>
-                        <input type="number" name="salaryMin" min="0" placeholder="e.g. 15000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (USD)</label>
+                        <input type="number" name="salaryMin" min="0" placeholder="e.g. 1000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (VND)</label>
-                        <input type="number" name="salaryMax" min="0" placeholder="e.g. 30000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (USD)</label>
+                        <input type="number" name="salaryMax" min="0" placeholder="e.g. 3000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
@@ -718,8 +719,8 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (VND)</label>
-                        <input type="number" id="editSalaryMin" name="salaryMin" min="0" placeholder="e.g. 15000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (USD)</label>
+                        <input type="number" id="editSalaryMin" name="salaryMin" min="0" placeholder="e.g. 1000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
@@ -808,6 +809,7 @@
         <span id="toastMsg">Action completed</span>
     </div>
     <div th:if="${successMessage}" class="hidden" id="serverSuccess" th:data-msg="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="hidden" id="serverError" th:data-msg="${errorMessage}"></div>
 
     <script>
         // ── New Job Modal ────────────────────────────────────────────────────
@@ -818,6 +820,10 @@
         function openEditDirect(d) {
             document.getElementById('editJobId').value = d.id || '';
             document.getElementById('editJobTitle').value = d.title || '';
+
+            const deptSel = document.getElementById('editJobDept');
+            if (deptSel) deptSel.value = d.deptId || '';
+
             document.getElementById('editDescription').value = d.description || '';
             document.getElementById('editRequirements').value = d.requirements || '';
             document.getElementById('editBenefits').value = d.benefits || '';
@@ -975,7 +981,10 @@
             const od = document.querySelector('#newJobModal input[name="openDate"]');
             if (od && !od.value) od.value = new Date().toISOString().split('T')[0];
             const srv = document.getElementById('serverSuccess');
-            if (srv && srv.dataset.msg) showToast(srv.dataset.msg);
+            if (srv && srv.dataset.msg) showToast(srv.dataset.msg, true);
+
+            const srvErr = document.getElementById('serverError');
+            if (srvErr && srvErr.dataset.msg) showToast(srvErr.dataset.msg, false);
         });
     </script>
 </body>

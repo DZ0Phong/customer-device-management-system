@@ -1274,13 +1274,13 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (VND)</label>
-                        <input type="number" name="salaryMin" min="0" placeholder="e.g. 15000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (USD)</label>
+                        <input type="number" name="salaryMin" min="0" placeholder="e.g. 1000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (VND)</label>
-                        <input type="number" name="salaryMax" min="0" placeholder="e.g. 30000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (USD)</label>
+                        <input type="number" name="salaryMax" min="0" placeholder="e.g. 3000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
@@ -1846,13 +1846,13 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (VND)</label>
-                        <input type="number" id="editSalaryMin" name="salaryMin" min="0" placeholder="e.g. 15000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Min Salary (USD)</label>
+                        <input type="number" id="editSalaryMin" name="salaryMin" min="0" placeholder="e.g. 1000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (VND)</label>
-                        <input type="number" id="editSalaryMax" name="salaryMax" min="0" placeholder="e.g. 30000000"
+                        <label class="block text-xs font-bold text-slate-600 mb-1.5">Max Salary (USD)</label>
+                        <input type="number" id="editSalaryMax" name="salaryMax" min="0" placeholder="e.g. 3000"
                             class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300">
                     </div>
                     <div>
@@ -1936,6 +1936,7 @@
         <span id="toastMsg">Action completed</span>
     </div>
     <div th:if="${successMessage}" class="hidden" id="serverSuccess" th:data-msg="${successMessage}"></div>
+    <div th:if="${errorMessage}" class="hidden" id="serverError" th:data-msg="${errorMessage}"></div>
 
     <script>
         const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEWING', 'OFFER', 'HIRED'];
@@ -1989,11 +1990,11 @@
 
             const salMin = parseFloat(data.jobSalaryMin) || 0, salMax = parseFloat(data.jobSalaryMax) || 0;
             const salEl = document.getElementById('jd-salary');
-            const fmt = new Intl.NumberFormat('vi-VN');
+            const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
             if (salMin > 0 || salMax > 0) {
-                if (salMin > 0 && salMax > 0) salEl.textContent = fmt.format(salMin) + ' – ' + fmt.format(salMax) + ' VND';
-                else if (salMin > 0) salEl.textContent = 'From ' + fmt.format(salMin) + ' VND';
-                else salEl.textContent = 'Up to ' + fmt.format(salMax) + ' VND';
+                if (salMin > 0 && salMax > 0) salEl.textContent = fmt.format(salMin) + ' – ' + fmt.format(salMax);
+                else if (salMin > 0) salEl.textContent = 'From ' + fmt.format(salMin);
+                else salEl.textContent = 'Up to ' + fmt.format(salMax);
             } else { salEl.textContent = 'Negotiable'; }
 
             // Toggle status button
@@ -2096,7 +2097,7 @@
 
             const exp = parseInt(data.exp) || 0, sal = parseFloat(data.salary) || 0;
             document.getElementById('cdExp').textContent = exp > 0 ? exp + ' year' + (exp !== 1 ? 's' : '') : 'N/A';
-            document.getElementById('cdSalary').textContent = sal > 0 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(sal) : 'N/A';
+            document.getElementById('cdSalary').textContent = sal > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(sal) : 'N/A';
 
             const sb = document.getElementById('cdStageBadge');
             const sm = { APPLIED: 'stage-applied', SCREENING: 'stage-screening', INTERVIEWING: 'stage-interviewing', OFFER: 'stage-offer', HIRED: 'stage-hired', REJECTED: 'stage-rejected' };
@@ -2326,7 +2327,7 @@
             document.getElementById('reviewEmail').textContent = email;
             document.getElementById('reviewJob').textContent = job;
             document.getElementById('reviewExp').textContent = exp > 0 ? exp + ' year' + (exp !== 1 ? 's' : '') : 'N/A';
-            document.getElementById('reviewSalary').textContent = salary > 0 ? new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND', maximumFractionDigits: 0 }).format(salary) : 'N/A';
+            document.getElementById('reviewSalary').textContent = salary > 0 ? new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(salary) : 'N/A';
             document.getElementById('reviewAvatar').textContent = name.split(' ').map(w => w[0]).slice(0, 2).join('').toUpperCase();
             const sel = document.querySelector('#reviewModal select[name="stage"]');
             if (sel) sel.value = stage;
@@ -2475,7 +2476,10 @@
             if (od && !od.value) od.value = new Date().toISOString().split('T')[0];
 
             const srv = document.getElementById('serverSuccess');
-            if (srv && srv.dataset.msg) showToast(srv.dataset.msg);
+            if (srv && srv.dataset.msg) showToast(srv.dataset.msg, true);
+
+            const srvErr = document.getElementById('serverError');
+            if (srvErr && srvErr.dataset.msg) showToast(srvErr.dataset.msg, false);
 
             document.addEventListener('keydown', e => {
                 if (e.key === 'Escape') {
