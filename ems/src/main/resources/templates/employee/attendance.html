@@ -28,7 +28,7 @@
 <body class="bg-background-light dark:bg-background-dark text-slate-900 dark:text-slate-100">
 <div class="flex h-screen overflow-hidden">
 
-    <aside th:replace="~{fragments/employee-sidebar :: sidebar('attendance', ${employee}, ${managementPortalUrl}, ${managementPortalLabel})}"></aside>
+    <aside th:replace="~{fragments/employee-sidebar :: sidebar('attendance', ${employee}, ${managementPortalUrl}, ${managementPortalLabel}, ${managementRoleLabel})}"></aside>
 
     <!-- Main Content -->
     <main class="flex-1 ml-64 overflow-y-auto bg-background-light dark:bg-background-dark">

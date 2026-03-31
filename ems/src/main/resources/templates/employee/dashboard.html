@@ -28,7 +28,7 @@
 <body class="bg-background-light dark:bg-background-dark font-display text-slate-900 dark:text-slate-100">
 <div class="flex min-h-screen">
 
-    <aside th:replace="~{fragments/employee-sidebar :: sidebar('dashboard', ${employee}, ${managementPortalUrl}, ${managementPortalLabel})}"></aside>
+    <aside th:replace="~{fragments/employee-sidebar :: sidebar('dashboard', ${employee}, ${managementPortalUrl}, ${managementPortalLabel}, ${managementRoleLabel})}"></aside>
 
     <!-- Main Content -->
     <main class="flex-1 ml-64 p-8">

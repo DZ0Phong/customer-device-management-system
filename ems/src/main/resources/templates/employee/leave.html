@@ -35,7 +35,7 @@
 <div class="flex min-h-screen">
 
   <!-- Sidebar (từ Dashboard) -->
-  <aside th:replace="~{fragments/employee-sidebar :: sidebar('leave', ${employee}, ${managementPortalUrl}, ${managementPortalLabel})}"></aside>
+  <aside th:replace="~{fragments/employee-sidebar :: sidebar('leave', ${employee}, ${managementPortalUrl}, ${managementPortalLabel}, ${managementRoleLabel})}"></aside>
 
   <!-- Main Content -->
   <main class="flex-1 ml-64 p-8">

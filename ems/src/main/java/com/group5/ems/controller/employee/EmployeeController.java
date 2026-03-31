@@ -151,6 +151,7 @@ public class EmployeeController {
         if (authentication == null) {
             model.addAttribute("managementPortalUrl", null);
             model.addAttribute("managementPortalLabel", null);
+            model.addAttribute("managementRoleLabel", null);
             return;
         }
 
@@ -159,6 +160,7 @@ public class EmployeeController {
 
         String portalUrl = null;
         String portalLabel = null;
+        String roleLabel = null;
         for (Role role : roles) {
             if (role == null || role.getCode() == null) {
                 continue;
@@ -168,23 +170,27 @@ public class EmployeeController {
                 case "DEPT_MANAGER" -> {
                     portalUrl = "/dept-manager/dashboard";
                     portalLabel = "Department View";
+                    roleLabel = role.getName() != null ? role.getName() : "Department Manager";
                 }
                 case "HR_MANAGER" -> {
                     if (portalUrl == null) {
                         portalUrl = "/hrmanager/dashboard";
                         portalLabel = "HR Manager View";
+                        roleLabel = role.getName() != null ? role.getName() : "HR Manager";
                     }
                 }
                 case "HR" -> {
                     if (portalUrl == null) {
                         portalUrl = "/hr/dashboard";
                         portalLabel = "HR View";
+                        roleLabel = role.getName() != null ? role.getName() : "HR Executive";
                     }
                 }
                 case "ADMIN" -> {
                     if (portalUrl == null) {
                         portalUrl = "/admin/dashboard";
                         portalLabel = "Admin View";
+                        roleLabel = role.getName() != null ? role.getName() : "Administrator";
                     }
                 }
                 default -> {
@@ -198,6 +204,7 @@ public class EmployeeController {
 
         model.addAttribute("managementPortalUrl", portalUrl);
         model.addAttribute("managementPortalLabel", portalLabel);
+        model.addAttribute("managementRoleLabel", roleLabel);
     }
 
     // ── Dashboard ──────────────────────────────────────────
