@@ -4,9 +4,13 @@ import com.group5.ems.dto.request.CreateLeaveRequestDTO;
 import com.group5.ems.dto.request.UpdateProfileRequest;
 import com.group5.ems.dto.response.*;
 import com.group5.ems.entity.Employee;
+import com.group5.ems.entity.Department;
+import com.group5.ems.entity.Position;
 import com.group5.ems.entity.Role;
 import com.group5.ems.entity.User;
+import com.group5.ems.repository.DepartmentRepository;
 import com.group5.ems.repository.EmployeeRepository;
+import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.repository.UserRepository;
 import com.group5.ems.repository.UserRoleRepository;
 import com.group5.ems.service.employee.*;
@@ -34,6 +38,8 @@ public class EmployeeController {
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRoleRepository userRoleRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
     private final DashboardService dashboardService;
     private final LeaveServiceImpl leaveService;
     private final ProfileService profileService;
@@ -49,6 +55,84 @@ public class EmployeeController {
 
     private Employee getEmployee(User user) {
         return employeeRepository.findByUserId(user.getId()).orElse(null);
+    }
+
+    private Employee resolveEmployeeForAttendance(User user) {
+        Employee employee = getEmployee(user);
+        if (employee != null) {
+            return employee;
+        }
+
+        List<Role> roles = userRoleRepository.getRolesByUserId(user.getId());
+        boolean canAutoProvision = roles.stream()
+                .map(Role::getCode)
+                .anyMatch(code -> "HR".equals(code) || "HR_MANAGER".equals(code));
+
+        if (!canAutoProvision) {
+            return null;
+        }
+
+        Department hrDepartment = departmentRepository.findAll().stream()
+                .filter(department -> department != null && (
+                        matchesCode(department.getCode(), "HR", "HUMAN_RESOURCES", "HUMAN_RESOURCE") ||
+                        matchesName(department.getName(), "hr", "human resources")))
+                .findFirst()
+                .orElse(null);
+
+        if (hrDepartment == null) {
+            throw new RuntimeException("No HR department found for this account. Please create or assign an HR department first.");
+        }
+
+        Position hrPosition = positionRepository.findAll().stream()
+                .filter(position -> position != null)
+                .filter(position -> position.getDepartmentId() == null || hrDepartment.getId().equals(position.getDepartmentId()))
+                .filter(position -> {
+                    String code = position.getCode();
+                    String name = position.getName();
+                    return matchesCode(code, "HR", "HR_MANAGER", "HR_SPECIALIST", "HR_STAFF")
+                            || matchesName(name, "hr", "human resources", "hr manager", "hr specialist");
+                })
+                .findFirst()
+                .orElse(null);
+
+        if (hrPosition == null) {
+            throw new RuntimeException("No HR position found for this account. Please create or assign an HR position first.");
+        }
+
+        Employee provisioned = new Employee();
+        provisioned.setUserId(user.getId());
+        provisioned.setEmployeeCode("AUTO-HR-" + user.getId());
+        provisioned.setDepartmentId(hrDepartment.getId());
+        provisioned.setPositionId(hrPosition.getId());
+        provisioned.setHireDate(LocalDate.now());
+        provisioned.setStatus("ACTIVE");
+
+        return employeeRepository.save(provisioned);
+    }
+
+    private boolean matchesCode(String value, String... candidates) {
+        if (value == null) {
+            return false;
+        }
+        for (String candidate : candidates) {
+            if (candidate != null && candidate.equalsIgnoreCase(value.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesName(String value, String... keywords) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim().toLowerCase();
+        for (String keyword : keywords) {
+            if (keyword != null && normalized.contains(keyword.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     // Tạo EmployeeInfoDTO mặc định khi chưa được assign phòng ban
@@ -120,7 +204,7 @@ public class EmployeeController {
     @GetMapping("/dashboard")
     public String dashboard(Model model, Authentication authentication) {
         User user = getUser(authentication);
-        Employee employee = getEmployee(user);
+        Employee employee = resolveEmployeeForAttendance(user);
 
         if (employee != null) {
             model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
@@ -262,8 +346,8 @@ public class EmployeeController {
     public String clockIn(Authentication authentication, RedirectAttributes redirectAttributes) {
         try {
             User user = getUser(authentication);
-            Employee employee = getEmployee(user);
-            if (employee == null) throw new RuntimeException("You are not assigned to any department yet.");
+            Employee employee = resolveEmployeeForAttendance(user);
+            if (employee == null) throw new RuntimeException("No employee profile found for this account.");
             attendanceService.clockIn(employee.getId());
             redirectAttributes.addFlashAttribute("success", "Clocked in successfully!");
         } catch (Exception e) {
@@ -276,8 +360,8 @@ public class EmployeeController {
     public String clockOut(Authentication authentication, RedirectAttributes redirectAttributes) {
         try {
             User user = getUser(authentication);
-            Employee employee = getEmployee(user);
-            if (employee == null) throw new RuntimeException("You are not assigned to any department yet.");
+            Employee employee = resolveEmployeeForAttendance(user);
+            if (employee == null) throw new RuntimeException("No employee profile found for this account.");
             attendanceService.clockOut(employee.getId());
             redirectAttributes.addFlashAttribute("success", "Clocked out successfully!");
         } catch (Exception e) {
@@ -291,7 +375,7 @@ public class EmployeeController {
                                                    @RequestParam int year,
                                                    @RequestParam int month) {
         User user = getUser(authentication);
-        Employee employee = getEmployee(user);
+        Employee employee = resolveEmployeeForAttendance(user);
         if (employee == null) {
             return ResponseEntity.badRequest().build();
         }
