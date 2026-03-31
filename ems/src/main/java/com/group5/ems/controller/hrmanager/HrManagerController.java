@@ -2,6 +2,11 @@ package com.group5.ems.controller.hrmanager;
 
 import com.group5.ems.dto.response.hrmanager.EventCreateDTO;
 import com.group5.ems.dto.response.hrmanager.EventUpdateDTO;
+import com.group5.ems.dto.response.UserDTO;
+import com.group5.ems.entity.Role;
+import com.group5.ems.entity.User;
+import com.group5.ems.repository.UserRepository;
+import com.group5.ems.repository.UserRoleRepository;
 import com.group5.ems.service.hrmanager.CalendarService;
 import com.group5.ems.service.hrmanager.HRAnalyticsService;
 import com.group5.ems.service.hrmanager.HRManagerDashboardService;
@@ -20,6 +25,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -32,6 +38,47 @@ public class HrManagerController {
     private final LeaveApprovalService leaveApprovalService;
     private final PayrollApprovalService payrollApprovalService;
     private final CalendarService calendarService;
+    private final UserRepository userRepository;
+    private final UserRoleRepository userRoleRepository;
+
+    @ModelAttribute("currentUser")
+    public UserDTO currentUser(org.springframework.security.core.Authentication authentication) {
+        if (authentication == null) {
+            return null;
+        }
+
+        User user = userRepository.findByUsername(authentication.getName()).orElse(null);
+        if (user == null) {
+            return null;
+        }
+
+        List<Role> roles = userRoleRepository.getRolesByUserId(user.getId());
+        Role primaryRole = roles.stream()
+                .filter(role -> role != null && "HR_MANAGER".equalsIgnoreCase(role.getCode()))
+                .findFirst()
+                .orElse(roles.stream().filter(role -> role != null).findFirst().orElse(null));
+
+        String firstName = user.getFullName();
+        if (firstName != null && !firstName.isBlank()) {
+            String[] parts = user.getFullName().trim().split("\\s+");
+            firstName = parts[parts.length - 1];
+        }
+
+        return UserDTO.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .fullName(user.getFullName())
+                .firstName(firstName)
+                .phone(user.getPhone())
+                .avatarUrl(user.getAvatarUrl())
+                .status(user.getStatus())
+                .lastLoginAt(user.getLastLoginAt())
+                .createdAt(user.getCreatedAt())
+                .updatedAt(user.getUpdatedAt())
+                .role(primaryRole != null ? primaryRole.getName() : "HR Manager")
+                .build();
+    }
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
