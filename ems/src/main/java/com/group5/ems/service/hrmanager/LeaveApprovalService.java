@@ -1,10 +1,13 @@
 package com.group5.ems.service.hrmanager;
 
+import com.group5.ems.constants.WorkflowConstants;
 import com.group5.ems.dto.response.hrmanager.LeaveRequestResponseDTO;
 import com.group5.ems.entity.EmployeeLeaveBalance;
 import com.group5.ems.entity.Request;
+import com.group5.ems.exception.WorkflowException;
 import com.group5.ems.repository.EmployeeLeaveBalanceRepository;
 import com.group5.ems.repository.RequestRepository;
+import com.group5.ems.service.common.ApprovalWorkflowService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -27,6 +30,9 @@ public class LeaveApprovalService {
     
     @Autowired
     private EmployeeLeaveBalanceRepository employeeLeaveBalanceRepository;
+    
+    @Autowired
+    private ApprovalWorkflowService workflowService;
 
     /**
      * Get all pending leave requests
@@ -49,11 +55,30 @@ public class LeaveApprovalService {
         Optional<Request> requestOpt = requestRepository.findById(requestId);
         if (requestOpt.isPresent()) {
             Request request = requestOpt.get();
-            request.setStatus("APPROVED");
-            request.setApprovedBy(approverId);
-            request.setApprovedAt(LocalDateTime.now());
-            request.setCurrentApproverId(null);
-            requestRepository.save(request);
+            
+            // Validate workflow step
+            if (!workflowService.canApprove(request, WorkflowConstants.ROLE_HR_MANAGER)) {
+                throw new WorkflowException("Cannot approve: Request must be approved by Department Manager and HR first. Current step: " 
+                        + workflowService.getStepDisplayName(request.getStep()));
+            }
+            
+            // Check for overlap before approving
+            if (request.getLeaveFrom() != null && request.getLeaveTo() != null) {
+                List<Request> overlappingRequests = requestRepository
+                        .findOverlappingLeaveRequests(
+                                "APPROVED",
+                                request.getLeaveFrom(),
+                                request.getLeaveTo()
+                        );
+                
+                if (!overlappingRequests.isEmpty()) {
+                    throw new RuntimeException("Cannot approve: " + overlappingRequests.size() + 
+                            " team member(s) already on leave during this period");
+                }
+            }
+            
+            // Move to next step (will set to APPROVED since this is final step)
+            workflowService.moveToNextStep(request, approverId, WorkflowConstants.ROLE_HR_MANAGER);
             
             // Update employee leave balance
             updateLeaveBalanceOnApproval(request);
@@ -70,12 +95,15 @@ public class LeaveApprovalService {
         Optional<Request> requestOpt = requestRepository.findById(requestId);
         if (requestOpt.isPresent()) {
             Request request = requestOpt.get();
-            request.setStatus("REJECTED");
-            request.setApprovedBy(approverId);
-            request.setApprovedAt(LocalDateTime.now());
-            request.setRejectedReason(rejectedReason);
-            request.setCurrentApproverId(null);
-            requestRepository.save(request);
+            
+            // Validate workflow step
+            if (!workflowService.canApprove(request, WorkflowConstants.ROLE_HR_MANAGER)) {
+                throw new WorkflowException("Cannot reject: Request must be at HR Manager approval step. Current step: " 
+                        + workflowService.getStepDisplayName(request.getStep()));
+            }
+            
+            // Reject using workflow service
+            workflowService.rejectRequest(request, approverId, WorkflowConstants.ROLE_HR_MANAGER, rejectedReason);
             
             // Update employee leave balance (remove from pending)
             updateLeaveBalanceOnRejection(request);
@@ -175,6 +203,23 @@ public class LeaveApprovalService {
             stats.put("nextReturnInfo", "No upcoming returns");
         }
         
+        // This month count and change
+        LocalDateTime monthStart = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0);
+        long thisMonthCount = requestRepository.countByCreatedAtBetween(monthStart, now);
+        stats.put("thisMonthCount", thisMonthCount);
+        
+        // Calculate change vs last month
+        LocalDateTime lastMonthStart = monthStart.minusMonths(1);
+        LocalDateTime lastMonthEnd = monthStart.minusSeconds(1);
+        long lastMonthCount = requestRepository.countByCreatedAtBetween(lastMonthStart, lastMonthEnd);
+        
+        if (lastMonthCount > 0) {
+            double changePercent = ((thisMonthCount - lastMonthCount) * 100.0) / lastMonthCount;
+            stats.put("thisMonthChange", String.format("%+.1f%% vs last month", changePercent));
+        } else {
+            stats.put("thisMonthChange", "vs last month");
+        }
+        
         return stats;
     }
 
@@ -210,6 +255,7 @@ public class LeaveApprovalService {
                 .map(request -> {
                     LeaveRequestResponseDTO dto = new LeaveRequestResponseDTO(request);
                     calculateLeaveBalance(dto, request);
+                    calculateTeamOverlap(dto, request);
                     return dto;
                 })
                 .collect(Collectors.toList());
@@ -406,6 +452,64 @@ public class LeaveApprovalService {
             balance.setUpdatedAt(java.time.Instant.now());
             
             employeeLeaveBalanceRepository.save(balance);
+        }
+    }
+
+    /**
+     * Calculate team overlap for a leave request
+     */
+    private void calculateTeamOverlap(LeaveRequestResponseDTO dto, Request request) {
+        if (request.getLeaveFrom() == null || request.getLeaveTo() == null) {
+            dto.setHasOverlap(false);
+            dto.setOverlapCount(0);
+            return;
+        }
+
+        try {
+            // Find other approved/pending leave requests that overlap with this date range
+            // Simplified: check all requests regardless of department
+            List<Request> overlappingRequests = requestRepository
+                    .findOverlappingLeaveRequests(
+                            "APPROVED",
+                            request.getLeaveFrom(),
+                            request.getLeaveTo()
+                    );
+
+            // Exclude the current request itself
+            overlappingRequests = overlappingRequests.stream()
+                    .filter(r -> !r.getId().equals(request.getId()))
+                    .collect(Collectors.toList());
+
+            int overlapCount = overlappingRequests.size();
+            dto.setHasOverlap(overlapCount > 0);
+            dto.setOverlapCount(overlapCount);
+
+            if (overlapCount > 0) {
+                // Build overlap employees string - use safe access
+                String overlapNames = overlappingRequests.stream()
+                        .limit(3)
+                        .map(r -> {
+                            try {
+                                if (r.getEmployee() != null && r.getEmployee().getUser() != null) {
+                                    return r.getEmployee().getUser().getFullName();
+                                }
+                            } catch (Exception e) {
+                                // Ignore lazy init errors
+                            }
+                            return "Unknown";
+                        })
+                        .collect(Collectors.joining(", "));
+
+                if (overlapCount > 3) {
+                    overlapNames += " and " + (overlapCount - 3) + " more";
+                }
+
+                dto.setOverlapEmployees(overlapNames + " on leave during this period");
+            }
+        } catch (Exception e) {
+            // If any error, just set no overlap
+            dto.setHasOverlap(false);
+            dto.setOverlapCount(0);
         }
     }
 }

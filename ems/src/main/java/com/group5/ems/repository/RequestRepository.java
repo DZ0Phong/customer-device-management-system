@@ -31,10 +31,9 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
         List<Request> findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long employeeId);
 
-        @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status AND r.requestType.category = :category")
-        int countByStatusAndRequestTypeCategory(@Param("status") String status, @Param("category") String category);
+        
+    List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
 
-        List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
 
         @Query("SELECT r FROM Request r " +
                         "JOIN FETCH r.employee e " +
@@ -48,21 +47,27 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
         @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status")
         Long countByStatus(@Param("status") String status);
 
-        // ── Pageable queries for HR leave page (DB-level filtering) ──
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category = 'ATTENDANCE' " +
+            "ORDER BY r.createdAt DESC")
+    List<Request> findPendingLeaveRequests();
 
-        @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
-                        "LEFT JOIN e.department d JOIN r.requestType rt " +
-                        "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
-                        "ORDER BY r.updatedAt DESC, r.createdAt DESC", countQuery = "SELECT COUNT(r) FROM Request r JOIN r.requestType rt "
-                                        +
-                                        "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE'")
-        Page<Request> findLeaveHistory(Pageable pageable);
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HRM' AND rt.category = 'ATTENDANCE' " +
+            "ORDER BY r.createdAt DESC")
+    List<Request> findHrmPendingLeaveRequests();
 
-        @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
-                        "WHERE r.status = 'PENDING' AND rt.category = 'ATTENDANCE' " +
-                        "ORDER BY r.createdAt DESC")
-        List<Request> findPendingLeaveRequests();
+    @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
+            "LEFT JOIN e.department d JOIN r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "ORDER BY r.updatedAt DESC, r.createdAt DESC",
+            countQuery = "SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+                    "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE'")
+    Page<Request> findLeaveHistory(Pageable pageable);
+
+        
 
         // ── Pageable queries for HR workflow requests ──
 
@@ -105,45 +110,50 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
         List<Request> findByEmployeeIdOrderByCreatedAtDesc(Long employeeId);
 
-        // Alternative queries without leaveType restriction
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.position p " +
-                        "WHERE r.status = :status " +
-                        "ORDER BY r.createdAt DESC")
-        Page<Request> findRequestsByStatusWithoutLeaveTypeFilter(@Param("status") String status, Pageable pageable);
+    // Alternative queries without leaveType restriction
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "WHERE r.status = :status " +
+            "ORDER BY r.createdAt DESC")
+    Page<Request> findRequestsByStatusWithoutLeaveTypeFilter(@Param("status") String status, Pageable pageable);
 
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.position p " +
-                        "WHERE r.status = 'APPROVED' " +
-                        "ORDER BY r.approvedAt DESC")
-        Page<Request> findApprovedRequestsOrderByApprovedAt(Pageable pageable);
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "WHERE r.status = 'APPROVED' " +
+            "ORDER BY r.approvedAt DESC")
+    Page<Request> findApprovedRequestsOrderByApprovedAt(Pageable pageable);
 
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.position p " +
-                        "WHERE r.status = 'REJECTED' " +
-                        "ORDER BY r.approvedAt DESC")
-        Page<Request> findRejectedRequestsOrderByApprovedAt(Pageable pageable);
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "WHERE r.status = 'REJECTED' " +
+            "ORDER BY r.approvedAt DESC")
+    Page<Request> findRejectedRequestsOrderByApprovedAt(Pageable pageable);
 
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.position p " +
-                        "WHERE r.status IN ('APPROVED', 'REJECTED') " +
-                        "ORDER BY r.approvedAt DESC")
-        Page<Request> findHistoryRequestsOrderByApprovedAt(Pageable pageable);
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "WHERE r.status IN ('APPROVED', 'REJECTED') " +
+            "ORDER BY r.approvedAt DESC")
+    Page<Request> findHistoryRequestsOrderByApprovedAt(Pageable pageable);
 
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "JOIN FETCH e.user u " +
-                        "LEFT JOIN FETCH e.position p " +
-                        "ORDER BY r.createdAt DESC")
-        Page<Request> findAllRequestsWithoutLeaveTypeFilter(Pageable pageable);
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "ORDER BY r.createdAt DESC")
+    Page<Request> findAllRequestsWithoutLeaveTypeFilter(Pageable pageable);
 
         @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status " +
                         "AND r.approvedAt BETWEEN :startDate AND :endDate")
@@ -168,9 +178,33 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
                         @Param("status") String status,
                         @Param("date") java.time.LocalDate date);
 
-        // ── Pageable queries for HR leave page (DB-level filtering) ──
+    // Find overlapping leave requests
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "JOIN FETCH e.user u " +
+           "WHERE r.status = :status " +
+           "AND r.leaveFrom <= :endDate " +
+           "AND r.leaveTo >= :startDate " +
+           "ORDER BY r.leaveFrom ASC")
+    List<Request> findOverlappingLeaveRequests(
+            @Param("status") String status,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate);
 
-        List<Request> findByRequestType_CodeInOrderByCreatedAtDesc(List<String> codes);
+    // Method for Recent Activities - filter by category
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "JOIN FETCH e.user u " +
+           "LEFT JOIN FETCH e.department d " +
+           "LEFT JOIN FETCH e.position p " +
+           "JOIN FETCH r.requestType rt " +
+           "WHERE rt.category = :category " +
+           "AND (r.status = 'PENDING' OR r.updatedAt >= :since) " +
+           "ORDER BY CASE WHEN r.status = 'PENDING' THEN 0 ELSE 1 END, r.createdAt DESC")
+    List<Request> findRecentRequestsByCategory(
+            @Param("category") String category,
+            @Param("since") LocalDateTime since);
+
 
         // ── Payroll Aggregation queries ──
         long countByRequestType_CodeInAndStatus(List<String> codes, String status);
@@ -190,48 +224,205 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
                         @Param("startInstant") java.time.Instant startInstant,
                         @Param("endInstant") java.time.Instant endInstant);
 
-        /**
-         * Finds approved overtime requests overlapping a given date range for a
-         * specific employee.
-         * Uses Request.startDate / Request.endDate (Instant fields).
-         */
-        @Query("SELECT r FROM Request r JOIN r.requestType rt " +
-                        "WHERE r.employeeId = :empId AND r.status = 'APPROVED' " +
-                        "AND rt.code = 'ATT_OVERTIME' " +
-                        "AND r.startDate <= :endInstant AND r.endDate >= :startInstant")
-        List<Request> findApprovedOvertime(@Param("empId") Long empId,
-                        @Param("startInstant") java.time.Instant startInstant,
-                        @Param("endInstant") java.time.Instant endInstant);
+    // Missing methods that are used by other services
+    List<Request> findByRequestType_CodeOrderByCreatedAtDesc(String code);
 
-        // Missing methods that are used by other services
-        List<Request> findByRequestType_CodeOrderByCreatedAtDesc(String code);
+    long countByRequestType_CodeAndStatus(String code, String status);
 
-        long countByRequestType_CodeAndStatus(String code, String status);
+    long countByStatusAndRequestTypeCodeIn(String status, List<String> codes);
 
-        long countByStatusAndRequestTypeCodeIn(String status, List<String> codes);
+    @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status AND r.step = 'WAITING_HR' AND r.requestType.code IN :codes")
+    long countByStatusAndStepWaitingHRAndRequestTypeCodeIn(@Param("status") String status, @Param("codes") List<String> codes);
 
-        @Query("SELECT r FROM Request r " +
-                        "JOIN FETCH r.employee e " +
-                        "WHERE e.id IN :employeeIds " +
-                        "AND r.status = 'APPROVED' " +
-                        "AND r.leaveFrom <= :endDate " +
-                        "AND r.leaveTo >= :startDate")
-        List<Request> findApprovedLeaveRequestsByEmployeeIdsAndDateRange(
-                        @Param("employeeIds") List<Long> employeeIds,
-                        @Param("startDate") java.time.LocalDate startDate,
-                        @Param("endDate") java.time.LocalDate endDate);
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "WHERE e.id IN :employeeIds " +
+           "AND r.status = 'APPROVED' " +
+           "AND r.leaveFrom <= :endDate " +
+           "AND r.leaveTo >= :startDate")
+    List<Request> findApprovedLeaveRequestsByEmployeeIdsAndDateRange(
+            @Param("employeeIds") List<Long> employeeIds,
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate);
 
-        @Query("SELECT r FROM Request r " +
-                        "WHERE r.id = :id " +
-                        "AND r.employee.department.id = :departmentId " +
-                        "AND r.leaveType IS NOT NULL")
-        java.util.Optional<Request> findByIdAndEmployeeDepartmentIdAndLeaveTypeIsNotNull(
-                        @Param("id") Long id,
-                        @Param("departmentId") Long departmentId);
+    @Query("SELECT r FROM Request r " +
+           "WHERE r.id = :id " +
+           "AND r.employee.department.id = :departmentId " +
+           "AND r.leaveType IS NOT NULL")
+    java.util.Optional<Request> findByIdAndEmployeeDepartmentIdAndLeaveTypeIsNotNull(
+            @Param("id") Long id,
+            @Param("departmentId") Long departmentId);
 
-        /**
-         * Finds approved overtime requests overlapping a given date range for a
-         * specific employee.
-         * Uses Request.startDate / Request.endDate (Instant fields).
-         */
+    // Count methods for Quick Stats
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt WHERE rt.category = :category")
+    long countByRequestTypeCategory(@Param("category") String category);
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+           "WHERE r.status = :status AND rt.category = :category")
+    long countByStatusAndRequestTypeCategory(@Param("status") String status, @Param("category") String category);
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+           "WHERE r.status = :status AND r.step = 'WAITING_HR' AND rt.category = :category")
+    long countByStatusAndStepWaitingHRAndRequestTypeCategory(@Param("status") String status, @Param("category") String category);
+
+    // ── Filtered Leave History (server-side) ──
+
+    @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
+            "LEFT JOIN e.department d JOIN r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:dateFrom IS NULL OR r.leaveFrom >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR r.leaveTo <= :dateTo) " +
+            "ORDER BY r.updatedAt DESC, r.createdAt DESC",
+            countQuery = "SELECT COUNT(r) FROM Request r JOIN r.employee e JOIN e.user u " +
+            "LEFT JOIN e.department d JOIN r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:dateFrom IS NULL OR r.leaveFrom >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR r.leaveTo <= :dateTo)")
+    Page<Request> findLeaveHistoryFiltered(
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId,
+            @Param("leaveType") String leaveType,
+            @Param("search") String search,
+            @Param("dateFrom") java.time.LocalDate dateFrom,
+            @Param("dateTo") java.time.LocalDate dateTo,
+            Pageable pageable);
+
+    // ── Calendar Events: approved/pending leaves overlapping a date range ──
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE rt.category = 'ATTENDANCE' " +
+            "AND r.status IN ('APPROVED', 'PENDING') " +
+            "AND r.leaveFrom IS NOT NULL AND r.leaveTo IS NOT NULL " +
+            "AND r.leaveFrom <= :endDate AND r.leaveTo >= :startDate")
+    List<Request> findCalendarEvents(
+            @Param("startDate") java.time.LocalDate startDate,
+            @Param("endDate") java.time.LocalDate endDate);
+
+    // ── Leave Statistics ──
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+            "WHERE rt.category = 'ATTENDANCE' AND r.status = :status " +
+            "AND r.updatedAt >= :since")
+    long countLeaveByStatusSince(
+            @Param("status") String status,
+            @Param("since") LocalDateTime since);
+
+    @Query(value = "SELECT rt.code, COUNT(r) as cnt FROM Request r JOIN r.requestType rt " +
+            "WHERE rt.category = 'ATTENDANCE' AND r.status <> 'PENDING' " +
+            "GROUP BY rt.code ORDER BY cnt DESC")
+    List<Object[]> findTopLeaveTypes();
+
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(HOUR, r.created_at, r.updated_at)) FROM requests r " +
+            "JOIN request_types rt ON r.request_type_id = rt.id " +
+            "WHERE rt.category = 'ATTENDANCE' AND r.status IN ('APPROVED', 'REJECTED') " +
+            "AND r.updated_at >= :since", nativeQuery = true)
+    Double avgProcessingHoursSince(@Param("since") LocalDateTime since);
+
+    // ── Bulk operations ──
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.id IN :ids AND r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category = 'ATTENDANCE'")
+    List<Request> findPendingLeavesByIds(@Param("ids") List<Long> ids);
+
+    // ── CSV export ──
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "ORDER BY r.updatedAt DESC")
+    List<Request> findLeaveHistoryForExport(
+            @Param("status") String status,
+            @Param("departmentId") Long departmentId);
+
+    // ══════════════════════════════════════════════════════════════════
+    // HR Workflow Requests — Pending (non-ATTENDANCE handled here)
+    // ══════════════════════════════════════════════════════════════════
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category <> 'ATTENDANCE' " +
+            "ORDER BY r.createdAt DESC")
+    List<Request> findPendingWorkflowRequests();
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HRM' AND rt.category <> 'ATTENDANCE' " +
+            "ORDER BY r.createdAt DESC")
+    List<Request> findHrmPendingWorkflowRequests();
+
+    // ── HR Workflow Requests — Filtered History ──
+
+    @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
+            "LEFT JOIN e.department d JOIN r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category <> 'ATTENDANCE' " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "AND (:categoryCode IS NULL OR rt.category = :categoryCode) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:dateFrom IS NULL OR r.createdAt >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR r.createdAt <= :dateTo) " +
+            "ORDER BY r.updatedAt DESC, r.createdAt DESC",
+            countQuery = "SELECT COUNT(r) FROM Request r JOIN r.employee e JOIN e.user u " +
+            "LEFT JOIN e.department d JOIN r.requestType rt " +
+            "WHERE r.status <> 'PENDING' AND rt.category <> 'ATTENDANCE' " +
+            "AND (:status IS NULL OR r.status = :status) " +
+            "AND (:categoryCode IS NULL OR rt.category = :categoryCode) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(r.title) LIKE LOWER(CONCAT('%', :search, '%'))) " +
+            "AND (:dateFrom IS NULL OR r.createdAt >= :dateFrom) " +
+            "AND (:dateTo IS NULL OR r.createdAt <= :dateTo)")
+    Page<Request> findWorkflowRequestsFiltered(
+            @Param("status") String status,
+            @Param("categoryCode") String categoryCode,
+            @Param("search") String search,
+            @Param("dateFrom") LocalDateTime dateFrom,
+            @Param("dateTo") LocalDateTime dateTo,
+            Pageable pageable);
+
+    // ── HR Workflow Requests — Stats ──
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+            "WHERE rt.category <> 'ATTENDANCE' AND r.status = :status " +
+            "AND r.updatedAt >= :since")
+    long countWorkflowByStatusSince(
+            @Param("status") String status,
+            @Param("since") LocalDateTime since);
+
+    @Query(value = "SELECT AVG(TIMESTAMPDIFF(HOUR, r.created_at, r.updated_at)) FROM requests r " +
+            "JOIN request_types rt ON r.request_type_id = rt.id " +
+            "WHERE rt.category <> 'ATTENDANCE' AND r.status IN ('APPROVED', 'REJECTED') " +
+            "AND r.updated_at >= :since", nativeQuery = true)
+    Double avgWorkflowProcessingHoursSince(@Param("since") LocalDateTime since);
+
+    @Query(value = "SELECT rt.name, COUNT(r) as cnt FROM Request r JOIN r.requestType rt " +
+            "WHERE rt.category <> 'ATTENDANCE' AND r.status <> 'PENDING' " +
+            "GROUP BY rt.name ORDER BY cnt DESC")
+    List<Object[]> findTopWorkflowTypes();
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category <> 'ATTENDANCE'")
+    long countPendingWorkflowRequests();
+
+    // ── HR Workflow Requests — Bulk operations ──
+
+    @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "WHERE r.id IN :ids AND r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category <> 'ATTENDANCE'")
+    List<Request> findPendingWorkflowRequestsByIds(@Param("ids") List<Long> ids);
 }
