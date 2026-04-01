@@ -31,9 +31,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
         List<Request> findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long employeeId);
 
-        
-    List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
 
+        List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
 
         @Query("SELECT r FROM Request r " +
                         "JOIN FETCH r.employee e " +
@@ -66,8 +65,6 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             countQuery = "SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
                     "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE'")
     Page<Request> findLeaveHistory(Pageable pageable);
-
-        
 
         // ── Pageable queries for HR workflow requests ──
 
@@ -178,6 +175,9 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
                         @Param("status") String status,
                         @Param("date") java.time.LocalDate date);
 
+        // ── Pageable queries for HR leave page (DB-level filtering) ──
+
+        List<Request> findByRequestType_CodeInOrderByCreatedAtDesc(List<String> codes);
     // Find overlapping leave requests
     @Query("SELECT r FROM Request r " +
            "JOIN FETCH r.employee e " +
@@ -224,6 +224,27 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
                         @Param("startInstant") java.time.Instant startInstant,
                         @Param("endInstant") java.time.Instant endInstant);
 
+        /**
+         * Finds approved overtime requests overlapping a given date range for a
+         * specific employee.
+         * Uses Request.startDate / Request.endDate (Instant fields).
+         */
+        @Query("SELECT r FROM Request r JOIN r.requestType rt " +
+                        "WHERE r.employeeId = :empId AND r.status = 'APPROVED' " +
+                        "AND rt.code = 'ATT_OVERTIME' " +
+                        "AND r.startDate <= :endInstant AND r.endDate >= :startInstant")
+        List<Request> findApprovedOvertime(@Param("empId") Long empId,
+                        @Param("startInstant") java.time.Instant startInstant,
+                        @Param("endInstant") java.time.Instant endInstant);
+
+        // Missing methods that are used by other services
+
+
+        /**
+         * Finds approved overtime requests overlapping a given date range for a
+         * specific employee.
+         * Uses Request.startDate / Request.endDate (Instant fields).
+         */
     // Missing methods that are used by other services
     List<Request> findByRequestType_CodeOrderByCreatedAtDesc(String code);
 
