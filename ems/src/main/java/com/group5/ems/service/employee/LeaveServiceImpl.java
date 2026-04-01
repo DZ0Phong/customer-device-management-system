@@ -1,14 +1,18 @@
 package com.group5.ems.service.employee;
 
+import com.group5.ems.constants.WorkflowConstants;
 import com.group5.ems.dto.request.CreateLeaveRequestDTO;
 import com.group5.ems.dto.response.LeaveBalanceDTO;
 import com.group5.ems.dto.response.LeaveRequestDTO;
 import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.Request;
 import com.group5.ems.entity.RequestType;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.RequestTypeRepository;
+import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +31,7 @@ public class LeaveServiceImpl {
     private final EmployeeRepository employeeRepository;
     private final RequestRepository requestRepository;
     private final RequestTypeRepository requestTypeRepository;
+    private final LogService logService;
 
     @Transactional(readOnly = true)
     public List<LeaveBalanceDTO> getLeaveBalances(Long employeeId) {
@@ -112,10 +117,12 @@ public class LeaveServiceImpl {
         request.setContent(dto.getContent());
         request.setTitle(dto.getLeaveType().replace("_", " ") + " Request");
         request.setStatus("PENDING");
+        request.setStep(WorkflowConstants.STEP_WAITING_DM);
         request.setCreatedAt(LocalDateTime.now());
         request.setUpdatedAt(LocalDateTime.now());
 
-        requestRepository.save(request);
+        Request savedRequest = requestRepository.save(request);
+        logService.log(AuditAction.CREATE, AuditEntityType.LEAVE, savedRequest.getId());
     }
 
     // ── Helper methods ──────────────────────────────────────
@@ -149,6 +156,40 @@ public class LeaveServiceImpl {
                 .content(req.getContent())
                 .status(req.getStatus())
                 .rejectedReason(req.getRejectedReason())
+                .step(req.getStep())
+                .statusDisplay(resolveStatusDisplay(req))
+                .stepDisplay(resolveStepDisplay(req.getStep()))
+                .createdAt(req.getCreatedAt())
                 .build();
+    }
+
+    private String resolveStatusDisplay(Request request) {
+        if (request == null) {
+            return "Unknown";
+        }
+        if ("APPROVED".equalsIgnoreCase(request.getStatus())) {
+            return "Approved";
+        }
+        if ("REJECTED".equalsIgnoreCase(request.getStatus())) {
+            return "Rejected";
+        }
+
+        String step = request.getStep() != null ? request.getStep() : WorkflowConstants.STEP_WAITING_DM;
+        return switch (step) {
+            case WorkflowConstants.STEP_WAITING_HR -> "Waiting for HR";
+            case WorkflowConstants.STEP_WAITING_HRM -> "Waiting for HR Manager";
+            default -> "Waiting for Department Manager";
+        };
+    }
+
+    private String resolveStepDisplay(String step) {
+        String normalized = step != null ? step : WorkflowConstants.STEP_WAITING_DM;
+        return switch (normalized) {
+            case WorkflowConstants.STEP_WAITING_HR -> "HR validation";
+            case WorkflowConstants.STEP_WAITING_HRM -> "HR Manager final decision";
+            case WorkflowConstants.STEP_COMPLETED -> "Completed";
+            case WorkflowConstants.STEP_REJECTED -> "Rejected";
+            default -> "Department Manager review";
+        };
     }
 }
