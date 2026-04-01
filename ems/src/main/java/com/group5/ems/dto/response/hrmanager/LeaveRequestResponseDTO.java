@@ -23,17 +23,30 @@ public class LeaveRequestResponseDTO {
     private String content;
     private String status;
     private String rejectedReason;
+    private java.time.LocalDateTime createdAt;
 
     // Employee info (for HR Manager view)
     private String employeeName;
     private String employeeInitials;
     private String employeePosition;
+    private String department;  // Department name for filtering
 
     // Formatted fields (for template display)
     private String durationLabel;
     private String dateRange;
     private String dateRangeYear;
     private String reason;
+    
+    // Leave balance info
+    private Integer currentBalance;
+    private Integer usedThisYear;
+    private Integer annualQuota;
+    private Integer balanceAfterApproval;
+    
+    // Team overlap info
+    private Boolean hasOverlap;
+    private Integer overlapCount;
+    private String overlapEmployees;
 
     // Constructor from Request entity
     public LeaveRequestResponseDTO(Request request) {
@@ -45,6 +58,7 @@ public class LeaveRequestResponseDTO {
         this.content = request.getContent();
         this.rejectedReason = request.getRejectedReason();
         this.reason = request.getContent() != null ? request.getContent() : request.getTitle();
+        this.createdAt = request.getCreatedAt();
 
         // Employee info
         if (request.getEmployee() != null && request.getEmployee().getUser() != null) {
@@ -57,10 +71,17 @@ public class LeaveRequestResponseDTO {
             } else {
                 this.employeePosition = "No Position";
             }
+            
+            if (request.getEmployee().getDepartment() != null) {
+                this.department = request.getEmployee().getDepartment().getName();
+            } else {
+                this.department = "No Department";
+            }
         } else {
             this.employeeName = "Unknown Employee";
             this.employeeInitials = "??";
             this.employeePosition = "No Position";
+            this.department = "No Department";
         }
 
         // Date calculations
@@ -76,6 +97,11 @@ public class LeaveRequestResponseDTO {
             this.dateRangeYear = "";
             this.durationLabel = "0 Days";
         }
+        
+        // Initialize overlap info (will be calculated by service if needed)
+        this.hasOverlap = false;
+        this.overlapCount = 0;
+        this.overlapEmployees = null;
     }
 
     // Utility methods

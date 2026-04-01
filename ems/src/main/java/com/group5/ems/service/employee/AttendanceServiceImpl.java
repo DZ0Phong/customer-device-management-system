@@ -23,7 +23,8 @@ public class AttendanceServiceImpl implements AttendanceService {
     private final AttendanceRepository attendanceRepository;
 
     // Giờ bắt đầu làm việc chuẩn
-    private static final LocalTime WORK_START = LocalTime.of(9, 0);
+    private static final LocalTime LATE_AFTER = LocalTime.of(9, 0);
+    private static final LocalTime ABSENT_AFTER = LocalTime.of(10, 30);
 
     @Override
     @Transactional(readOnly = true)
@@ -56,13 +57,13 @@ public class AttendanceServiceImpl implements AttendanceService {
 
         // Số ngày đi làm
         long presentDays = records.stream()
-                .filter(a -> "PRESENT".equals(a.getStatus()) || "LATE".equals(a.getStatus()))
+                .map(this::resolveAttendanceStatus)
+                .filter(status -> "PRESENT".equals(status) || "LATE".equals(status))
                 .count();
 
         // Số ngày đúng giờ
         long onTimeDays = records.stream()
-                .filter(a -> "PRESENT".equals(a.getStatus()))
-                .filter(a -> a.getCheckIn() != null && !a.getCheckIn().isAfter(WORK_START))
+                .filter(a -> "PRESENT".equals(resolveAttendanceStatus(a)))
                 .count();
 
         double onTimeRate = presentDays > 0
@@ -102,14 +103,14 @@ public class AttendanceServiceImpl implements AttendanceService {
                 throw new RuntimeException("Already clocked in today!");
             }
             att.setCheckIn(now);
-            att.setStatus(now.isAfter(WORK_START) ? "LATE" : "PRESENT");
+            att.setStatus(resolveStatusByCheckIn(now));
             attendanceRepository.save(att);
         } else {
             Attendance att = new Attendance();
             att.setEmployeeId(employeeId);
             att.setWorkDate(today);
             att.setCheckIn(now);
-            att.setStatus(now.isAfter(WORK_START) ? "LATE" : "PRESENT");
+            att.setStatus(resolveStatusByCheckIn(now));
             attendanceRepository.save(att);
         }
     }
@@ -156,9 +157,32 @@ public class AttendanceServiceImpl implements AttendanceService {
                 .workDate(a.getWorkDate())
                 .checkIn(a.getCheckIn())
                 .checkOut(a.getCheckOut())
-                .status(a.getStatus())
+                .status(resolveAttendanceStatus(a))
                 .note(a.getNote())
                 .build();
+    }
+
+    private String resolveAttendanceStatus(Attendance attendance) {
+        if (attendance == null) {
+            return "ABSENT";
+        }
+        if (attendance.getCheckIn() != null) {
+            return resolveStatusByCheckIn(attendance.getCheckIn());
+        }
+        return attendance.getStatus() != null ? attendance.getStatus() : "ABSENT";
+    }
+
+    private String resolveStatusByCheckIn(LocalTime checkIn) {
+        if (checkIn == null) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(ABSENT_AFTER)) {
+            return "ABSENT";
+        }
+        if (checkIn.isAfter(LATE_AFTER)) {
+            return "LATE";
+        }
+        return "PRESENT";
     }
 
     private int countWorkDays(LocalDate from, LocalDate to) {
