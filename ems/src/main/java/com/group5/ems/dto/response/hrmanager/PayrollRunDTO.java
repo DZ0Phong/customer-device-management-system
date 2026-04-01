@@ -14,9 +14,9 @@ import java.time.LocalDate;
 public class PayrollRunDTO {
     private Long id;
     private String departmentName;
-    private String periodLabel;        // "Monthly Payroll - June 2024"
-    private int employeeCount;
-    private String totalAmountFormatted; // "€128,450.00"
-    private String status;             // PENDING_REVIEW, PROCESSING, APPROVED, REJECTED
+    private String periodLabel;
+    private Integer employeeCount;
+    private String totalAmountFormatted;
+    private String status;
     private LocalDate dueDate;
 }

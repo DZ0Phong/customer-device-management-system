@@ -4,7 +4,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -15,260 +14,268 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.multipart.MultipartFile;
 
 import com.group5.ems.dto.request.ApplyJobRequestDTO;
 import com.group5.ems.dto.request.ContactRequestDTO;
 import com.group5.ems.dto.response.ApplicationResponseDTO;
-import com.group5.ems.entity.CandidateCv;
 import com.group5.ems.entity.Department;
 import com.group5.ems.entity.JobPost;
-import com.group5.ems.repository.CandidateCvRepository;
+import com.group5.ems.service.guest.ApplicationService;
+import com.group5.ems.service.guest.CandidateCvService;
+import com.group5.ems.service.guest.CompanyService;
+import com.group5.ems.service.guest.DepartmentService;
 import com.group5.ems.service.guest.EmailService;
 import com.group5.ems.service.guest.GuestService;
+import com.group5.ems.service.guest.JobPostService;
 
 import lombok.RequiredArgsConstructor;
 
 @Controller
-@RequestMapping("/guest")
+@RequestMapping("/home")
 @RequiredArgsConstructor
 public class GuestController {
 
-        private final GuestService guestService;
-        private final CandidateCvRepository candidateCvRepository;
-        private final EmailService emailService;
+    private final GuestService guestService;
+    private final JobPostService jobPostService;
+    private final CompanyService companyService;
+    private final CandidateCvService candidateCvService;
+    private final ApplicationService applicationService;
+    private final EmailService emailService;
+    private final DepartmentService departmentService;
 
-        // =============================
-        // COMPANY INFO
-        // =============================
+    // =============================
+    // COMPANY INFO
+    // =============================
 
-        @GetMapping("/info")
-        public String viewCompanyInfo(Model model) {
+    @GetMapping("/info")
+    public String viewCompanyInfo(Model model) {
 
-                model.addAttribute("info",
-                                guestService.getPublicCompanyInfo());
+        model.addAttribute("info",
+                companyService.getPublicCompanyInfo());
 
-                return "guest/company-info";
+        return "home/company-info";
+    }
+
+    // =============================
+    // APPLICATIONS
+    // =============================
+
+    @GetMapping("/applications/{candidateId}")
+    public String viewApplications(
+            @PathVariable Long candidateId,
+            Model model) {
+
+        model.addAttribute("applications",
+                applicationService.getApplicationsByCandidate(candidateId));
+
+        return "home/applications";
+    }
+
+    // =============================
+    // APPLY JOB
+    // =============================
+
+    @PostMapping(value = "/apply-full", consumes = "multipart/form-data")
+    @ResponseBody
+    public ApplicationResponseDTO applyFull(
+            @ModelAttribute ApplyJobRequestDTO request) throws Exception {
+
+        return guestService.applyJobFullFlow(request);
+    }
+
+    @PostMapping("/apply")
+    @ResponseBody
+    public String applyJob(
+            @RequestParam Long candidateId,
+            @RequestParam Long jobId,
+            @RequestParam Long cvId) {
+
+        applicationService.applyJob(candidateId, jobId, cvId);
+
+        return "ok";
+    }
+
+    // =============================
+    // CANDIDATE CVS
+    // =============================
+
+    @GetMapping("/candidate-cv/{candidateId}")
+    public String viewCandidateCv(
+            @PathVariable Long candidateId,
+            Model model) {
+
+        model.addAttribute("cvs",
+                candidateCvService.getCandidateCvs(candidateId));
+
+        return "home/candidate-cv";
+    }
+
+    // =============================
+    // HOME
+    // =============================
+
+    @GetMapping({ "", "/" })
+    public String home(Model model) {
+
+        List<JobPost> jobs = jobPostService.getOpenJobs();
+
+        model.addAttribute("companyNews",
+                companyService.getPublicCompanyInfo());
+
+        model.addAttribute("featuredJobs",
+                jobs.stream().limit(6).toList());
+
+        model.addAttribute("openCount",
+                jobs.size());
+
+        model.addAttribute("deptCount",
+                jobPostService.countJobsByDepartment(null));
+
+        return "home/index";
+    }
+
+    // =============================
+    // JOB LIST
+    // =============================
+
+    @GetMapping("/jobs")
+    public String jobs(Model model) {
+
+        List<JobPost> jobs = jobPostService.getOpenJobs();
+        List<Department> departments = departmentService.getAllDepartments();
+
+        Map<Long, Long> deptCounts = new HashMap<>();
+
+        for (Department d : departments) {
+            deptCounts.put(d.getId(),
+                    jobPostService.countJobsByDepartment(d.getId()));
         }
 
-        // =============================
-        // APPLICATIONS
-        // =============================
+        model.addAttribute("jobs", jobs);
+        model.addAttribute("departments", departments);
+        model.addAttribute("deptCounts", deptCounts);
+        model.addAttribute("openCount", jobs.size());
 
-        @GetMapping("/applications/{candidateId}")
-        public String viewApplications(
-                        @PathVariable Long candidateId,
-                        Model model) {
+        return "home/jobs";
+    }
 
-                model.addAttribute("applications",
-                                guestService.getApplicationsByCandidate(candidateId));
+    @GetMapping("/jobs/department/{id}")
+    public String jobsByDepartment(
+            @PathVariable Long id,
+            Model model) {
 
-                return "guest/applications";
+        model.addAttribute("jobs",
+                jobPostService.getJobsByDepartment(id));
+
+        model.addAttribute("departments",
+                departmentService.getAllDepartments());
+
+        model.addAttribute("openCount",
+                jobPostService.getOpenJobs().size());
+
+        return "home/jobs";
+    }
+
+    // =============================
+    // JOB DETAIL
+    // =============================
+
+    @GetMapping("/jobs/{id}")
+    public String jobDetail(
+            @PathVariable Long id,
+            Model model) {
+
+        JobPost job = jobPostService.getJobDetail(id);
+
+        if (job == null) {
+            return "redirect:/home/jobs";
         }
 
-        // =============================
-        // APPLY JOB FULL FLOW
-        // =============================
+        model.addAttribute("jobs",
+                jobPostService.getOpenJobs());
 
-        @PostMapping(value = "/apply-full", consumes = "multipart/form-data")
-        @ResponseBody
-        public ApplicationResponseDTO applyFull(
-                        @ModelAttribute ApplyJobRequestDTO request) throws Exception {
+        model.addAttribute("departments",
+                departmentService.getAllDepartments());
 
-                return guestService.applyJobFullFlow(request);
-        }
+        model.addAttribute("openCount",
+                jobPostService.getOpenJobs().size());
 
-        // apply when candidate already exists
-        @PostMapping("/apply")
-        @ResponseBody
-        public String applyJob(
-                        @RequestParam Long candidateId,
-                        @RequestParam Long jobId,
-                        @RequestParam Long cvId) {
+        model.addAttribute("openJobId", id);
 
-                guestService.applyJob(candidateId, jobId, cvId);
+        return "home/jobs";
+    }
 
-                return "ok";
-        }
+    // =============================
+    // ABOUT
+    // =============================
 
-        // =============================
-        // CANDIDATE CVS
-        // =============================
+    @GetMapping("/about")
+    public String about(Model model) {
 
-        @GetMapping("/candidate-cv/{candidateId}")
-        public String viewCandidateCv(
-                        @PathVariable Long candidateId,
-                        Model model) {
+        model.addAttribute("companyInfoList",
+                companyService.getPublicCompanyInfo());
 
-                model.addAttribute("cvs",
-                                guestService.getCandidateCvs(candidateId));
+        return "home/about";
+    }
 
-                return "guest/candidate-cv";
-        }
+    // =============================
+    // CONTACT
+    // =============================
 
-        // =============================
-        // HOME
-        // =============================
+    @GetMapping("/contact")
+    public String contact() {
+        return "home/contact";
+    }
 
-        @GetMapping({ "", "/" })
-        public String home(Model model) {
+    @PostMapping("/contact/send")
+    @ResponseBody
+    public String sendContact(@RequestBody ContactRequestDTO request) {
 
-                model.addAttribute("companyNews",
-                                guestService.getPublicCompanyInfo());
+        emailService.sendContactEmail(
+                request.getSenderName(),
+                request.getSenderEmail(),
+                request.getSenderPhone(),
+                request.getTopic(),
+                request.getMessage());
 
-                model.addAttribute("featuredJobs",
-                                guestService.getOpenJobs()
-                                                .stream()
-                                                .limit(6)
-                                                .toList());
+        return "success";
+    }
 
-                model.addAttribute("openCount",
-                                guestService.getOpenJobs().size());
+    // =============================
+    // TRACK APPLICATION
+    // =============================
 
-                model.addAttribute("deptCount",
-                                guestService.getDepartmentCount());
+    @GetMapping("/track/api/{token}")
+    @ResponseBody
+    public ApplicationResponseDTO trackApplicationApi(
+            @PathVariable String token) {
 
-                return "guest/index";
-        }
+        return applicationService.trackApplicationDTO(token);
+    }
 
-        // =============================
-        // JOB LIST
-        // =============================
+    @PostMapping("/application/delete/{token}")
+    @ResponseBody
+    public String deleteApplication(@PathVariable String token) {
 
-        @GetMapping("/jobs")
-        public String jobs(Model model) {
+        applicationService.deleteApplicationByToken(token);
 
-                List<JobPost> jobs = guestService.getOpenJobs();
-                List<Department> departments = guestService.getAllDepartments();
+        return "deleted";
+    }
 
-                Map<Long, Long> deptCounts = new HashMap<>();
+    // =============================
+    // DOWNLOAD CV
+    // =============================
 
-                for (Department d : departments) {
-                        deptCounts.put(d.getId(),
-                                        guestService.countJobsByDepartment(d.getId()));
-                }
+//     @GetMapping("/cv/{id}")
+//     @ResponseBody
+//     public ResponseEntity<byte[]> downloadCv(@PathVariable Long id) {
 
-                model.addAttribute("jobs", jobs);
-                model.addAttribute("departments", departments);
-                model.addAttribute("deptCounts", deptCounts);
-                model.addAttribute("openCount", jobs.size());
+//         CandidateCv cv = candidateCvService.getCandidateCvById(id);
 
-                return "guest/jobs";
-        }
-
-        // jobs by department
-        @GetMapping("/jobs/department/{id}")
-        public String jobsByDepartment(
-                        @PathVariable Long id,
-                        Model model) {
-
-                model.addAttribute("jobs",
-                                guestService.getJobsByDepartment(id));
-
-                model.addAttribute("departments",
-                                guestService.getAllDepartments());
-
-                model.addAttribute("openCount",
-                                guestService.getOpenJobs().size());
-
-                return "guest/jobs";
-        }
-
-        // job detail
-        @GetMapping("/jobs/{id}")
-        public String jobDetail(
-                        @PathVariable Long id,
-                        Model model) {
-
-                JobPost job = guestService.getJobDetail(id);
-
-                if (job == null) {
-                        return "redirect:/guest/jobs";
-                }
-
-                model.addAttribute("jobs",
-                                guestService.getOpenJobs());
-
-                model.addAttribute("departments",
-                                guestService.getAllDepartments());
-
-                model.addAttribute("openCount",
-                                guestService.getOpenJobs().size());
-
-                model.addAttribute("openJobId", id);
-
-                return "guest/jobs";
-        }
-
-        // =============================
-        // ABOUT
-        // =============================
-
-        @GetMapping("/about")
-        public String about(Model model) {
-
-                model.addAttribute("companyInfoList",
-                                guestService.getPublicCompanyInfo());
-
-                return "guest/about";
-        }
-
-        // =============================
-        // CONTACT
-        // =============================
-
-        @GetMapping("/contact")
-        public String contact() {
-
-                return "guest/contact";
-        }
-
-        @PostMapping("/contact/send")
-        @ResponseBody
-        public String sendContact(@RequestBody ContactRequestDTO request) {
-
-                emailService.sendContactEmail(
-                                request.getSenderName(),
-                                request.getSenderEmail(),
-                                request.getSenderPhone(),
-                                request.getTopic(),
-                                request.getMessage());
-
-                return "success";
-        }
-
-        // =============================
-        // TRACK APPLICATION
-        // =============================
-
-        // API for JS
-        @GetMapping("/track/api/{token}")
-        @ResponseBody
-        public ApplicationResponseDTO trackApplicationApi(
-                        @PathVariable String token) {
-
-                return guestService.trackApplicationDTO(token);
-        }
-
-        @PostMapping("/test-upload")
-        @ResponseBody
-        public String testUpload(@RequestParam("file") MultipartFile file) {
-                System.out.println(file.getOriginalFilename());
-                return "ok";
-        }
-
-        @GetMapping("/cv/{id}")
-        @ResponseBody
-        public ResponseEntity<byte[]> downloadCv(@PathVariable Long id) {
-
-                CandidateCv cv = candidateCvRepository
-                                .findById(id)
-                                .orElseThrow(() -> new RuntimeException("CV not found"));
-
-                return ResponseEntity.ok()
-                                .header("Content-Disposition",
-                                                "attachment; filename=\"" + cv.getFileName() + "\"")
-                                .header("Content-Type", cv.getFileType())
-                                .body(cv.getFileData());
-        }
+//         return ResponseEntity.ok()
+//                 .header("Content-Disposition",
+//                         "attachment; filename=\"" + cv.getFileName() + "\"")
+//                 .header("Content-Type", cv.getFileType())
+//                 .body(cv.getFileData());
+//     }
 }

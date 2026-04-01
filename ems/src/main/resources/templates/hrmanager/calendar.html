@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title th:text="${pageTitle != null ? pageTitle : 'Calendar - EMS'}">Calendar - EMS</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
+        rel="stylesheet" />
+    <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}" />
+    <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1414b8",
+                        "primary-light": "#e8e8fb",
+                        "bg-light": "#f6f6f8",
+                    },
+                    fontFamily: { display: ["Inter"] },
+                },
+            },
+        };
+    </script>
+    <style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        .fill-icon {
+            font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+        }
+
+        ::-webkit-scrollbar {
+            width: 5px;
+            height: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #1414b840;
+            border-radius: 99px;
+        }
+
+        .nav-active {
+            box-shadow: 0 0 0 1px #1414b830, inset 3px 0 0 #1414b8;
+        }
+    </style>
+</head>
+
+<body class="bg-bg-light font-display text-slate-900 min-h-screen">
+    <div class="flex h-screen overflow-hidden">
+
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SIDEBAR                                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <aside th:replace="~{fragments/hrmanager-sidebar :: sidebar(${activePage}, ${currentUser})}"></aside>
+
+        <!-- ── Main Content ─────────────────────────────────────────────────────── -->
+        <main class="flex-1 flex flex-col overflow-hidden">
+
+            <!-- Header -->
+            <header
+                class="h-16 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between px-8 shrink-0">
+                <div class="flex items-center gap-4">
+                    <h2 class="text-xl font-bold">Calendar</h2>
+                    <!-- Month/Year navigation -->
+                    <div class="flex items-center gap-2">
+                        <a th:href="@{/hrmanager/calendar(month=${currentMonth == 1 ? 12 : currentMonth - 1}, year=${currentMonth == 1 ? currentYear - 1 : currentYear})}"
+                            class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-slate-500">chevron_left</span>
+                        </a>
+                        <span class="text-sm font-bold min-w-[120px] text-center" id="currentPeriodLabel">
+                            <!-- Rendered by JS -->
+                        </span>
+                        <a th:href="@{/hrmanager/calendar(month=${currentMonth == 12 ? 1 : currentMonth + 1}, year=${currentMonth == 12 ? currentYear + 1 : currentYear})}"
+                            class="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors">
+                            <span class="material-symbols-outlined text-slate-500">chevron_right</span>
+                        </a>
+                        <a th:href="@{/hrmanager/calendar}"
+                            class="px-3 py-1 text-xs font-bold border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors ml-2">
+                            Today
+                        </a>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Calendar Body -->
+            <div class="flex-1 overflow-y-auto p-6">
+                <!-- Day headers -->
+                <div class="grid grid-cols-7 mb-2">
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Sun</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Mon</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Tue</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Wed</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Thu</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Fri</div>
+                    <div class="text-center text-xs font-bold text-slate-500 uppercase tracking-wider py-2">Sat</div>
+                </div>
+                <!-- Calendar grid — rendered by JS -->
+                <div id="monthGrid"
+                    class="grid grid-cols-7 gap-px bg-slate-200 dark:bg-slate-700 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-700">
+                    <!-- Days injected by buildMonthGrid() -->
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- ── Add/Edit Event Modal ─────────────────────────────────────────────── -->
+    <div id="eventModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-lg mx-4 p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h3 id="modalTitle" class="text-xl font-black">Add Event</h3>
+                <button onclick="closeModal()"
+                    class="text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
+
+            <form id="eventForm" method="post" th:action="@{/hrmanager/calendar/create}">
+                <input type="hidden" name="_method" value="post" />
+                <input type="hidden" id="eventId" name="id" />
+
+                <div class="space-y-4">
+                    <!-- Title -->
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Title *</label>
+                        <input type="text" id="eventTitle" name="title" required
+                            class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30"
+                            placeholder="Event title" />
+                    </div>
+
+                    <!-- Description -->
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Description</label>
+                        <textarea id="eventDescription" name="description" rows="2"
+                            class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 resize-none"
+                            placeholder="Optional description"></textarea>
+                    </div>
+
+                    <!-- Date Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Date
+                                *</label>
+                            <input type="date" id="eventStartDate" name="startDate" required
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">End Date</label>
+                            <input type="date" id="eventEndDate" name="endDate"
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        </div>
+                    </div>
+
+                    <!-- All Day Toggle -->
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="eventAllDay" name="isAllDay"
+                            class="rounded border-slate-300 text-primary focus:ring-primary"
+                            onchange="toggleTimeFields(this.checked)" />
+                        <label for="eventAllDay" class="text-sm font-medium">All Day Event</label>
+                    </div>
+
+                    <!-- Time Row -->
+                    <div id="timeFields" class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Start Time</label>
+                            <input type="time" id="eventStartTime" name="startTime"
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">End Time</label>
+                            <input type="time" id="eventEndTime" name="endTime"
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30" />
+                        </div>
+                    </div>
+
+                    <!-- Type & Color Row -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Type</label>
+                            <select id="eventType" name="type"
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <option value="MEETING">Meeting</option>
+                                <option value="HOLIDAY">Holiday</option>
+                                <option value="REVIEW">Review</option>
+                                <option value="TRAINING">Training</option>
+                                <option value="OTHER">Other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-xs font-bold text-slate-500 uppercase tracking-wider">Color</label>
+                            <select id="eventColor" name="color"
+                                class="mt-1 w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary/30">
+                                <option value="blue">Blue</option>
+                                <option value="purple">Purple</option>
+                                <option value="emerald">Emerald</option>
+                                <option value="amber">Amber</option>
+                                <option value="rose">Rose</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex gap-3 mt-6">
+                    <button type="button" onclick="closeModal()"
+                        class="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 font-bold text-sm hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit" id="submitBtn"
+                        class="flex-1 py-2.5 rounded-lg bg-primary text-white font-bold text-sm hover:bg-primary/90 transition-colors">
+                        Save Event
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Delete Confirm Modal ─────────────────────────────────────────────── -->
+    <div id="deleteModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
+        <div class="bg-white dark:bg-slate-900 rounded-2xl shadow-2xl w-full max-w-sm mx-4 p-8">
+            <div class="flex flex-col items-center text-center mb-6">
+                <div class="size-14 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center mb-4">
+                    <span class="material-symbols-outlined text-red-500 text-2xl">delete</span>
+                </div>
+                <h3 class="text-lg font-black">Delete Event</h3>
+                <p class="text-sm text-slate-500 mt-1">Are you sure you want to delete <span id="deleteEventName"
+                        class="font-bold text-slate-700 dark:text-slate-300"></span>?</p>
+            </div>
+            <form id="deleteForm" method="post" th:action="@{/hrmanager/calendar/delete}">
+                <input type="hidden" id="deleteEventId" name="id" />
+                <div class="flex gap-3">
+                    <button type="button" onclick="closeDeleteModal()"
+                        class="flex-1 py-2.5 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex-1 py-2.5 rounded-lg bg-red-500 text-white font-bold text-sm hover:bg-red-600 transition-colors">
+                        Delete
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ── Toast ──────────────────────────────────────────────────────────────── -->
+    <div id="toast"
+        class="fixed bottom-6 right-6 z-50 hidden items-center gap-3 px-5 py-3 rounded-xl shadow-lg text-white text-sm font-semibold">
+        <span id="toast-icon" class="material-symbols-outlined text-[20px]">check_circle</span>
+        <span id="toast-msg">Done</span>
+    </div>
+
+    <script th:inline="javascript">
+        /*<![CDATA[*/
+        var calendarMonth = /*[[${currentMonth}]]*/ 1;
+        var calendarYear = /*[[${currentYear}]]*/ 2026;
+        var calendarEvents = /*[[${events}]]*/[];
+        var calendarFlashMessage = /*[[${flashMessage}]]*/ null;
+        var calendarFlashType = /*[[${flashType}]]*/ 'success';
+
+        var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
+            'July', 'August', 'September', 'October', 'November', 'December'];
+
+        document.getElementById('currentPeriodLabel').textContent = MONTHS[calendarMonth - 1] + ' ' + calendarYear;
+
+        function buildMonthGrid() {
+            var grid = document.getElementById('monthGrid');
+            if (!grid) return;
+
+            var today = new Date();
+            var firstDay = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+            var daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+            var daysInPrev = new Date(calendarYear, calendarMonth - 1, 0).getDate();
+            var html = '';
+
+            // Ngày tháng trước
+            for (var i = firstDay - 1; i >= 0; i--) {
+                var d = daysInPrev - i;
+                html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">'
+                    + '<span class="text-xs font-bold text-slate-400">' + d + '</span>'
+                    + '</div>';
+            }
+
+            // Ngày tháng hiện tại
+            for (var d = 1; d <= daysInMonth; d++) {
+                var isToday = d === today.getDate()
+                    && calendarMonth === today.getMonth() + 1
+                    && calendarYear === today.getFullYear();
+                var mm = String(calendarMonth).padStart(2, '0');
+                var dd = String(d).padStart(2, '0');
+                var dateStr = calendarYear + '-' + mm + '-' + dd;
+                var dayEvts = calendarEvents.filter(function (e) { return e.startDate === dateStr; });
+                var ringCls = isToday ? 'ring-2 ring-primary ring-inset' : '';
+
+                var numBadge = isToday
+                    ? '<span class="text-xs font-bold bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center">' + d + '</span>'
+                    : '<span class="text-xs font-bold text-slate-700 dark:text-slate-300">' + d + '</span>';
+
+                var evtsHtml = '';
+                var shown = dayEvts.slice(0, 3);
+                for (var j = 0; j < shown.length; j++) {
+                    var ev = shown[j];
+                    // Encode an toàn hơn
+                    var evJson = JSON.stringify(ev)
+                        .replace(/\\/g, '\\\\')
+                        .replace(/'/g, "\\'")
+                        .replace(/"/g, '&quot;');
+
+                    evtsHtml += '<div class="text-[10px] font-bold px-1.5 py-0.5 rounded truncate cursor-pointer ' + getEventBgClass(ev.color) + '"'
+                        + ' onclick="event.stopPropagation(); openEditModalFromData(JSON.parse(this.dataset.ev))"'
+                        + ' data-ev=\'' + JSON.stringify(ev).replace(/'/g, "\\'") + '\''
+                        + ' title="' + (ev.title || '').replace(/"/g, '&quot;') + '">'
+                        + (ev.title || '')
+                        + '</div>';
+                }
+                if (dayEvts.length > 3) {
+                    evtsHtml += '<div class="text-[10px] text-slate-400 font-medium px-1">+' + (dayEvts.length - 3) + ' more</div>';
+                }
+
+                html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 cursor-pointer hover:bg-slate-50 transition-colors ' + ringCls + '"'
+                    + ' onclick="openAddModalWithDate(\'' + dateStr + '\')">'
+                    + '<div class="flex justify-between items-start mb-1">' + numBadge + '</div>'
+                    + '<div class="space-y-1">' + evtsHtml + '</div>'
+                    + '</div>';
+            }
+
+            // Ngày tháng sau
+            var totalCells = Math.ceil((firstDay + daysInMonth) / 7) * 7;
+            for (var d = 1; d <= totalCells - firstDay - daysInMonth; d++) {
+                html += '<div class="bg-white dark:bg-slate-900 min-h-[100px] p-2 opacity-40">'
+                    + '<span class="text-xs font-bold text-slate-400">' + d + '</span>'
+                    + '</div>';
+            }
+
+            grid.innerHTML = html;
+            window.hydrateAppIcons?.(grid);
+        }
+
+        function getEventBgClass(color) {
+            var map = {
+                blue: 'bg-blue-100 text-blue-700',
+                purple: 'bg-purple-100 text-purple-700',
+                emerald: 'bg-emerald-100 text-emerald-700',
+                amber: 'bg-amber-100 text-amber-700',
+                rose: 'bg-rose-100 text-rose-700'
+            };
+            return map[color] || map.blue;
+        }
+
+        buildMonthGrid();
+
+        function openModal() {
+            var m = document.getElementById('eventModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeModal() {
+            var m = document.getElementById('eventModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+            document.getElementById('eventForm').reset();
+            document.getElementById('eventId').value = '';
+            document.getElementById('timeFields').style.display = '';
+        }
+        function openAddModal() {
+            document.getElementById('modalTitle').textContent = 'Add Event';
+            document.getElementById('eventForm').action = '/hrmanager/calendar/create';
+            openModal();
+        }
+        function openAddModalWithDate(dateStr) {
+            openAddModal();
+            document.getElementById('eventStartDate').value = dateStr;
+            document.getElementById('eventEndDate').value = dateStr;
+        }
+        function openEditModalFromData(evStr) {
+            var ev = evStr;
+            if (typeof evStr === 'string') {
+                try { ev = JSON.parse(evStr); } catch (e) { return; }
+            }
+            document.getElementById('modalTitle').textContent = 'Edit Event';
+            document.getElementById('eventForm').action = '/hrmanager/calendar/update';
+            document.getElementById('eventId').value = ev.id || '';
+            document.getElementById('eventTitle').value = ev.title || '';
+            document.getElementById('eventDescription').value = ev.description || '';
+            document.getElementById('eventStartDate').value = ev.startDate || '';
+            document.getElementById('eventEndDate').value = ev.endDate || '';
+            document.getElementById('eventStartTime').value = ev.startTime || '';
+            document.getElementById('eventEndTime').value = ev.endTime || '';
+            document.getElementById('eventType').value = ev.type || 'MEETING';
+            document.getElementById('eventColor').value = ev.color || 'blue';
+            document.getElementById('eventAllDay').checked = ev.isAllDay || false;
+            toggleTimeFields(ev.isAllDay || false);
+            openModal();
+        }
+        function openEditModal(id, title, desc, sd, ed, st, et, type, color, allDay) {
+            openEditModalFromData({ id: id, title: title, description: desc, startDate: sd, endDate: ed, startTime: st, endTime: et, type: type, color: color, isAllDay: allDay });
+        }
+        function toggleTimeFields(allDay) {
+            document.getElementById('timeFields').style.display = allDay ? 'none' : '';
+        }
+        document.getElementById('eventModal').addEventListener('click', function (e) {
+            if (e.target === this) closeModal();
+        });
+
+        function confirmDelete(id, name) {
+            document.getElementById('deleteEventId').value = id;
+            document.getElementById('deleteEventName').textContent = name;
+            var m = document.getElementById('deleteModal');
+            m.classList.remove('hidden'); m.classList.add('flex');
+        }
+        function closeDeleteModal() {
+            var m = document.getElementById('deleteModal');
+            m.classList.add('hidden'); m.classList.remove('flex');
+        }
+        document.getElementById('deleteModal').addEventListener('click', function (e) {
+            if (e.target === this) closeDeleteModal();
+        });
+
+        function showToast(message, type) {
+            var toast = document.getElementById('toast');
+            var icon = document.getElementById('toast-icon');
+            var msg = document.getElementById('toast-msg');
+            msg.textContent = message;
+            var iconName = type === 'success' ? 'check_circle' : type === 'error' ? 'error' : 'info';
+            if (window.setAppIcon) {
+                window.setAppIcon(icon, iconName);
+            } else {
+                icon.textContent = iconName;
+            }
+            toast.className = toast.className.replace(/bg-\S+/g, '');
+            toast.classList.add(type === 'success' ? 'bg-emerald-600' : type === 'error' ? 'bg-rose-600' : 'bg-slate-700');
+            toast.classList.remove('hidden'); toast.classList.add('flex');
+            setTimeout(function () { toast.classList.add('hidden'); toast.classList.remove('flex'); }, 3200);
+        }
+
+        function openEditFromBtn(btn) {
+            openEditModalFromData({
+                id: btn.dataset.id,
+                title: btn.dataset.title,
+                description: btn.dataset.description,
+                startDate: btn.dataset.startDate,
+                endDate: btn.dataset.endDate,
+                startTime: btn.dataset.startTime,
+                endTime: btn.dataset.endTime,
+                type: btn.dataset.type,
+                color: btn.dataset.color,
+                isAllDay: btn.dataset.allDay === 'true'
+            });
+        }
+
+        function confirmDeleteFromBtn(btn) {
+            confirmDelete(btn.dataset.id, btn.dataset.title);
+        }
+
+        if (calendarFlashMessage) showToast(calendarFlashMessage, calendarFlashType);
+        /*]]>*/
+    </script>
+
+</body>
+
+</html>

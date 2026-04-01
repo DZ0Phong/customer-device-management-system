@@ -28,7 +28,7 @@ public class SecurityConfig {
                 .requestMatchers("/login", "/error", "/guest", "/guest/**", "/access-denied",
                         "/forgot-password", "/forgot-password/**", "/reset-password").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
-                .requestMatchers("/employee/**").hasRole("EMPLOYEE")
+                .requestMatchers("/employee/**").hasAnyRole("EMPLOYEE", "DEPT_MANAGER", "HR", "HR_MANAGER")
                 .requestMatchers("/dept-manager/**").hasRole("DEPT_MANAGER")
                 .requestMatchers("/hrmanager/**").hasRole("HR_MANAGER")
                 .requestMatchers("/hr/**").hasRole("HR")

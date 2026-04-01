@@ -4,9 +4,15 @@ import com.group5.ems.dto.request.CreateLeaveRequestDTO;
 import com.group5.ems.dto.request.UpdateProfileRequest;
 import com.group5.ems.dto.response.*;
 import com.group5.ems.entity.Employee;
+import com.group5.ems.entity.Department;
+import com.group5.ems.entity.Position;
+import com.group5.ems.entity.Role;
 import com.group5.ems.entity.User;
+import com.group5.ems.repository.DepartmentRepository;
 import com.group5.ems.repository.EmployeeRepository;
+import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.repository.UserRepository;
+import com.group5.ems.repository.UserRoleRepository;
 import com.group5.ems.service.employee.*;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpHeaders;
@@ -31,14 +37,15 @@ public class EmployeeController {
 
     private final UserRepository userRepository;
     private final EmployeeRepository employeeRepository;
+    private final UserRoleRepository userRoleRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
     private final DashboardService dashboardService;
     private final LeaveServiceImpl leaveService;
     private final ProfileService profileService;
     private final AttendanceService attendanceService;
     private final PayrollService payrollService;
     private final PerformanceService performanceService;
-
-
 
     // ── Helper methods ─────────────────────────────────────
     private User getUser(Authentication authentication) {
@@ -47,19 +54,177 @@ public class EmployeeController {
     }
 
     private Employee getEmployee(User user) {
-        return employeeRepository.findByUserId(user.getId())
-                .orElseThrow(() -> new RuntimeException("Employee not found"));
+        return employeeRepository.findByUserId(user.getId()).orElse(null);
+    }
+
+    private Employee resolveEmployeeForAttendance(User user) {
+        Employee employee = getEmployee(user);
+        if (employee != null) {
+            return employee;
+        }
+
+        List<Role> roles = userRoleRepository.getRolesByUserId(user.getId());
+        boolean canAutoProvision = roles.stream()
+                .map(Role::getCode)
+                .anyMatch(code -> "HR".equals(code) || "HR_MANAGER".equals(code));
+
+        if (!canAutoProvision) {
+            return null;
+        }
+
+        Department hrDepartment = departmentRepository.findAll().stream()
+                .filter(department -> department != null && (
+                        matchesCode(department.getCode(), "HR", "HUMAN_RESOURCES", "HUMAN_RESOURCE") ||
+                        matchesName(department.getName(), "hr", "human resources")))
+                .findFirst()
+                .orElse(null);
+
+        if (hrDepartment == null) {
+            throw new RuntimeException("No HR department found for this account. Please create or assign an HR department first.");
+        }
+
+        Position hrPosition = positionRepository.findAll().stream()
+                .filter(position -> position != null)
+                .filter(position -> position.getDepartmentId() == null || hrDepartment.getId().equals(position.getDepartmentId()))
+                .filter(position -> {
+                    String code = position.getCode();
+                    String name = position.getName();
+                    return matchesCode(code, "HR", "HR_MANAGER", "HR_SPECIALIST", "HR_STAFF")
+                            || matchesName(name, "hr", "human resources", "hr manager", "hr specialist");
+                })
+                .findFirst()
+                .orElse(null);
+
+        if (hrPosition == null) {
+            throw new RuntimeException("No HR position found for this account. Please create or assign an HR position first.");
+        }
+
+        Employee provisioned = new Employee();
+        provisioned.setUserId(user.getId());
+        provisioned.setEmployeeCode("AUTO-HR-" + user.getId());
+        provisioned.setDepartmentId(hrDepartment.getId());
+        provisioned.setPositionId(hrPosition.getId());
+        provisioned.setHireDate(LocalDate.now());
+        provisioned.setStatus("ACTIVE");
+
+        return employeeRepository.save(provisioned);
+    }
+
+    private boolean matchesCode(String value, String... candidates) {
+        if (value == null) {
+            return false;
+        }
+        for (String candidate : candidates) {
+            if (candidate != null && candidate.equalsIgnoreCase(value.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private boolean matchesName(String value, String... keywords) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim().toLowerCase();
+        for (String keyword : keywords) {
+            if (keyword != null && normalized.contains(keyword.toLowerCase())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Tạo EmployeeInfoDTO mặc định khi chưa được assign phòng ban
+    private EmployeeInfoDTO buildDefaultEmployeeInfo(User user) {
+        return EmployeeInfoDTO.builder()
+                .fullName(user.getFullName())
+                .firstName(user.getFullName())
+                .avatarUrl(user.getAvatarUrl())
+                .position("Unassigned")
+                .department("—")
+                .build();
+    }
+
+    @ModelAttribute
+    public void populatePortalSwitch(Authentication authentication, Model model) {
+        if (authentication == null) {
+            model.addAttribute("managementPortalUrl", null);
+            model.addAttribute("managementPortalLabel", null);
+            model.addAttribute("managementRoleLabel", null);
+            return;
+        }
+
+        User user = getUser(authentication);
+        List<Role> roles = userRoleRepository.getRolesByUserId(user.getId());
+
+        String portalUrl = null;
+        String portalLabel = null;
+        String roleLabel = null;
+        for (Role role : roles) {
+            if (role == null || role.getCode() == null) {
+                continue;
+            }
+
+            switch (role.getCode()) {
+                case "DEPT_MANAGER" -> {
+                    portalUrl = "/dept-manager/dashboard";
+                    portalLabel = "Department View";
+                    roleLabel = role.getName() != null ? role.getName() : "Department Manager";
+                }
+                case "HR_MANAGER" -> {
+                    if (portalUrl == null) {
+                        portalUrl = "/hrmanager/dashboard";
+                        portalLabel = "HR Manager View";
+                        roleLabel = role.getName() != null ? role.getName() : "HR Manager";
+                    }
+                }
+                case "HR" -> {
+                    if (portalUrl == null) {
+                        portalUrl = "/hr/dashboard";
+                        portalLabel = "HR View";
+                        roleLabel = role.getName() != null ? role.getName() : "HR Executive";
+                    }
+                }
+                case "ADMIN" -> {
+                    if (portalUrl == null) {
+                        portalUrl = "/admin/dashboard";
+                        portalLabel = "Admin View";
+                        roleLabel = role.getName() != null ? role.getName() : "Administrator";
+                    }
+                }
+                default -> {
+                }
+            }
+
+            if (portalUrl != null && "DEPT_MANAGER".equals(role.getCode())) {
+                break;
+            }
+        }
+
+        model.addAttribute("managementPortalUrl", portalUrl);
+        model.addAttribute("managementPortalLabel", portalLabel);
+        model.addAttribute("managementRoleLabel", roleLabel);
     }
 
     // ── Dashboard ──────────────────────────────────────────
     @GetMapping("/dashboard")
     public String dashboard(Model model, Authentication authentication) {
         User user = getUser(authentication);
-        Employee employee = getEmployee(user);
+        Employee employee = resolveEmployeeForAttendance(user);
 
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
-        model.addAttribute("dashboard", dashboardService.getDashboardData(employee.getId()));
-        model.addAttribute("activities", dashboardService.getRecentActivities(employee.getId()));
+        if (employee != null) {
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+            model.addAttribute("dashboard", dashboardService.getDashboardData(employee.getId()));
+            model.addAttribute("activities", dashboardService.getRecentActivities(employee.getId()));
+        } else {
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+            model.addAttribute("dashboard", EmployeeDashboardDTO.builder()
+                    .leaveBalance(0.0).attendanceRate(0.0)
+                    .attendanceTrend("+0%").lastPayroll(0.0)
+                    .performanceRating(0.0).build());
+            model.addAttribute("activities", List.of());
+        }
 
         return "employee/dashboard";
     }
@@ -70,9 +235,15 @@ public class EmployeeController {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
 
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
-        model.addAttribute("balances", leaveService.getLeaveBalances(employee.getId()));
-        model.addAttribute("history", leaveService.getLeaveHistory(employee.getId()));
+        if (employee != null) {
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+            model.addAttribute("balances", leaveService.getLeaveBalances(employee.getId()));
+            model.addAttribute("leaveHistory", leaveService.getLeaveHistory(employee.getId()));
+        } else {
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+            model.addAttribute("balances", List.of());
+            model.addAttribute("leaveHistory", List.of());
+        }
 
         return "employee/leave";
     }
@@ -84,6 +255,7 @@ public class EmployeeController {
         try {
             User user = getUser(authentication);
             Employee employee = getEmployee(user);
+            if (employee == null) throw new RuntimeException("You are not assigned to any department yet.");
             leaveService.createLeaveRequest(employee.getId(), dto);
             redirectAttributes.addFlashAttribute("success", "Leave request submitted successfully");
         } catch (Exception e) {
@@ -98,8 +270,23 @@ public class EmployeeController {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
 
-        model.addAttribute("profile", profileService.getProfile(employee.getId(), user.getId()));
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+        if (employee != null) {
+            model.addAttribute("profile", profileService.getProfile(employee.getId(), user.getId()));
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+        } else {
+            model.addAttribute("profile", EmployeeProfileDTO.builder()
+                    .userId(user.getId())
+                    .username(user.getUsername())
+                    .email(user.getEmail())
+                    .fullName(user.getFullName())
+                    .phone(user.getPhone())
+                    .avatarUrl(user.getAvatarUrl())
+                    .status(user.getStatus())
+                    .departmentName("Unassigned")
+                    .positionName("Unassigned")
+                    .build());
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+        }
 
         return "employee/profile";
     }
@@ -130,11 +317,7 @@ public class EmployeeController {
         int selectedYear = year == 0 ? now.getYear() : year;
         int selectedMonth = month == 0 ? now.getMonthValue() : month;
 
-        List<AttendanceDTO> attendances = attendanceService.getAttendanceHistory(employee.getId(), selectedYear, selectedMonth);
-        AttendanceStatsDTO stats = attendanceService.getAttendanceStats(employee.getId(), selectedYear, selectedMonth);
-
         List<Integer> years = List.of(now.getYear() - 2, now.getYear() - 1, now.getYear());
-
         List<Map<String, Object>> months = new ArrayList<>();
         String[] monthNames = {"January", "February", "March", "April", "May", "June",
                 "July", "August", "September", "October", "November", "December"};
@@ -145,9 +328,19 @@ public class EmployeeController {
             months.add(m);
         }
 
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
-        model.addAttribute("attendances", attendances);
-        model.addAttribute("stats", stats);
+        if (employee != null) {
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+            model.addAttribute("attendances", attendanceService.getAttendanceHistory(employee.getId(), selectedYear, selectedMonth));
+            model.addAttribute("stats", attendanceService.getAttendanceStats(employee.getId(), selectedYear, selectedMonth));
+        } else {
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+            model.addAttribute("attendances", List.of());
+            model.addAttribute("stats", AttendanceStatsDTO.builder()
+                    .totalHours("0h 0m").onTimeRate(0.0)
+                    .presentDays(0).totalWorkDays(0)
+                    .clockedInToday(false).clockedOutToday(false).build());
+        }
+
         model.addAttribute("selectedYear", selectedYear);
         model.addAttribute("selectedMonth", selectedMonth);
         model.addAttribute("years", years);
@@ -160,7 +353,8 @@ public class EmployeeController {
     public String clockIn(Authentication authentication, RedirectAttributes redirectAttributes) {
         try {
             User user = getUser(authentication);
-            Employee employee = getEmployee(user);
+            Employee employee = resolveEmployeeForAttendance(user);
+            if (employee == null) throw new RuntimeException("No employee profile found for this account.");
             attendanceService.clockIn(employee.getId());
             redirectAttributes.addFlashAttribute("success", "Clocked in successfully!");
         } catch (Exception e) {
@@ -173,7 +367,8 @@ public class EmployeeController {
     public String clockOut(Authentication authentication, RedirectAttributes redirectAttributes) {
         try {
             User user = getUser(authentication);
-            Employee employee = getEmployee(user);
+            Employee employee = resolveEmployeeForAttendance(user);
+            if (employee == null) throw new RuntimeException("No employee profile found for this account.");
             attendanceService.clockOut(employee.getId());
             redirectAttributes.addFlashAttribute("success", "Clocked out successfully!");
         } catch (Exception e) {
@@ -187,7 +382,10 @@ public class EmployeeController {
                                                    @RequestParam int year,
                                                    @RequestParam int month) {
         User user = getUser(authentication);
-        Employee employee = getEmployee(user);
+        Employee employee = resolveEmployeeForAttendance(user);
+        if (employee == null) {
+            return ResponseEntity.badRequest().build();
+        }
 
         byte[] csv = attendanceService.exportReport(employee.getId(), year, month);
         String filename = "attendance_" + year + "_" + month + ".csv";
@@ -198,14 +396,21 @@ public class EmployeeController {
                 .body(csv);
     }
 
+    // ── Payroll ────────────────────────────────────────────
     @GetMapping("/payroll")
     public String payroll(Authentication authentication, Model model) {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
 
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
-        model.addAttribute("summary", payrollService.getPayrollSummary(employee.getId()));
-        model.addAttribute("payslips", payrollService.getPayslipHistory(employee.getId()));
+        if (employee != null) {
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+            model.addAttribute("summary", payrollService.getPayrollSummary(employee.getId()));
+            model.addAttribute("payslips", payrollService.getPayslipHistory(employee.getId()));
+        } else {
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+            model.addAttribute("summary", PayrollSummaryDTO.builder().build());
+            model.addAttribute("payslips", List.of());
+        }
 
         return "employee/payroll";
     }
@@ -214,6 +419,9 @@ public class EmployeeController {
     public ResponseEntity<byte[]> exportPayroll(Authentication authentication) {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
+        if (employee == null) {
+            return ResponseEntity.badRequest().build();
+        }
 
         byte[] csv = payrollService.exportPayslipCsv(employee.getId());
 
@@ -229,9 +437,19 @@ public class EmployeeController {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
 
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
-        model.addAttribute("summary", performanceService.getPerformanceSummary(employee.getId()));
-        model.addAttribute("reviews", performanceService.getReviewHistory(employee.getId()));
+        if (employee != null) {
+            model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+            model.addAttribute("summary", performanceService.getPerformanceSummary(employee.getId()));
+            model.addAttribute("reviews", performanceService.getReviewHistory(employee.getId()));
+        } else {
+            model.addAttribute("employee", buildDefaultEmployeeInfo(user));
+            model.addAttribute("summary", PerformanceSummaryDTO.builder()
+                    .currentRating(java.math.BigDecimal.ZERO)
+                    .previousRating(java.math.BigDecimal.ZERO)
+                    .talentMatrix("N/A").totalReviews(0)
+                    .kpisMet(0).kpisTotal(0).skillsCount(0).build());
+            model.addAttribute("reviews", List.of());
+        }
 
         return "employee/performance";
     }
@@ -241,7 +459,11 @@ public class EmployeeController {
     public String settings(Authentication authentication, Model model) {
         User user = getUser(authentication);
         Employee employee = getEmployee(user);
-        model.addAttribute("employee", dashboardService.getEmployeeInfo(employee.getId(), user.getId()));
+
+        model.addAttribute("employee", employee != null
+                ? dashboardService.getEmployeeInfo(employee.getId(), user.getId())
+                : buildDefaultEmployeeInfo(user));
+
         return "employee/settings";
     }
 }

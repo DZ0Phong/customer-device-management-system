@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8"/>
+    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+    <title>EMS Pro - Performance Reviews</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@100..900&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app-icons.css}"/>
+    <script defer th:src="@{/js/app-icons.js}"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1414b8",
+                        "primary-light": "#e8e8fb",
+                        "bg-light": "#f6f6f8",
+                    },
+                    fontFamily: { display: ["Inter"] },
+                },
+            },
+        };
+    </script>
+    <style>
+        .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .fill-icon { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+        .dot-grid {
+            background-image: radial-gradient(circle, #1414b820 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
+        .nav-active { box-shadow: 0 0 0 1px #1414b830, inset 3px 0 0 #1414b8; }
+    </style>
+</head>
+<body class="bg-bg-light font-display text-slate-900 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+    <aside th:replace="~{fragments/deptmanager-sidebar :: sidebar('performance', ${data})}"></aside>
+
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden bg-white">
+        <header class="h-16 border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+            <div>
+                <h2 class="text-base font-black text-slate-900 leading-tight">Performance Reviews</h2>
+                <p class="text-xs text-slate-400">Create, update and complete reviews for your own department only.</p>
+            </div>
+            <div class="hidden md:flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
+                <span class="material-symbols-outlined text-slate-300 text-base">search</span>
+                <input id="search-input" class="bg-transparent border-none text-xs text-slate-600 focus:outline-none w-48 placeholder-slate-300" placeholder="Search team members..." type="text"/>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8 dot-grid">
+            <div class="max-w-6xl mx-auto space-y-8">
+                <div class="space-y-4">
+                    <div th:if="${param.success != null}" class="rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+                        Performance review has been saved successfully.
+                    </div>
+                    <div th:if="${param.error != null}" class="rounded-2xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                        The review could not be saved. Please check the input and try again.
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-4">
+                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Overdue</p>
+                        <p class="mt-2 text-3xl font-black text-slate-900" th:text="${data.overdueCount}">0</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Draft</p>
+                        <p class="mt-2 text-3xl font-black text-slate-900" th:text="${data.draftCount}">0</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Scheduled</p>
+                        <p class="mt-2 text-3xl font-black text-slate-900" th:text="${data.scheduledCount}">0</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Completed</p>
+                        <p class="mt-2 text-3xl font-black text-slate-900" th:text="${data.completedCount}">0</p>
+                    </div>
+                    <div class="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Avg Growth</p>
+                        <p class="mt-2 text-3xl font-black text-slate-900" th:text="${data.averageGrowth}">0%</p>
+                        <p class="mt-1 text-[11px] text-slate-400">Completion rate: <span th:text="${data.completionRate}">0%</span></p>
+                    </div>
+                </div>
+
+                <div class="flex flex-wrap gap-3 border-b border-slate-200 pb-4" id="filter-tabs">
+                    <button type="button" class="tab-btn rounded-xl bg-primary-light px-4 py-2 text-sm font-bold text-primary" data-status="ALL">All</button>
+                    <button type="button" class="tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100" data-status="NOT_STARTED">Not Started</button>
+                    <button type="button" class="tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100" data-status="DRAFT">Draft</button>
+                    <button type="button" class="tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100" data-status="SCHEDULED">Scheduled</button>
+                    <button type="button" class="tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100" data-status="OVERDUE">Overdue</button>
+                    <button type="button" class="tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100" data-status="COMPLETED">Completed</button>
+                </div>
+
+                <div class="rounded-2xl border border-slate-100 bg-white shadow-sm overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left">
+                            <thead class="bg-slate-50/70 border-b border-slate-100">
+                            <tr>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Employee</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Period</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Scores</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Reviewer</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400">Status</th>
+                                <th class="px-6 py-4 text-[10px] font-bold uppercase tracking-widest text-slate-400 text-right">Action</th>
+                            </tr>
+                            </thead>
+                            <tbody id="review-table" class="divide-y divide-slate-50">
+                            <tr th:each="review : ${data.reviews}"
+                                class="review-row hover:bg-slate-50/50 transition-colors"
+                                th:attr="data-status=${review.status},data-name=${#strings.toLowerCase(review.employeeName)}">
+                                <td class="px-6 py-4">
+                                    <div class="flex items-center gap-3">
+                                        <img th:if="${review.avatarUrl != null}" th:src="${review.avatarUrl}" th:alt="${review.employeeName}" class="size-10 rounded-full object-cover border border-slate-100"/>
+                                        <div th:if="${review.avatarUrl == null}" class="size-10 rounded-full bg-primary/10 text-primary font-bold flex items-center justify-center border border-slate-100" th:text="${#strings.substring(review.employeeName,0,1)}">A</div>
+                                        <div>
+                                            <p class="text-sm font-bold text-slate-900" th:text="${review.employeeName}">Employee</p>
+                                            <p class="text-[11px] text-slate-400" th:text="${review.employeeTitle}">Title</p>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td class="px-6 py-4 text-sm font-medium text-slate-600" th:text="${review.cyclePeriod}">YEAR_2026</td>
+                                <td class="px-6 py-4 text-sm text-slate-600">
+                                    <span th:if="${review.performanceScore != null}" th:text="${review.performanceScore + ' / ' + review.potentialScore}">3.00 / 3.00</span>
+                                    <span th:if="${review.performanceScore == null}" class="text-slate-400">Pending input</span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-slate-500" th:text="${review.reviewerName}">Department Manager</td>
+                                <td class="px-6 py-4">
+                                    <span class="inline-flex items-center gap-1.5 rounded-md border px-2 py-0.5 text-[11px] font-bold"
+                                          th:classappend="${review.statusTheme}"
+                                          th:text="${review.statusDisplay}">Draft</span>
+                                </td>
+                                <td class="px-6 py-4 text-right">
+                                    <button type="button"
+                                            class="open-review-btn rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white hover:bg-primary/90 transition-colors"
+                                            th:attr="data-review-id=${review.id},data-employee-id=${review.employeeId},data-action=${review.actionMode}"
+                                            th:text="${review.actionLabel}">Open</button>
+                                </td>
+                            </tr>
+                            <tr th:if="${data.reviews == null or data.reviews.isEmpty()}">
+                                <td colspan="6" class="px-6 py-12 text-center text-sm text-slate-400">No employees found in this department.</td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+</div>
+
+<div id="review-modal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm">
+    <div class="w-full max-w-3xl rounded-3xl bg-white shadow-2xl border border-slate-100 overflow-hidden">
+        <div class="flex items-center justify-between border-b border-slate-100 px-6 py-5">
+            <div>
+                <h3 id="modal-title" class="text-xl font-black text-slate-900">Performance Review</h3>
+                <p class="text-sm text-slate-400">This form only updates reviews inside your department.</p>
+            </div>
+            <button id="close-modal-btn" type="button" class="rounded-xl p-2 text-slate-400 hover:bg-slate-100 hover:text-slate-600">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
+        <form th:action="@{/dept-manager/performance-review/save}" method="post" class="space-y-6 px-6 py-6">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" id="review-id" name="id"/>
+
+            <div class="grid gap-5 md:grid-cols-2">
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Employee</label>
+                    <select id="employee-id" name="employeeId" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary" required>
+                        <option value="" disabled selected>Select employee</option>
+                        <option th:each="employee : ${data.employees}"
+                                th:value="${employee.id}"
+                                th:text="${employee.name + ' - ' + employee.position}">Employee</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Review Period</label>
+                    <input id="review-period" name="reviewPeriod" type="text" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary" placeholder="YEAR_2026 or H1_2026" required/>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Performance Score</label>
+                    <input id="performance-score" name="performanceScore" type="number" min="1" max="5" step="0.01" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary" required/>
+                </div>
+                <div>
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Potential Score</label>
+                    <input id="potential-score" name="potentialScore" type="number" min="1" max="5" step="0.01" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary" required/>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Status</label>
+                    <select id="review-status" name="status" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary">
+                        <option value="DRAFT">Draft</option>
+                        <option value="SCHEDULED">Scheduled</option>
+                        <option value="COMPLETED">Completed</option>
+                    </select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Strengths</label>
+                    <textarea id="strengths" name="strengths" rows="4" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-primary focus:ring-primary" placeholder="What is this employee doing well?"></textarea>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="mb-2 block text-sm font-semibold text-slate-700">Areas To Improve</label>
+                    <textarea id="areas-to-improve" name="areasToImprove" rows="4" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm focus:border-primary focus:ring-primary" placeholder="What should improve next?"></textarea>
+                </div>
+            </div>
+
+            <div class="flex justify-end gap-3 border-t border-slate-100 pt-5">
+                <button id="cancel-modal-btn" type="button" class="rounded-xl px-5 py-2.5 text-sm font-bold text-slate-500 hover:bg-slate-100">Cancel</button>
+                <button type="submit" class="rounded-xl bg-primary px-5 py-2.5 text-sm font-bold text-white hover:bg-primary/90">Save Review</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script th:inline="javascript">
+    const searchInput = document.getElementById('search-input');
+    const tabButtons = document.querySelectorAll('.tab-btn');
+    const reviewRows = document.querySelectorAll('.review-row');
+    const modal = document.getElementById('review-modal');
+    const newReviewBtn = document.getElementById('new-review-btn');
+    const closeModalBtn = document.getElementById('close-modal-btn');
+    const cancelModalBtn = document.getElementById('cancel-modal-btn');
+    const openButtons = document.querySelectorAll('.open-review-btn');
+
+    const formFields = {
+        id: document.getElementById('review-id'),
+        employeeId: document.getElementById('employee-id'),
+        reviewPeriod: document.getElementById('review-period'),
+        performanceScore: document.getElementById('performance-score'),
+        potentialScore: document.getElementById('potential-score'),
+        status: document.getElementById('review-status'),
+        strengths: document.getElementById('strengths'),
+        areasToImprove: document.getElementById('areas-to-improve'),
+        modalTitle: document.getElementById('modal-title')
+    };
+
+    let currentStatusFilter = 'ALL';
+    let currentSearch = '';
+
+    function applyFilters() {
+        reviewRows.forEach(row => {
+            const status = row.dataset.status || '';
+            const name = row.dataset.name || '';
+            const matchesStatus = currentStatusFilter === 'ALL' || status === currentStatusFilter;
+            const matchesSearch = currentSearch === '' || name.includes(currentSearch);
+            row.style.display = matchesStatus && matchesSearch ? '' : 'none';
+        });
+    }
+
+    function setActiveTab(activeButton) {
+        tabButtons.forEach(button => {
+            button.className = 'tab-btn rounded-xl px-4 py-2 text-sm font-bold text-slate-500 hover:bg-slate-100';
+        });
+        activeButton.className = 'tab-btn rounded-xl bg-primary-light px-4 py-2 text-sm font-bold text-primary';
+    }
+
+    function openModal() {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
+    function resetForm(employeeId = '') {
+        formFields.id.value = '';
+        formFields.employeeId.value = employeeId;
+        formFields.reviewPeriod.value = 'YEAR_' + new Date().getFullYear();
+        formFields.performanceScore.value = '3.00';
+        formFields.potentialScore.value = '3.00';
+        formFields.status.value = 'DRAFT';
+        formFields.strengths.value = '';
+        formFields.areasToImprove.value = '';
+        formFields.modalTitle.textContent = employeeId ? 'Start Performance Review' : 'New Performance Review';
+    }
+
+    async function loadReview(id, employeeId) {
+        resetForm(employeeId || '');
+
+        if (!id) {
+            openModal();
+            return;
+        }
+
+        try {
+            const response = await fetch(`/dept-manager/performance-review/${id}`);
+            if (!response.ok) {
+                throw new Error('Failed to load review');
+            }
+
+            const review = await response.json();
+            formFields.id.value = review.id || '';
+            formFields.employeeId.value = review.employeeId || '';
+            formFields.reviewPeriod.value = review.reviewPeriod || '';
+            formFields.performanceScore.value = review.performanceScore || '3.00';
+            formFields.potentialScore.value = review.potentialScore || '3.00';
+            formFields.status.value = review.status || 'DRAFT';
+            formFields.strengths.value = review.strengths || '';
+            formFields.areasToImprove.value = review.areasToImprove || '';
+            formFields.modalTitle.textContent = review.employeeName ? `Review: ${review.employeeName}` : 'Performance Review';
+            openModal();
+        } catch (error) {
+            alert('Unable to load this review right now.');
+        }
+    }
+
+    if (searchInput) {
+        searchInput.addEventListener('input', event => {
+            currentSearch = event.target.value.toLowerCase().trim();
+            applyFilters();
+        });
+    }
+
+    tabButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            currentStatusFilter = button.dataset.status;
+            setActiveTab(button);
+            applyFilters();
+        });
+    });
+
+    newReviewBtn.addEventListener('click', () => {
+        resetForm();
+        openModal();
+    });
+
+    openButtons.forEach(button => {
+        button.addEventListener('click', () => {
+            loadReview(button.dataset.reviewId, button.dataset.employeeId);
+        });
+    });
+
+    closeModalBtn.addEventListener('click', closeModal);
+    cancelModalBtn.addEventListener('click', closeModal);
+    modal.addEventListener('click', event => {
+        if (event.target === modal) {
+            closeModal();
+        }
+    });
+</script>
+</body>
+</html>

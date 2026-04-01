@@ -3,10 +3,11 @@
 <head>
     <meta charset="utf-8"/>
     <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>HRM Pro - My Team</title>
+    <title>EMS Pro - My Team</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet"/>
+    <link rel="stylesheet" th:href="@{/css/app-icons.css}"/>
+    <script defer th:src="@{/js/app-icons.js}"></script>
     <script>
         tailwind.config = {
             darkMode: "class",
@@ -55,90 +56,7 @@
 <div class="flex h-screen overflow-hidden">
 
     <!-- ─── Sidebar ───────────────────────────── -->
-    <aside class="w-[280px] bg-white border-r border-slate-100 flex flex-col shrink-0 relative overflow-hidden">
-        
-        <div class="absolute top-0 right-0 w-40 h-40 bg-primary/5 rounded-full -translate-y-1/2 translate-x-1/2 pointer-events-none"></div>
-
-        <!-- Brand -->
-        <div class="px-6 py-6 flex items-center gap-3 relative z-10 shrink-0">
-            <div class="w-10 h-10 rounded-xl bg-primary flex items-center justify-center text-white shadow-md shadow-primary/30">
-                <span class="material-symbols-outlined text-[22px]">corporate_fare</span>
-            </div>
-            <div>
-                <h1 class="text-base font-black tracking-tight text-slate-900">EMS Pro</h1>
-                <p class="text-[11px] text-slate-400 font-medium whitespace-nowrap">Department Management</p>
-            </div>
-        </div>
-
-        <div class="flex-1 overflow-y-auto px-4 py-2 space-y-8 scrollbar-hide">
-            
-            <!-- Menu -->
-            <div>
-                <p class="px-3 text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Main</p>
-                <nav class="space-y-1">
-                    <a th:href="@{/dept-manager/dashboard}" class="group flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-                        <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-all">dashboard</span>
-                        <span class="text-sm font-medium">Dashboard</span>
-                    </a>
-                    
-                    <a th:href="@{/dept-manager/my-department}" class="group flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-                        <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-all">domain</span>
-                        <span class="text-sm font-medium">My Department</span>
-                    </a>
-
-                    <a th:href="@{/dept-manager/my-team}" class="nav-active flex items-center px-3 py-2 rounded-xl bg-primary-light text-primary transition-colors">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[20px] fill-icon">groups</span>
-                            <span class="text-sm font-semibold">Team Members</span>
-                        </div>
-                    </a>
-                    
-                    <a th:href="@{/dept-manager/leave-approval}" class="group flex items-center justify-between px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-                        <div class="flex items-center gap-3">
-                            <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-all">event_available</span>
-                            <span class="text-sm font-medium">Leave Approval</span>
-                        </div>
-                        <span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-full" th:text="${data.pendingApprovals}">8</span>
-                    </a>
-
-                    <a th:href="@{/dept-manager/attendance-review}" class="group flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-                        <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-all">fact_check</span>
-                        <span class="text-sm font-medium">Attendance Review</span>
-                    </a>
-
-                    <a th:href="@{/dept-manager/performance-review}" class="group flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all">
-                        <span class="material-symbols-outlined text-[20px] group-hover:text-primary transition-all">rate_review</span>
-                        <span class="text-sm font-medium">Performance Review</span>
-                    </a>
-                </nav>
-            </div>
-        </div>
-
-        <!-- Manager Card footer -->
-        <div class="p-4 shrink-0">
-            <div class="bg-slate-50 border border-slate-100 rounded-2xl p-3 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                    <img th:if="${data.manager != null && data.manager.avatarUrl != null}"
-                         th:src="${data.manager.avatarUrl}"
-                         th:alt="${data.manager.name}"
-                         class="w-full h-full object-cover"
-                         onerror="this.style.display='none'"/>
-                    <span th:text="${data.manager != null ? data.manager.name.substring(0,1) : 'U'}">U</span>
-                </div>
-                <div class="flex-1 min-w-0">
-                    <p class="text-xs font-bold text-slate-800 truncate" th:text="${data.manager != null ? data.manager.name : 'User'}">User</p>
-                    <p class="text-[11px] font-medium text-slate-400 truncate" th:text="${data.manager != null ? data.manager.role : ''}"></p>
-                </div>
-                <form th:action="@{/logout}" method="post" class="shrink-0">
-                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
-                    <button type="submit"
-                            class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors">
-                        <span class="material-symbols-outlined text-sm">logout</span>
-                    </button>
-                </form>
-            </div>
-        </div>
-    </aside>
+    <aside th:replace="~{fragments/deptmanager-sidebar :: sidebar('team', ${data})}"></aside>
 
     <!-- ─── Main ───────────────────────────────────────────────── -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
@@ -173,12 +91,39 @@
                         <h2 class="text-slate-900 dark:text-white text-3xl font-black tracking-tight">Team Directory</h2>
                         <p class="text-slate-500 text-sm">Managing <strong th:text="${data.teamMembers != null ? data.teamMembers.size() : 0}">0</strong> team members</p>
                     </div>
+
+                    <!-- Alerts for Requests -->
+                    <div class="w-full mt-4">
+                        <div th:if="${param.error != null}" class="bg-rose-50 border border-rose-200 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-3">
+                            <span class="material-symbols-outlined">error</span>
+                            <div>
+                                <p class="font-bold text-sm">Request Failed</p>
+                                <p class="text-xs" th:if="${#strings.contains(#strings.toString(param.error), 'addrequest')}">The add-member request could not be submitted. Please try again.</p>
+                                <p class="text-xs" th:if="${#strings.contains(#strings.toString(param.error), 'invalidremoval')}">That employee is not in your department, so the removal request was blocked.</p>
+                                <p class="text-xs" th:if="${#strings.contains(#strings.toString(param.error), 'notransfer')}">No eligible internal transfer targets were found for this role.</p>
+                            </div>
+                        </div>
+                        <div th:if="${param.success != null and #strings.contains(#strings.toString(param.success), 'add')}" class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-3">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            <div>
+                                <p class="font-bold text-sm">Request Submitted</p>
+                                <p class="text-xs">Your recruitment request has been successfully sent to HR.</p>
+                            </div>
+                        </div>
+                        <div th:if="${param.success != null and #strings.contains(#strings.toString(param.success), 'removal')}" class="bg-emerald-50 border border-emerald-200 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-3">
+                            <span class="material-symbols-outlined">check_circle</span>
+                            <div>
+                                <p class="font-bold text-sm">Request Submitted</p>
+                                <p class="text-xs">Your member removal request has been successfully sent to HR.</p>
+                            </div>
+                        </div>
+                    </div>
                     <div class="flex gap-3">
-                        <button class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
+                        <button id="btn-export" class="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 text-sm font-bold rounded-lg shadow-sm hover:bg-slate-50 transition-colors">
                             <span class="material-symbols-outlined text-[18px]">file_download</span>
                             Export
                         </button>
-                        <button class="flex items-center gap-2 px-5 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:bg-primary/90 transition-colors">
+                        <button onclick="openAddModal()" class="flex items-center gap-2 px-5 py-2 bg-primary text-white text-sm font-bold rounded-lg shadow-lg hover:bg-primary/90 transition-colors">
                             <span class="material-symbols-outlined text-[18px]">person_add</span>
                             Add Member
                         </button>
@@ -193,7 +138,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Top Performers</p>
-                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num">12</p>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num" th:text="${data.topPerformers}">0</p>
                         </div>
                     </div>
                     <div class="anim anim-1 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-4 shadow-sm">
@@ -202,7 +147,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">On Leave</p>
-                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num">3</p>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num" th:text="${data.onLeaveCount}">0</p>
                         </div>
                     </div>
                     <div class="anim anim-2 bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-100 dark:border-slate-800 flex items-center gap-4 shadow-sm">
@@ -211,7 +156,7 @@
                         </div>
                         <div>
                             <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Recent Hires</p>
-                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num">2</p>
+                            <p class="text-2xl font-black text-slate-900 dark:text-white leading-none mt-1 stat-num" th:text="${data.recentHires}">0</p>
                         </div>
                     </div>
                 </div>
@@ -223,7 +168,7 @@
                             <thead>
                                 <tr class="bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800">
                                     <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Name</th>
-                                    <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Role</th>
+                                    <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Position</th>
                                     <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Rating</th>
                                     <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
                                     <th class="px-6 py-4 text-[10px] font-bold text-slate-400 uppercase tracking-wider text-right">Actions</th>
@@ -237,7 +182,10 @@
                                                 <img class="w-full h-full object-cover" th:alt="${member.name}" th:src="${member.avatarUrl}"/>
                                             </div>
                                             <div>
-                                                <p class="text-sm font-bold text-slate-800 dark:text-white leading-tight" th:text="${member.name}">Name</p>
+                                                <div class="flex items-center gap-2 mb-0.5">
+                                                    <span class="text-[10px] font-bold text-primary bg-primary/10 px-1.5 py-0.5 rounded" th:text="${member.empCode}">EMP-001</span>
+                                                    <p class="text-sm font-bold text-slate-800 dark:text-white leading-tight" th:text="${member.name}">Name</p>
+                                                </div>
                                                 <p class="text-xs text-slate-500 font-medium mt-0.5" th:text="${member.email}">Email</p>
                                             </div>
                                         </div>
@@ -255,8 +203,8 @@
                                         </span>
                                     </td>
                                     <td class="px-6 py-4 text-right">
-                                        <button class="w-8 h-8 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors inline-flex items-center justify-center">
-                                            <span class="material-symbols-outlined text-[20px]">more_vert</span>
+                                        <button class="kick-btn w-8 h-8 rounded-lg hover:bg-rose-50 text-slate-400 hover:text-rose-500 transition-colors inline-flex items-center justify-center" title="Request Removal" th:data-id="${member.id}" th:data-name="${member.name}">
+                                            <span class="material-symbols-outlined text-[20px]">person_remove</span>
                                         </button>
                                     </td>
                                 </tr>
@@ -277,5 +225,180 @@
         </div>
     </main>
 </div>
+
+<!-- Add Member Modal -->
+<div id="add-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeAddModal()"></div>
+    <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-lg p-6 anim">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Add New Member</h3>
+        <p class="text-sm text-slate-500 mb-6">Choose how you want to add a new member to your team.</p>
+        
+        <form th:action="@{/dept-manager/team/request-add}" method="post" id="add-member-form">
+            <!-- CSRF Token -->
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+            <!-- Request Type Selection -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+                <label class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-primary bg-primary/5 shadow-sm" id="type-transfer-label">
+                    <input type="radio" name="requestType" value="TRANSFER" class="sr-only" checked onchange="toggleAddType('TRANSFER')"/>
+                    <span class="material-symbols-outlined text-primary mb-2">swap_horiz</span>
+                    <span class="text-sm font-bold text-slate-900">Internal Transfer</span>
+                    <span class="text-[11px] text-slate-500 mt-1">Request an existing employee from another department.</span>
+                </label>
+                <label class="relative flex flex-col p-4 border-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200" id="type-recruit-label">
+                    <input type="radio" name="requestType" value="RECRUITMENT" class="sr-only" onchange="toggleAddType('RECRUITMENT')"/>
+                    <span class="material-symbols-outlined text-slate-400 mb-2">person_search</span>
+                    <span class="text-sm font-bold text-slate-900">Recruitment</span>
+                    <span class="text-[11px] text-slate-500 mt-1">Request HR to hire a new employee for your team.</span>
+                </label>
+            </div>
+
+            <!-- Contextual Fields: Position -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2" id="role-label-text">Select Position</label>
+                <select name="role" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 px-4 py-2.5 text-sm focus:ring-2 focus:ring-primary focus:border-primary" required>
+                    <option value="" disabled selected>-- Choose a position --</option>
+                    <option th:each="pos : ${data.allPositions}" th:value="${pos.name}" th:text="${pos.name}">Position</option>
+                </select>
+            </div>
+
+            <!-- Description -->
+            <div class="mb-6">
+                <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Description / Requirements</label>
+                <textarea name="description" rows="3" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary" placeholder="Provide details for HR..." required></textarea>
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeAddModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-primary hover:bg-primary/90 shadow-sm transition-colors">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Request Removal Modal -->
+<div id="kick-modal" class="fixed inset-0 z-50 hidden items-center justify-center">
+    <div class="absolute inset-0 bg-slate-900/40 backdrop-blur-sm transition-opacity" onclick="closeKickModal()"></div>
+    <div class="relative bg-white dark:bg-slate-900 rounded-2xl shadow-xl w-full max-w-md p-6 anim">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-2">Request Member Removal</h3>
+        <p class="text-sm text-slate-500 mb-6">You are requesting HR to remove <strong id="kick-member-name" class="text-slate-700 dark:text-slate-300"></strong> from your department.</p>
+        
+        <form th:action="@{/dept-manager/team/request-removal}" method="post">
+            <!-- CSRF Token -->
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <input type="hidden" id="kick-member-id" name="employeeId" value=""/>
+            
+            <label class="block text-sm font-semibold text-slate-700 dark:text-slate-300 mb-2">Reason for Removal</label>
+            <textarea name="reason" rows="4" class="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 text-sm focus:ring-2 focus:ring-primary focus:border-primary mb-6" placeholder="Provide a detailed reason for HR..." required></textarea>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="closeKickModal()" class="px-5 py-2.5 rounded-xl text-sm font-bold text-slate-600 hover:bg-slate-100 transition-colors">Cancel</button>
+                <button type="submit" class="px-5 py-2.5 rounded-xl text-sm font-bold text-white bg-rose-500 hover:bg-rose-600 shadow-sm transition-colors">Submit Request</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+    function openAddModal() {
+        document.getElementById('add-modal').classList.remove('hidden');
+        document.getElementById('add-modal').classList.add('flex');
+    }
+
+    function closeAddModal() {
+        document.getElementById('add-modal').classList.add('hidden');
+        document.getElementById('add-modal').classList.remove('flex');
+    }
+
+    function toggleAddType(type) {
+        const transferLabel = document.getElementById('type-transfer-label');
+        const recruitLabel = document.getElementById('type-recruit-label');
+        const roleLabelText = document.getElementById('role-label-text');
+
+        if (type === 'TRANSFER') {
+            transferLabel.className = 'relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-colors border-primary bg-primary/5 shadow-sm';
+            transferLabel.querySelector('.material-symbols-outlined').className = 'material-symbols-outlined text-primary mb-2';
+            
+            recruitLabel.className = 'relative flex flex-col p-4 border-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200';
+            recruitLabel.querySelector('.material-symbols-outlined').className = 'material-symbols-outlined text-slate-400 mb-2';
+            
+            roleLabelText.innerText = 'Select Position (Internal Transfer)';
+        } else {
+            recruitLabel.className = 'relative flex flex-col p-4 border-2 rounded-xl cursor-pointer transition-colors border-primary bg-primary/5 shadow-sm';
+            recruitLabel.querySelector('.material-symbols-outlined').className = 'material-symbols-outlined text-primary mb-2';
+            
+            transferLabel.className = 'relative flex flex-col p-4 border-2 rounded-xl cursor-pointer hover:bg-slate-50 transition-colors border-slate-200';
+            transferLabel.querySelector('.material-symbols-outlined').className = 'material-symbols-outlined text-slate-400 mb-2';
+            
+            roleLabelText.innerText = 'Select Position (Recruitment)';
+        }
+    }
+
+    function openKickModal(id, name) {
+        document.getElementById('kick-member-id').value = id;
+        document.getElementById('kick-member-name').innerText = name;
+        document.getElementById('kick-modal').classList.remove('hidden');
+        document.getElementById('kick-modal').classList.add('flex');
+    }
+
+    function closeKickModal() {
+        document.getElementById('kick-modal').classList.add('hidden');
+        document.getElementById('kick-modal').classList.remove('flex');
+    }
+    document.addEventListener('DOMContentLoaded', () => {
+        // Kick button event delegation
+        document.querySelectorAll('.kick-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-id');
+                const name = btn.getAttribute('data-name');
+                openKickModal(id, name);
+            });
+        });
+
+        const btnExport = document.getElementById('btn-export');
+        
+        if (btnExport) {
+            btnExport.addEventListener('click', () => {
+                const rows = document.querySelectorAll('tbody tr');
+                if (!rows || rows.length === 0 || rows[0].cells.length === 1) {
+                    alert('No team members to export.');
+                    return;
+                }
+
+                const headers = ['ID', 'Name', 'Email', 'Role', 'Rating', 'Status'];
+                let csvContent = "data:text/csv;charset=utf-8," + headers.join(",") + "\n";
+
+                rows.forEach(row => {
+                    if (row.cells.length < 5) return; // skip empty messages
+
+                    const idEl = row.cells[0].querySelector('.bg-primary\\/10');
+                    const nameEl = row.cells[0].querySelector('.text-sm.font-bold');
+                    const emailEl = row.cells[0].querySelector('.text-xs.font-medium');
+                    
+                    const id = idEl ? idEl.innerText.trim() : '';
+                    const name = nameEl ? nameEl.innerText.trim() : '';
+                    const email = emailEl ? emailEl.innerText.trim() : '';
+                    const role = row.cells[1].innerText.trim();
+                    const rating = row.cells[2].innerText.trim();
+                    const status = row.cells[3].innerText.trim();
+                    
+                    const safeName = `"${name.replace(/"/g, '""')}"`;
+                    
+                    const rowData = [id, safeName, email, role, rating, status];
+                    csvContent += rowData.join(",") + "\n";
+                });
+
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "team_members.csv");
+                document.body.appendChild(link);
+                
+                link.click();
+                document.body.removeChild(link);
+            });
+        }
+    });
+</script>
 </body>
 </html>

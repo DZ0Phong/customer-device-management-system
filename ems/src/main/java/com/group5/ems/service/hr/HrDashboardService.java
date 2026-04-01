@@ -6,6 +6,7 @@ import com.group5.ems.repository.AttendanceRepository;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.JobPostRepository;
 import com.group5.ems.repository.RequestRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class HrDashboardService {
 
@@ -24,23 +26,15 @@ public class HrDashboardService {
     private final AttendanceRepository attendanceRepository;
     private final ApplicationRepository applicationRepository;
 
-    public HrDashboardService(EmployeeRepository employeeRepository,
-                              JobPostRepository jobPostRepository,
-                              RequestRepository requestRepository,
-                              AttendanceRepository attendanceRepository,
-                              ApplicationRepository applicationRepository) {
-        this.employeeRepository = employeeRepository;
-        this.jobPostRepository = jobPostRepository;
-        this.requestRepository = requestRepository;
-        this.attendanceRepository = attendanceRepository;
-        this.applicationRepository = applicationRepository;
-    }
-
     public HrDashboardMetricsDTO getDashboardMetrics() {
         Long activeEmployees = employeeRepository.countByStatus("ACTIVE");
         int openJobPosts = jobPostRepository.countByStatus("OPEN");
-        int pendingLeaveRequests = requestRepository.countByStatusAndRequestTypeCategory("PENDING", "ATTENDANCE");
-        int pendingWorkflowRequests = requestRepository.countByStatusAndRequestTypeCategory("PENDING", "HR_STATUS");
+        long pendingLeaveRequestsLong = requestRepository.countByStatusAndStepWaitingHRAndRequestTypeCodeIn(
+                "PENDING", 
+                java.util.Arrays.asList("LV_ANNUAL", "LV_SICK", "LEAVE_ANNUAL", "LEAVE_SICK", "LEAVE_UNPAID")
+        );
+        int pendingLeaveRequests = (int) pendingLeaveRequestsLong;
+        int pendingWorkflowRequests = (int) requestRepository.countByStatusAndStepWaitingHRAndRequestTypeCategory("PENDING", "HR_STATUS");
         long newHiresThisMonth = employeeRepository.newThisMonth();
         int totalApplicants = (int) applicationRepository.count();
 
@@ -56,7 +50,7 @@ public class HrDashboardService {
             attendanceLabels.add(day.format(labelFmt));
 
             int present = attendanceRepository.countByWorkDateAndStatus(day, "PRESENT");
-            int onLeave = attendanceRepository.countByWorkDateAndStatus(day, "ON_LEAVE");
+            int onLeave = attendanceRepository.countByWorkDateAndStatus(day, "LATE");
             int totalForDay = attendanceRepository.countByWorkDate(day);
             int absent = Math.max(0, totalForDay - present - onLeave);
 
@@ -67,9 +61,9 @@ public class HrDashboardService {
 
         // Recruitment pipeline counts
         int pipelineApplied = applicationRepository.countByStatus("APPLIED");
-        int pipelineReviewing = applicationRepository.countByStatus("REVIEWING");
+        int pipelineReviewing = applicationRepository.countByStatus("SCREENING");
         int pipelineInterviewing = applicationRepository.countByStatus("INTERVIEWING");
-        int pipelineOfferSent = applicationRepository.countByStatus("OFFER_SENT");
+        int pipelineOfferSent = applicationRepository.countByStatus("OFFER");
 
         return HrDashboardMetricsDTO.builder()
                 .activeEmployees(activeEmployees)
@@ -87,5 +81,11 @@ public class HrDashboardService {
                 .pipelineInterviewing(pipelineInterviewing)
                 .pipelineOfferSent(pipelineOfferSent)
                 .build();
+    }
+
+    public Long findEmployeeIdByCode(String code) {
+        return employeeRepository.findByEmployeeCode(code)
+                .map(com.group5.ems.entity.Employee::getId)
+                .orElse(null);
     }
 }

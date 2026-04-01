@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="utf-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>EMS Pro - Bank Details</title>
+    <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+    <link href="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/css/tom-select.css" rel="stylesheet">
+    <script th:src="@{/js/hr/hr-common.js}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tom-select@2.2.2/dist/js/tom-select.complete.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        primary: "#1414b8",
+                        "primary-light": "#e8e8fb",
+                        "bg-light": "#f6f6f8",
+                    },
+                    fontFamily: { display: ["Inter"] },
+                },
+            },
+        };
+    </script>
+</head>
+<body class="bg-bg-light font-display text-slate-900 min-h-screen">
+<div class="flex h-screen overflow-hidden">
+
+    <!-- SIDEBAR -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+        <!-- SIDEBAR                                                   -->
+        <!-- ══════════════════════════════════════════════════════════ -->
+        <div th:replace="~{fragments/hr-sidebar :: sidebar('employees')}"></div>
+
+    <!-- Main -->
+    <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
+        <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
+            <div>
+                <nav class="flex gap-2 text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">
+                    <a th:href="@{/hr/employees}" class="hover:text-primary transition-colors">Employees</a>
+                    <span>/</span>
+                    <span class="text-slate-600">Bank Details</span>
+                </nav>
+                <h2 class="text-base font-black text-slate-900 leading-tight">Bank Details: <span th:text="${employee.user.fullName}">Employee Name</span></h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <a th:href="@{/hr/employees}" class="flex items-center gap-2 text-slate-500 hover:text-slate-700 font-medium text-sm transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">arrow_back</span>
+                    Back to List
+                </a>
+            </div>
+        </header>
+
+        <div class="flex-1 overflow-y-auto p-8 dot-grid">
+            <div class="max-w-4xl mx-auto space-y-6">
+
+                <!-- Flash Messages -->
+                <div th:if="${successMessage}" class="bg-emerald-50 border border-emerald-100 text-emerald-700 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm anim anim-1">
+                    <span class="material-symbols-outlined text-emerald-500">check_circle</span>
+                    <p class="text-sm font-semibold" th:text="${successMessage}">Success Message</p>
+                </div>
+                <div th:if="${errorMessage}" class="bg-rose-50 border border-rose-100 text-rose-700 px-4 py-3 rounded-xl flex items-center gap-3 shadow-sm anim anim-1">
+                    <span class="material-symbols-outlined text-rose-500">error</span>
+                    <p class="text-sm font-semibold" th:text="${errorMessage}">Error Message</p>
+                </div>
+
+                <!-- Bank Accounts List -->
+                <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden anim anim-2">
+                    <div class="p-5 border-b border-slate-50">
+                        <h3 class="text-sm font-black text-slate-800">Saved Bank Accounts</h3>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-slate-50/70">
+                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Bank Name</th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Account Name</th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Account Number</th>
+                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-center">Status</th>
+                                    <th th:if="${currentUser != null and currentUser.id == employee.user.id}" class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody class="divide-y divide-slate-50">
+                                <tr th:if="${bankDetails.empty}">
+                                    <td colspan="5" class="px-5 py-10 text-center text-slate-400 text-sm italic">No bank accounts added for this employee.</td>
+                                </tr>
+                                <tr th:each="detail : ${bankDetails}" class="hover:bg-primary/[2%] transition-colors">
+                                    <td class="px-5 py-4">
+                                        <span class="text-xs font-bold text-slate-800" th:text="${detail.bankName}">Bank Name</span>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <span class="text-xs text-slate-600 font-medium" th:text="${detail.accountName}">Account Name</span>
+                                    </td>
+                                    <td class="px-5 py-4">
+                                        <span class="font-mono text-xs text-slate-800" th:text="${detail.maskedAccountNumber}">******1234</span>
+                                    </td>
+                                    <td class="px-5 py-4 text-center">
+                                        <span th:if="${detail.isPrimary}" class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 text-[10px] font-bold">
+                                            <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                                            Primary
+                                        </span>
+                                        <span th:unless="${detail.isPrimary}" class="text-[10px] text-slate-300 font-bold uppercase tracking-widest">Secondary</span>
+                                    </td>
+                                    <td th:if="${currentUser != null and currentUser.id == employee.user.id}" class="px-5 py-4 text-right">
+                                            <form th:if="${!detail.isPrimary}" th:action="@{/hr/bank-details/{employeeId}/{bankId}/set-primary(employeeId=${employee.id}, bankId=${detail.id})}" method="post">
+                                                <button type="submit" class="text-[10px] font-bold text-primary hover:text-white hover:bg-primary px-3 py-1 rounded-lg border border-primary/20 transition-all">
+                                                    Set Primary
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                    <!-- Pagination Support -->
+                    <div th:if="${totalPages > 1}" class="px-5 py-4 border-t border-slate-100 bg-slate-50/50 flex items-center justify-between">
+                        <ul class="flex items-center gap-1.5 justify-end">
+                            <li th:class="${currentPage == 0} ? 'opacity-50 pointer-events-none' : ''">
+                                <a th:href="@{/hr/bank-details/{id}(id=${employee.id}, page=${currentPage - 1})}" class="w-8 h-8 flex items-center justify-center rounded-xl font-bold bg-white border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 transition-all text-xs">
+                                    <span class="material-symbols-outlined text-[18px]">chevron_left</span>
+                                </a>
+                            </li>
+                            <li th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                                <a th:href="@{/hr/bank-details/{id}(id=${employee.id}, page=${i})}"
+                                   th:text="${i + 1}"
+                                   th:class="${currentPage == i} ? 'w-8 h-8 flex items-center justify-center rounded-xl font-black bg-primary text-white shadow-md shadow-primary/20 text-xs' : 'w-8 h-8 flex items-center justify-center rounded-xl font-bold bg-white border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 transition-all text-xs'">
+                                </a>
+                            </li>
+                            <li th:class="${currentPage + 1 >= totalPages} ? 'opacity-50 pointer-events-none' : ''">
+                                <a th:href="@{/hr/bank-details/{id}(id=${employee.id}, page=${currentPage + 1})}" class="w-8 h-8 flex items-center justify-center rounded-xl font-bold bg-white border border-slate-200 text-slate-500 hover:text-primary hover:border-primary/30 transition-all text-xs">
+                                    <span class="material-symbols-outlined text-[18px]">chevron_right</span>
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Add Form -->
+                <div th:if="${currentUser != null and currentUser.id == employee.user.id}"
+                     class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden anim anim-3">
+                    <div class="p-5 border-b border-slate-50">
+                        <h3 class="text-sm font-black text-slate-800">Add New Bank Account</h3>
+                    </div>
+                    <form th:action="@{/hr/bank-details/{id}/add(id=${employee.id})}" th:object="${bankDetailsForm}" method="post" class="p-6 space-y-6">
+                        <div class="grid grid-cols-1 gap-6">
+                            <!-- Bank Selection -->
+                            <div class="space-y-1.5">
+                                <label for="bank-select" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">Select Bank</label>
+                                <select id="bank-select" th:field="*{bankCode}" placeholder="Search for a bank..." required
+                                        class="w-full bg-slate-50 border-slate-100 rounded-xl px-4 py-2.5 text-sm focus:ring-primary focus:border-primary"
+                                        th:classappend="${#fields.hasErrors('bankCode')} ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500' : ''">
+                                    <option value="">-- Choose a Bank --</option>
+                                    <option th:each="bank : ${banks}" th:value="${bank.bin}" th:text="${bank.shortName + ' - ' + bank.name}"></option>
+                                </select>
+                                <p th:if="${#fields.hasErrors('bankCode')}" class="text-[10px] font-bold text-rose-500 mt-1 px-1" th:errors="*{bankCode}">Error</p>
+                            </div>
+
+                            <!-- Account Name -->
+                            <div class="space-y-1.5">
+                                <label for="accountName" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">Account Name (Must match exactly as registered at the bank)</label>
+                                <input type="text" id="accountName" th:field="*{accountName}" placeholder="e.g. NGUYEN VAN A" required style="text-transform: uppercase;"
+                                       class="w-full bg-slate-50 border-slate-100 rounded-xl px-4 py-2.5 text-sm focus:ring-primary focus:border-primary placeholder:text-slate-300"
+                                       th:classappend="${#fields.hasErrors('accountName')} ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500 bg-rose-50/50' : ''">
+                                <p th:if="${#fields.hasErrors('accountName')}" class="text-[10px] font-bold text-rose-500 mt-1 px-1" th:errors="*{accountName}">Error</p>
+                            </div>
+
+                            <!-- Account Number -->
+                            <div class="space-y-1.5">
+                                <label for="accountNumber" class="text-[11px] font-bold text-slate-500 uppercase tracking-wider px-1">Account Number</label>
+                                <input type="text" id="accountNumber" th:field="*{accountNumber}" placeholder="Encryption applied automatically" required pattern="[0-9]+"
+                                       class="w-full bg-slate-50 border-slate-100 rounded-xl px-4 py-2.5 text-sm font-mono focus:ring-primary focus:border-primary placeholder:text-slate-300"
+                                       th:classappend="${#fields.hasErrors('accountNumber')} ? 'border-rose-300 focus:ring-rose-500 focus:border-rose-500 bg-rose-50/50' : ''">
+                                <p th:if="${#fields.hasErrors('accountNumber')}" class="text-[10px] font-bold text-rose-500 mt-1 px-1" th:errors="*{accountNumber}">Error</p>
+                            </div>
+                        </div>
+
+                        <div class="pt-2 flex justify-end">
+                            <button type="submit" class="bg-primary text-white px-8 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
+                                Save Bank Account
+                            </button>
+                        </div>
+                    </form>
+                </div>
+
+            </div>
+        </div>
+    </main>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        new TomSelect("#bank-select", {
+            create: false,
+            sortField: { field: "text", direction: "asc" },
+            placeholder: "Type to search for a bank...",
+            maxOptions: null
+        });
+    });
+</script>
+</body>
+</html>
+
+

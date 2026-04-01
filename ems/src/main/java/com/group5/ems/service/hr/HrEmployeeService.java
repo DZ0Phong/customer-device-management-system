@@ -6,10 +6,14 @@ import com.group5.ems.entity.Contract;
 import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.Salary;
 import com.group5.ems.repository.EmployeeRepository;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
+import com.group5.ems.service.common.LogService;
 
 import java.math.BigDecimal;
 import java.util.Comparator;
@@ -19,20 +23,13 @@ import java.util.stream.Collectors;
 import org.springframework.transaction.annotation.Transactional;
 
 @Service
+@RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class HrEmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final LogService logService;
 
-    public HrEmployeeService(EmployeeRepository employeeRepository) {
-        this.employeeRepository = employeeRepository;
-    }
-
-    public List<HrEmployeeDTO> getAllEmployees() {
-        return employeeRepository.findAll().stream()
-                .map(this::mapToDTO)
-                .collect(Collectors.toList());
-    }
 
     public Page<HrEmployeeDTO> searchEmployees(String search, String department, String status, Pageable pageable) {
         String searchParam = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
@@ -43,6 +40,7 @@ public class HrEmployeeService {
         List<HrEmployeeDTO> dtos = page.getContent().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
+
         return new PageImpl<>(dtos, pageable, page.getTotalElements());
     }
 
@@ -111,7 +109,7 @@ public class HrEmployeeService {
             }
         }
 
-        return HrEmployeeDetailDTO.builder()
+        HrEmployeeDetailDTO dto = HrEmployeeDetailDTO.builder()
                 .id(employee.getId())
                 .initials(initials.toUpperCase())
                 .fullName(fullName)
@@ -132,7 +130,10 @@ public class HrEmployeeService {
                 .contractEnd(contractEnd)
                 .contractStatus(contractStatus)
                 .build();
+
+        return dto;
     }
+
 
     private HrEmployeeDTO mapToDTO(Employee employee) {
         String initials = "";
