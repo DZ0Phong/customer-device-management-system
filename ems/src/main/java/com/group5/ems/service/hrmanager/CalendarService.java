@@ -24,36 +24,75 @@ public class CalendarService {
     private final EventRepository eventRepository;
     
     public List<EventDTO> getUpcomingEvents() {
-        List<EventDTO> events = new ArrayList<>();
-        
-        // Sample upcoming events - you can replace this with actual database queries
         LocalDate now = LocalDate.now();
+        LocalDate futureLimit = now.plusDays(30); // Get events for next 30 days
         
-        events.add(new EventDTO(
-            "New Employee Orientation",
-            now.plusDays(2),
-            "09:00",
-            "11:00",
-            "blue"
-        ));
+        // Get events from database
+        List<Event> upcomingEvents = eventRepository.findByStartTimeBetween(
+            now, java.time.LocalTime.MIN,
+            futureLimit, java.time.LocalTime.MAX
+        );
         
-        events.add(new EventDTO(
-            "Q3 Performance Reviews",
-            now.plusDays(4),
-            "00:00",
-            "23:59",
-            "purple"
-        ));
+        // Convert to DTOs
+        List<EventDTO> events = upcomingEvents.stream()
+            .limit(5) // Limit to 5 upcoming events
+            .map(event -> {
+                String color = determineEventColor(event);
+                return new EventDTO(
+                    event.getTitle(),
+                    event.getStartDate(),
+                    event.getStartTime() != null ? event.getStartTime().toString() : "00:00",
+                    event.getEndTime() != null ? event.getEndTime().toString() : "23:59",
+                    color
+                );
+            })
+            .collect(Collectors.toList());
         
-        events.add(new EventDTO(
-            "Benefits Enrollment Ends",
-            now.plusDays(5),
-            "00:00",
-            "17:00",
-            "emerald"
-        ));
+        // If no events found, return sample events as fallback
+        if (events.isEmpty()) {
+            events.add(new EventDTO(
+                "New Employee Orientation",
+                now.plusDays(2),
+                "09:00",
+                "11:00",
+                "blue"
+            ));
+            
+            events.add(new EventDTO(
+                "Q3 Performance Reviews",
+                now.plusDays(4),
+                "00:00",
+                "23:59",
+                "purple"
+            ));
+            
+            events.add(new EventDTO(
+                "Benefits Enrollment Ends",
+                now.plusDays(5),
+                "00:00",
+                "17:00",
+                "emerald"
+            ));
+        }
         
         return events;
+    }
+    
+    private String determineEventColor(Event event) {
+        // Determine color based on event type or title
+        String title = event.getTitle().toLowerCase();
+        if (title.contains("orientation") || title.contains("training")) {
+            return "blue";
+        } else if (title.contains("review") || title.contains("performance")) {
+            return "purple";
+        } else if (title.contains("benefit") || title.contains("enrollment")) {
+            return "emerald";
+        } else if (title.contains("meeting")) {
+            return "amber";
+        } else if (title.contains("deadline") || title.contains("due")) {
+            return "rose";
+        }
+        return "blue"; // default color
     }
     
     public List<EventResponseDTO> getEventsByMonth(int month, int year) {
