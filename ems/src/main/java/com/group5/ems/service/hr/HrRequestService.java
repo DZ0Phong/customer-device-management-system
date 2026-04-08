@@ -19,6 +19,7 @@ import com.group5.ems.exception.RequestNotFoundException;
 import com.group5.ems.exception.WorkflowException;
 import com.group5.ems.repository.BenefitTypeRepository;
 import com.group5.ems.repository.DepartmentRepository;
+import com.group5.ems.repository.EmployeeLeaveBalanceRepository;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.repository.RequestApprovalHistoryRepository;
@@ -37,6 +38,8 @@ import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
@@ -59,6 +62,7 @@ public class HrRequestService {
     private final PositionRepository positionRepository;
     private final BenefitTypeRepository benefitTypeRepository;
     private final ApprovalWorkflowService workflowService;
+    private final EmployeeLeaveBalanceRepository leaveBalanceRepository;
     private final LogService logService;
 
     private static final int MIN_REJECTION_REASON_LENGTH = 10;
@@ -401,6 +405,55 @@ public class HrRequestService {
             approverName = request.getApprovedByUser().getFullName();
         }
 
+        String statusClass = "border-slate-200 bg-slate-50 text-slate-500";
+        String statusDisplay = request.getStatus();
+        String stepDisplay = workflowService.getStepDisplayName(request.getStep());
+
+        if (WorkflowConstants.STATUS_PENDING.equals(request.getStatus())) {
+            statusClass = "border-amber-200 bg-amber-50 text-amber-600";
+            statusDisplay = "Pending Review";
+        } else if (WorkflowConstants.STATUS_APPROVED.equals(request.getStatus())) {
+            statusClass = "border-emerald-200 bg-emerald-50 text-emerald-600";
+            statusDisplay = "Approved";
+        } else if (WorkflowConstants.STATUS_REJECTED.equals(request.getStatus())) {
+            statusClass = "border-rose-200 bg-rose-50 text-rose-600";
+            statusDisplay = "Rejected";
+        }
+
+        // Position
+        String empPosition = "Employee";
+        if (request.getEmployee() != null && request.getEmployee().getPosition() != null) {
+            empPosition = request.getEmployee().getPosition().getName();
+        }
+
+        // Leave specific metadata
+        BigDecimal balanceRemaining = null;
+        BigDecimal balanceTotal = null;
+        Integer balancePercentage = null;
+        Integer overlapCount = null;
+        boolean isLeaveRequest = request.getRequestType() != null && "ATTENDANCE".equals(request.getRequestType().getCategory());
+
+        if (isLeaveRequest) {
+            int currentYear = LocalDate.now().getYear();
+            var balanceOpt = leaveBalanceRepository.findByEmployeeIdAndYear(request.getEmployeeId(), currentYear);
+            if (balanceOpt.isPresent()) {
+                var balance = balanceOpt.get();
+                balanceRemaining = balance.getRemainingDays();
+                balanceTotal = balance.getTotalDays();
+                if (balanceTotal != null && balanceTotal.compareTo(BigDecimal.ZERO) > 0) {
+                    balancePercentage = balanceRemaining.multiply(new BigDecimal(100))
+                            .divide(balanceTotal, 0, java.math.RoundingMode.HALF_UP).intValue();
+                }
+            }
+
+            if (request.getLeaveFrom() != null && request.getLeaveTo() != null) {
+                var overlaps = requestRepository.findOverlappingLeaveRequests("APPROVED", request.getLeaveFrom(), request.getLeaveTo());
+                overlapCount = (int) overlaps.stream()
+                        .filter(r -> !r.getId().equals(request.getId()))
+                        .count();
+            }
+        }
+
         return HrRequestDTO.builder()
                 .id(request.getId())
                 .requestedBy(empName)
@@ -408,6 +461,7 @@ public class HrRequestService {
                 .department(deptName)
                 .departmentId(deptId)
                 .employeeCode(empCode)
+                .employeePosition(empPosition)
                 .category(category)
                 .categoryCode(categoryCode)
                 .title(request.getTitle())
@@ -415,9 +469,19 @@ public class HrRequestService {
                 .status(request.getStatus())
                 .rejectedReason(request.getRejectedReason())
                 .submittedAt(request.getCreatedAt())
+                .submittedAtDisplay(request.getCreatedAt() != null ? request.getCreatedAt().format(DTF_FULL) : "N/A")
                 .processedAt(processedAt)
                 .approverName(approverName)
+                .statusClass(statusClass)
+                .statusDisplay(statusDisplay)
+                .stepDisplay(stepDisplay)
+                .leaveBalanceRemaining(balanceRemaining)
+                .leaveBalanceTotal(balanceTotal)
+                .leaveBalancePercentage(balancePercentage)
+                .overlapCount(overlapCount)
+                .isLeaveRequest(isLeaveRequest)
                 .build();
+
     }
 
     private String buildInitials(String fullName) {
