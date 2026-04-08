@@ -31,8 +31,6 @@ public interface UserRepository extends JpaRepository<User, Long>, JpaSpecificat
 
     boolean existsByUsernameAndIdNot(String username, Long id);
 
-    List<User> findTop5ByOrderByCreatedAtDesc();
-
     @Override
     @EntityGraph(attributePaths = {"employee", "employee.department", "userRoles", "userRoles.role"})
     Page<User> findAll(Specification<User> spec, Pageable pageable);
