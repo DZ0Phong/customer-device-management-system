@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -32,6 +33,7 @@ public class HrManagerController {
     private final LeaveApprovalService leaveApprovalService;
     private final PayrollApprovalService payrollApprovalService;
     private final CalendarService calendarService;
+    private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
@@ -305,14 +307,36 @@ public class HrManagerController {
     public String requestManagement(Model model,
                                 @RequestParam(defaultValue = "pending") String tab,
                                 @RequestParam(defaultValue = "all") String category,
-                                @RequestParam(defaultValue = "1") int page) {
+                                @RequestParam(defaultValue = "1") int page,
+                                @RequestParam(required = false) Long requestId) {
         model.addAttribute("stats",         leaveApprovalService.getStats());
         model.addAttribute("leaveRequests", leaveApprovalService.getLeaveRequests(tab, page));
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
         model.addAttribute("activeTab",     tab);
         model.addAttribute("activeCategory", category);
         model.addAttribute("activePage",    "leave");
+        model.addAttribute("requestId",     requestId); // For auto-expand
         return "hrmanager/leave_approval";
+    }
+    
+    // ── Notify Critical Items (Email Notification) ───────────────────────────
+    @PostMapping({"/leave-approval/notify-critical", "/request-management/notify-critical"})
+    @ResponseBody
+    public Map<String, Object> notifyCriticalItems(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Integer count = (Integer) payload.get("count");
+            
+            // Send email notification to current HR Manager
+            emailNotificationService.sendCriticalRequestsNotification(getCurrentUserId(), count);
+            
+            response.put("success", true);
+            response.put("message", "Notification sent");
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to send notification: " + e.getMessage());
+        }
+        return response;
     }
 
     // ── Payroll Approval ──────────────────────────────────────────────────────
@@ -430,6 +454,52 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
         return "redirect:/hrmanager/leave-approval?tab=pending";
+    }
+    
+    // ── Bulk Actions ──────────────────────────────────────────────────────────
+    @PostMapping({"/leave-approval/bulk-approve", "/request-management/bulk-approve"})
+    @ResponseBody
+    public Map<String, Object> bulkApprove(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> requestIdsInt = (List<Integer>) payload.get("requestIds");
+            List<Long> requestIds = requestIdsInt.stream()
+                    .map(Integer::longValue)
+                    .collect(java.util.stream.Collectors.toList());
+            Long approverId = getCurrentUserId();
+            
+            Map<String, Object> result = leaveApprovalService.bulkApprove(requestIds, approverId);
+            result.put("success", true);
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Bulk approve failed: " + e.getMessage());
+            return error;
+        }
+    }
+    
+    @PostMapping({"/leave-approval/bulk-reject", "/request-management/bulk-reject"})
+    @ResponseBody
+    public Map<String, Object> bulkReject(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> requestIdsInt = (List<Integer>) payload.get("requestIds");
+            List<Long> requestIds = requestIdsInt.stream()
+                    .map(Integer::longValue)
+                    .collect(java.util.stream.Collectors.toList());
+            Long approverId = getCurrentUserId();
+            String reason = (String) payload.getOrDefault("reason", "Bulk rejection");
+            
+            Map<String, Object> result = leaveApprovalService.bulkReject(requestIds, approverId, reason);
+            result.put("success", true);
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", false);
+            error.put("message", "Bulk reject failed: " + e.getMessage());
+            return error;
+        }
     }
 
     // ── Revert Request (24h window) - Phase 3 ────────────────────────────────

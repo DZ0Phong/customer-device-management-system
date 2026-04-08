@@ -391,8 +391,8 @@
                     <button
                         class="relative w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-500 transition-colors">
                         <span class="material-symbols-outlined text-[20px]">notifications</span>
-                        <span
-                            class="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
+                        <span class="notification-bell-badge hidden absolute top-1.5 right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-500 text-white text-[10px] font-bold flex items-center justify-center border-2 border-white">0</span>
+                    </button>
                     </button>
                     <button
                         class="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-50 text-slate-500 transition-colors">
@@ -606,7 +606,7 @@
                                         <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                             Employee</th>
                                         <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
-                                            Leave Type</th>
+                                            Title</th>
                                         <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
                                             Duration</th>
                                         <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">
@@ -1440,8 +1440,7 @@
                                                 </td>
                                                 <td class="px-4 py-4">
                                                     <div class="flex items-center gap-3">
-                                                        <div class="size-9 rounded-full bg-slate-200 flex-shrink-0 flex items-center justify-center font-bold text-slate-600 text-sm"
-                                                            th:text="${req.employeeInitials}">AR</div>
+                                                        
                                                         <div>
                                                             <p class="text-sm font-bold" th:text="${req.employeeName}">
                                                                 Name</p>
@@ -1451,23 +1450,8 @@
                                                     </div>
                                                 </td>
                                                 <td class="px-4 py-4">
-                                                    <th:block th:switch="${req.leaveType}">
-                                                        <span th:case="'Annual Leave'"
-                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700"
-                                                            th:text="${req.leaveType}">Annual Leave</span>
-                                                        <span th:case="'Sick Leave'"
-                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-purple-100 text-purple-700"
-                                                            th:text="${req.leaveType}">Sick Leave</span>
-                                                        <span th:case="'Personal Leave'"
-                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
-                                                            th:text="${req.leaveType}">Personal Leave</span>
-                                                        <span th:case="'Maternity Leave'"
-                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-pink-100 text-pink-700"
-                                                            th:text="${req.leaveType}">Maternity Leave</span>
-                                                        <span th:case="*"
-                                                            class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700"
-                                                            th:text="${req.leaveType}">Other</span>
-                                                    </th:block>
+                                                    <p class="text-sm font-medium text-slate-700 truncate max-w-[200px]" 
+                                                       th:text="${req.title != null and !req.title.isEmpty() ? req.title : 'No title'}">Request Title</p>
                                                 </td>
                                                 <td class="px-4 py-4 text-sm font-semibold"
                                                     th:text="${req.durationLabel}">5 Days</td>
@@ -1658,8 +1642,32 @@
                                                                             class="ml-auto px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-700 text-[10px] font-bold">No
                                                                             conflict</span>
                                                                     </h4>
+                                                                    
+                                                                    <!-- Request Type Badge -->
+                                                                    <div class="bg-white rounded-xl p-3 border border-slate-200">
+                                                                        <p class="text-xs text-slate-400 mb-2">Request Type</p>
+                                                                        <th:block th:switch="${req.leaveType}">
+                                                                            <span th:case="'Annual Leave'"
+                                                                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-700"
+                                                                                th:text="${req.leaveType}">Annual Leave</span>
+                                                                            <span th:case="'Sick Leave'"
+                                                                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-700"
+                                                                                th:text="${req.leaveType}">Sick Leave</span>
+                                                                            <span th:case="'Personal Leave'"
+                                                                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"
+                                                                                th:text="${req.leaveType}">Personal Leave</span>
+                                                                            <span th:case="'Maternity Leave'"
+                                                                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-pink-100 text-pink-700"
+                                                                                th:text="${req.leaveType}">Maternity Leave</span>
+                                                                            <span th:case="*"
+                                                                                class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold bg-slate-100 text-slate-700"
+                                                                                th:text="${req.leaveType != null ? req.leaveType : 'Other'}">Other</span>
+                                                                        </th:block>
+                                                                    </div>
+                                                                    
+                                                                    <!-- Overlap Info -->
                                                                     <div
-                                                                        class="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-500 min-h-[80px] flex items-center justify-center">
+                                                                        class="bg-white rounded-xl p-3 border border-slate-200 text-xs text-slate-500 min-h-[60px] flex items-center justify-center">
                                                                         <span th:if="${req.overlapEmployees != null}"
                                                                             th:text="${req.overlapEmployees}">—</span>
                                                                         <span
@@ -1849,6 +1857,34 @@
             </div>
         </div>
     </div>
+    
+    <!-- ══ CONFIRM MODAL (Custom - No System Alert) ═══════════════ -->
+    <div id="confirm-modal" class="modal-backdrop">
+        <div class="modal-box" style="width: 420px;">
+            <div class="p-6 border-b border-slate-100">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                        <span class="material-symbols-outlined text-emerald-600" id="confirm-icon">check_circle</span>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900" id="confirm-title">Confirm Action</h3>
+                        <p class="text-xs text-slate-500 mt-0.5" id="confirm-message">Are you sure?</p>
+                    </div>
+                </div>
+            </div>
+            <div class="px-6 pb-6 pt-4 flex gap-3">
+                <button onclick="closeConfirmModal()"
+                    class="flex-1 px-4 py-3 border border-slate-200 text-slate-600 rounded-xl text-sm font-semibold hover:bg-slate-50 transition-colors">
+                    Cancel
+                </button>
+                <button id="confirm-btn" onclick="confirmAction()"
+                    class="flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2">
+                    <span class="material-symbols-outlined text-[18px]">check</span>
+                    <span id="confirm-btn-text">Confirm</span>
+                </button>
+            </div>
+        </div>
+    </div>
 
     <!-- ══ TOAST ═════════════════════════════════════════════════ -->
     <div id="toast">
@@ -1863,8 +1899,58 @@
         // ── State ──────────────────────────────────────────────────────
         var selectedIds = new Set();
         var rejectTargetId = null;
+        var confirmCallback = null; // For custom confirm modal
         var activeFilters = { type: 'all', priority: 'all', status: 'all' };
         var currentCategory = 'all'; // Phase 3: Track current category
+        
+        // ── Custom Confirm Modal (No System Alert) ────────────────────
+        function showConfirm(title, message, onConfirm, options) {
+            options = options || {};
+            confirmCallback = onConfirm;
+            
+            document.getElementById('confirm-title').textContent = title;
+            document.getElementById('confirm-message').textContent = message;
+            document.getElementById('confirm-btn-text').textContent = options.confirmText || 'Confirm';
+            
+            // Change icon and color based on type
+            var icon = document.getElementById('confirm-icon');
+            var btn = document.getElementById('confirm-btn');
+            var iconParent = icon.parentElement;
+            
+            if (options.type === 'danger') {
+                icon.textContent = 'warning';
+                iconParent.className = 'w-10 h-10 rounded-xl bg-rose-100 flex items-center justify-center';
+                icon.className = 'material-symbols-outlined text-rose-600';
+                btn.className = 'flex-1 px-4 py-3 bg-rose-500 text-white rounded-xl text-sm font-bold hover:bg-rose-600 transition-colors flex items-center justify-center gap-2';
+            } else {
+                icon.textContent = 'check_circle';
+                iconParent.className = 'w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center';
+                icon.className = 'material-symbols-outlined text-emerald-600';
+                btn.className = 'flex-1 px-4 py-3 bg-emerald-500 text-white rounded-xl text-sm font-bold hover:bg-emerald-600 transition-colors flex items-center justify-center gap-2';
+            }
+            
+            window.hydrateAppIcons?.(icon);
+            document.getElementById('confirm-modal').classList.add('open');
+        }
+        
+        function closeConfirmModal() {
+            document.getElementById('confirm-modal').classList.remove('open');
+            confirmCallback = null;
+        }
+        
+        function confirmAction() {
+            if (confirmCallback) {
+                confirmCallback();
+            }
+            closeConfirmModal();
+        }
+        
+        // Close modal on backdrop click
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('confirm-modal')?.addEventListener('click', function (e) {
+                if (e.target === this) closeConfirmModal();
+            });
+        });
 
         // ── Category Switching - Phase 3 ──────────────────────────────
         function switchCategory(category) {
@@ -2136,25 +2222,53 @@
         function bulkApprove() {
             if (selectedIds.size === 0) return;
             
-            // Show loading on bulk approve button
-            const bulkBtn = event.target.closest('button');
-            if (bulkBtn) {
-                bulkBtn.disabled = true;
-                const icon = bulkBtn.querySelector('.material-symbols-outlined');
-                if (icon) {
-                    icon.classList.add('animate-spin');
-                    if (window.setAppIcon) {
-                        window.setAppIcon(icon, 'progress_activity');
-                    } else {
-                        icon.textContent = 'progress_activity';
+            // Use custom confirm modal instead of system alert
+            showConfirm(
+                'Bulk Approve',
+                'Approve ' + selectedIds.size + ' selected request(s)?',
+                function() {
+                    // Show loading on bulk approve button
+                    const bulkBtn = document.querySelector('[onclick="bulkApprove()"]');
+                    if (bulkBtn) {
+                        bulkBtn.disabled = true;
+                        bulkBtn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Approving...';
+                        window.hydrateAppIcons?.(bulkBtn);
                     }
-                }
-                bulkBtn.innerHTML = bulkBtn.innerHTML.replace(/Approve.*/, 'Approving...');
-                window.hydrateAppIcons?.(bulkBtn);
-            }
-            
-            var ids = Array.from(selectedIds);
-            submitBulkAction('/hrmanager/leave-approval/bulk-approve', ids, null);
+                    
+                    var ids = Array.from(selectedIds);
+                    
+                    // Use AJAX instead of form submit
+                    fetch('/hrmanager/leave-approval/bulk-approve', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content || ''
+                        },
+                        body: JSON.stringify({ requestIds: ids })
+                    })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.success !== false) {
+                            var msg = data.success + ' approved';
+                            if (data.failed > 0) {
+                                msg += ', ' + data.failed + ' failed';
+                            }
+                            showToast(msg, data.failed > 0 ? 'warning' : 'success');
+                            
+                            // Reload page after 1 second
+                            setTimeout(() => window.location.reload(), 1000);
+                        } else {
+                            showToast(data.message || 'Bulk approve failed', 'error');
+                            if (bulkBtn) bulkBtn.disabled = false;
+                        }
+                    })
+                    .catch(err => {
+                        showToast('Error: ' + err.message, 'error');
+                        if (bulkBtn) bulkBtn.disabled = false;
+                    });
+                },
+                { confirmText: 'Approve All' }
+            );
         }
 
         function bulkRejectOpen() {
@@ -2167,24 +2281,37 @@
         }
 
         function submitBulkAction(url, ids, reason) {
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = url;
-            ids.forEach(function (id) {
-                var input = document.createElement('input');
-                input.type = 'hidden';
-                input.name = 'requestIds';
-                input.value = id;
-                form.appendChild(input);
+            // Use AJAX for bulk reject
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="_csrf"]')?.content || ''
+                },
+                body: JSON.stringify({ 
+                    requestIds: ids,
+                    reason: reason || 'Bulk rejection'
+                })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if (data.success !== false) {
+                    var msg = data.success + ' rejected';
+                    if (data.failed > 0) {
+                        msg += ', ' + data.failed + ' failed';
+                    }
+                    showToast(msg, data.failed > 0 ? 'warning' : 'success');
+                    
+                    // Close modal and reload
+                    closeRejectModal();
+                    setTimeout(() => window.location.reload(), 1000);
+                } else {
+                    showToast(data.message || 'Bulk reject failed', 'error');
+                }
+            })
+            .catch(err => {
+                showToast('Error: ' + err.message, 'error');
             });
-            if (reason) {
-                var r = document.createElement('input');
-                r.type = 'hidden'; r.name = 'rejectedReason'; r.value = reason;
-                form.appendChild(r);
-            }
-            appendCsrf(form);
-            document.body.appendChild(form);
-            form.submit();
         }
 
         // ── Approve / Reject single ───────────────────────────────────
@@ -2242,22 +2369,26 @@
                 }
             }
             
-            if (!confirm('Are you sure you want to revert this request back to PENDING status?')) {
-                return;
-            }
-            
-            // Show loading
-            btn.disabled = true;
-            btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Reverting...';
-            window.hydrateAppIcons?.(btn);
-            
-            var form = document.createElement('form');
-            form.method = 'POST';
-            form.action = '/hrmanager/leave-approval/revert';
-            appendHidden(form, 'requestId', requestId);
-            appendCsrf(form);
-            document.body.appendChild(form);
-            form.submit();
+            // Use custom confirm modal instead of system alert
+            showConfirm(
+                'Revert Request',
+                'Are you sure you want to revert this request back to PENDING status?',
+                function() {
+                    // Show loading
+                    btn.disabled = true;
+                    btn.innerHTML = '<span class="material-symbols-outlined text-[18px] animate-spin">progress_activity</span> Reverting...';
+                    window.hydrateAppIcons?.(btn);
+                    
+                    var form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/hrmanager/leave-approval/revert';
+                    appendHidden(form, 'requestId', requestId);
+                    appendCsrf(form);
+                    document.body.appendChild(form);
+                    form.submit();
+                },
+                { type: 'danger', confirmText: 'Revert' }
+            );
         }
 
         // ── Leave History Modal - Phase 3 ─────────────────────────────
@@ -2381,6 +2512,23 @@
             if (csrfToken) appendHidden(form, '_csrf', csrfToken);
         }
 
+        /*]]>*/
+    </script>
+    
+    <!-- ══ ENHANCEMENTS SCRIPT ═══════════════════════════════════════════════ -->
+    <script src="/js/leave-approval-enhancements.js" th:src="@{/js/leave-approval-enhancements.js}"></script>
+    
+    <!-- Pass requestId to JavaScript for auto-expand -->
+    <script th:if="${requestId != null}" th:inline="javascript">
+        /*<![CDATA[*/
+        // Auto-expand is handled by leave-approval-enhancements.js
+        // This just ensures the requestId is in the URL
+        var requestIdFromServer = /*[[${requestId}]]*/ null;
+        if (requestIdFromServer && !window.location.search.includes('requestId=')) {
+            var url = new URL(window.location.href);
+            url.searchParams.set('requestId', requestIdFromServer);
+            window.history.replaceState({}, '', url);
+        }
         /*]]>*/
     </script>
 </body>
