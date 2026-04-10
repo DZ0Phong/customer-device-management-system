@@ -36,7 +36,7 @@ public class SecurityConfig {
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/employee/**").hasAnyRole("EMPLOYEE", "DEPT_MANAGER", "HR", "HR_MANAGER")
                 .requestMatchers("/dept-manager/**").hasRole("DEPT_MANAGER")
-                .requestMatchers("/hrmanager/**").hasRole("HR_MANAGER")
+                .requestMatchers("/hrmanager/**", "/hr-manager/**").hasRole("HR_MANAGER")
                 .requestMatchers("/hr/**").hasRole("HR")
                 .anyRequest().authenticated()).formLogin(form -> form
                         .loginPage("/login")

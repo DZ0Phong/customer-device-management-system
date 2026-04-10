@@ -172,4 +172,9 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long> {
     long countNewHiresBetween(@Param("periodStart") LocalDate periodStart, 
                               @Param("periodEnd") LocalDate periodEnd);
 
+    /**
+     * Find employees without department assignment (unassigned employees)
+     */
+    List<Employee> findByDepartmentIdIsNull();
+
 }

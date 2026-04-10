@@ -9,6 +9,7 @@ import com.group5.ems.entity.Request;
 import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.RequestType;
 import com.group5.ems.entity.Salary;
+import com.group5.ems.entity.StaffingRequest;
 import com.group5.ems.entity.User;
 import com.group5.ems.enums.AuditAction;
 import com.group5.ems.enums.AuditEntityType;
@@ -20,6 +21,7 @@ import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.RequestTypeRepository;
 import com.group5.ems.repository.SalaryRepository;
+import com.group5.ems.repository.StaffingRequestRepository;
 import com.group5.ems.service.common.LogService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -65,6 +67,7 @@ public class DeptManagerService {
     private final PerformanceReviewRepository performanceReviewRepository;
     private final SalaryRepository salaryRepository;
     private final RequestApprovalHistoryRepository requestApprovalHistoryRepository;
+    private final StaffingRequestRepository staffingRequestRepository;
     private final LogService logService;
 
     public int getTeamSize(Long managerId) {
@@ -334,21 +337,19 @@ public class DeptManagerService {
         }
 
         String normalizedType = requestType != null ? requestType.trim().toUpperCase(Locale.ROOT) : "RECRUITMENT";
-        RequestType workflowType = "TRANSFER".equals(normalizedType)
-                ? findOrCreateRequestType("HR_TRANSFER", "Internal Transfer Request", "HR_STATUS",
-                "Request to transfer an employee into the department")
-                : findOrCreateRequestType("HR_RECRUIT", "Recruitment Request", "HR_STATUS",
-                "Propose hiring new staff for the department");
 
-        Request request = new Request();
-        request.setEmployeeId(managerEmployee.getId());
-        request.setRequestTypeId(workflowType.getId());
-        request.setTitle(("TRANSFER".equals(normalizedType) ? "Transfer request: " : "Recruitment request: ") + role);
-        request.setContent(buildAddMemberRequestContent(department, normalizedType, role, description));
-        request.setStatus("PENDING");
-        Request savedRequest = requestRepository.save(request);
-        saveHistory(savedRequest.getId(), managerEmployee.getUserId(), "SUBMITTED", "Submitted by Department Manager");
+        // Create StaffingRequest instead of Request
+        StaffingRequest staffingRequest = new StaffingRequest();
+        staffingRequest.setDepartmentId(department.getId());
+        staffingRequest.setRequestedByEmployeeId(managerEmployee.getId());
+        staffingRequest.setRequestType(normalizedType);
+        staffingRequest.setRoleRequested(role);
+        staffingRequest.setDescription(description);
+        staffingRequest.setStatus("PENDING");
+        
+        StaffingRequest savedRequest = staffingRequestRepository.save(staffingRequest);
         logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, savedRequest.getId(), managerEmployee.getUserId());
+        
         return true;
     }
 
