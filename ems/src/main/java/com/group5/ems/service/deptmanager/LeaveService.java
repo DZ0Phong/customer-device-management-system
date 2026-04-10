@@ -9,6 +9,7 @@ import com.group5.ems.exception.WorkflowException;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.service.common.ApprovalWorkflowService;
 import com.group5.ems.service.common.LogService;
+import com.group5.ems.util.WorkingDayUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -97,6 +98,10 @@ public class LeaveService {
                 reqMap.put("typeDisplay", "Sick Leave");
                 reqMap.put("typeColorClass", "bg-rose-50 dark:bg-rose-900/30 text-rose-600 dark:text-rose-300 border-rose-100");
                 reqMap.put("typeDotClass", "bg-rose-500");
+            } else if (typeStr.contains("unpaid") || typeStr.contains("personal")) {
+                reqMap.put("typeDisplay", "Unpaid Leave");
+                reqMap.put("typeColorClass", "bg-slate-100 dark:bg-slate-800/60 text-slate-700 dark:text-slate-300 border-slate-200");
+                reqMap.put("typeDotClass", "bg-slate-500");
             } else {
                 reqMap.put("typeDisplay", req.getLeaveType());
                 reqMap.put("typeColorClass", "bg-purple-50 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300 border-purple-100");
@@ -105,7 +110,7 @@ public class LeaveService {
 
             long durationDays = 0;
             if (req.getLeaveFrom() != null && req.getLeaveTo() != null) {
-                durationDays = java.time.temporal.ChronoUnit.DAYS.between(req.getLeaveFrom(), req.getLeaveTo()) + 1;
+                durationDays = WorkingDayUtils.countWorkingDays(req.getLeaveFrom(), req.getLeaveTo());
             }
             reqMap.put("durationDays", durationDays);
 

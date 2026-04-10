@@ -1,6 +1,7 @@
 package com.group5.ems.dto.response.hrmanager;
 
 import com.group5.ems.entity.Request;
+import com.group5.ems.util.WorkingDayUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 
 @Data
 @Builder
@@ -104,7 +104,7 @@ public class LeaveRequestResponseDTO {
             this.dateRange = request.getLeaveFrom().format(formatter) + " - " + request.getLeaveTo().format(formatter);
             this.dateRangeYear = String.valueOf(request.getLeaveFrom().getYear());
             
-            long days = ChronoUnit.DAYS.between(request.getLeaveFrom(), request.getLeaveTo()) + 1;
+            long days = WorkingDayUtils.countWorkingDays(request.getLeaveFrom(), request.getLeaveTo());
             this.durationLabel = days + (days == 1 ? " Day" : " Days");
         } else {
             this.dateRange = "No dates";
@@ -121,7 +121,7 @@ public class LeaveRequestResponseDTO {
     // Utility methods
     public long getDaysCount() {
         if (leaveFrom == null || leaveTo == null) return 0;
-        return ChronoUnit.DAYS.between(leaveFrom, leaveTo) + 1;
+        return WorkingDayUtils.countWorkingDays(leaveFrom, leaveTo);
     }
 
     private String getInitials(String fullName) {
