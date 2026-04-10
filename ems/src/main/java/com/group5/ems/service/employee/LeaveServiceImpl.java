@@ -15,13 +15,13 @@ import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.RequestTypeRepository;
 import com.group5.ems.service.common.LogService;
+import com.group5.ems.util.WorkingDayUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -44,7 +44,7 @@ public class LeaveServiceImpl {
         List<LeaveBalanceDTO> balances = new ArrayList<>();
         balances.add(buildBalance("ANNUAL_LEAVE", 12.0, allLeaves));
         balances.add(buildBalance("SICK_LEAVE", 10.0, allLeaves));
-        balances.add(buildBalance("PERSONAL_LEAVE", 5.0, allLeaves));
+        balances.add(buildUnlimitedBalance("UNPAID_LEAVE", allLeaves));
 
         return balances;
     }
@@ -92,27 +92,31 @@ public class LeaveServiceImpl {
         }
 
         // ── Kiểm tra balance ───────────────────────────────
-        double requestedDays = ChronoUnit.DAYS.between(dto.getLeaveFrom(), dto.getLeaveTo()) + 1;
+        long requestedDays = WorkingDayUtils.countWorkingDays(dto.getLeaveFrom(), dto.getLeaveTo());
+        if (requestedDays <= 0) {
+            throw new RuntimeException("Selected leave range must contain at least one working day.");
+        }
         List<LeaveBalanceDTO> balances = getLeaveBalances(employeeId);
 
+        String normalizedLeaveType = normalizeLeaveType(dto.getLeaveType());
         LeaveBalanceDTO balance = balances.stream()
-                .filter(b -> b.getLeaveType().equals(dto.getLeaveType()))
+                .filter(b -> b.getLeaveType().equals(normalizedLeaveType))
                 .findFirst()
                 .orElseThrow(() -> new RuntimeException("Unsupported leave type."));
 
-        if (!balance.isRequestable()) {
+        if (!balance.isUnlimited() && !balance.isRequestable()) {
             throw new RuntimeException("This leave type has no remaining days.");
         }
 
-        if (requestedDays > balance.getRemainingDays()) {
+        if (!balance.isUnlimited() && requestedDays > balance.getRemainingDays()) {
             throw new RuntimeException("Insufficient leave balance. You have "
                     + (int) balance.getRemainingDays() + " day(s) remaining.");
         }
 
         // ── Map leaveType -> request_type code ────────────
-        String requestTypeCode = switch (dto.getLeaveType()) {
+        String requestTypeCode = switch (normalizedLeaveType) {
             case "SICK_LEAVE" -> "LEAVE_SICK";
-            case "PERSONAL_LEAVE" -> "LEAVE_UNPAID";
+            case "UNPAID_LEAVE" -> "LEAVE_UNPAID";
             default -> "LEAVE_ANNUAL";
         };
 
@@ -123,7 +127,7 @@ public class LeaveServiceImpl {
         Request request = new Request();
         request.setEmployeeId(employeeId);
         request.setRequestTypeId(requestType.getId());
-        request.setLeaveType(dto.getLeaveType());
+        request.setLeaveType(normalizedLeaveType);
         request.setLeaveFrom(dto.getLeaveFrom());
         request.setLeaveTo(dto.getLeaveTo());
         request.setContent(dto.getContent());
@@ -166,23 +170,60 @@ public class LeaveServiceImpl {
     // ── Helper methods ──────────────────────────────────────
 
     private LeaveBalanceDTO buildBalance(String leaveType, double total, List<Request> allLeaves) {
-        double used = allLeaves.stream()
-                .filter(r -> leaveType.equals(r.getLeaveType()))
-                .filter(r -> "APPROVED".equals(r.getStatus()))
+        double approved = allLeaves.stream()
+                .filter(r -> leaveType.equals(normalizeLeaveType(r.getLeaveType())))
+                .filter(r -> WorkflowConstants.STATUS_APPROVED.equalsIgnoreCase(r.getStatus()))
                 .filter(r -> r.getLeaveFrom() != null && r.getLeaveTo() != null)
-                .mapToDouble(r -> ChronoUnit.DAYS.between(r.getLeaveFrom(), r.getLeaveTo()) + 1)
+                .mapToDouble(r -> WorkingDayUtils.countWorkingDays(r.getLeaveFrom(), r.getLeaveTo()))
                 .sum();
 
-        double remaining = Math.max(0, total - used);
-        double usagePercentage = total > 0 ? Math.round((used / total) * 100) : 0;
+        double pending = allLeaves.stream()
+                .filter(r -> leaveType.equals(normalizeLeaveType(r.getLeaveType())))
+                .filter(r -> WorkflowConstants.STATUS_PENDING.equalsIgnoreCase(r.getStatus()))
+                .filter(r -> r.getLeaveFrom() != null && r.getLeaveTo() != null)
+                .mapToDouble(r -> WorkingDayUtils.countWorkingDays(r.getLeaveFrom(), r.getLeaveTo()))
+                .sum();
+
+        double reserved = approved + pending;
+        double remaining = Math.max(0, total - reserved);
+        double usagePercentage = total > 0 ? Math.round((reserved / total) * 100) : 0;
 
         return LeaveBalanceDTO.builder()
                 .leaveType(leaveType)
                 .totalDays(total)
-                .usedDays(used)
+                .usedDays(approved)
+                .pendingDays(pending)
                 .remainingDays(remaining)
                 .usagePercentage(usagePercentage)
                 .requestable(remaining > 0)
+                .unlimited(false)
+                .build();
+    }
+
+    private LeaveBalanceDTO buildUnlimitedBalance(String leaveType, List<Request> allLeaves) {
+        double approved = allLeaves.stream()
+                .filter(r -> leaveType.equals(normalizeLeaveType(r.getLeaveType())))
+                .filter(r -> WorkflowConstants.STATUS_APPROVED.equalsIgnoreCase(r.getStatus()))
+                .filter(r -> r.getLeaveFrom() != null && r.getLeaveTo() != null)
+                .mapToDouble(r -> WorkingDayUtils.countWorkingDays(r.getLeaveFrom(), r.getLeaveTo()))
+                .sum();
+
+        double pending = allLeaves.stream()
+                .filter(r -> leaveType.equals(normalizeLeaveType(r.getLeaveType())))
+                .filter(r -> WorkflowConstants.STATUS_PENDING.equalsIgnoreCase(r.getStatus()))
+                .filter(r -> r.getLeaveFrom() != null && r.getLeaveTo() != null)
+                .mapToDouble(r -> WorkingDayUtils.countWorkingDays(r.getLeaveFrom(), r.getLeaveTo()))
+                .sum();
+
+        return LeaveBalanceDTO.builder()
+                .leaveType(leaveType)
+                .totalDays(0)
+                .usedDays(approved)
+                .pendingDays(pending)
+                .remainingDays(0)
+                .usagePercentage(0)
+                .requestable(true)
+                .unlimited(true)
                 .build();
     }
 
@@ -262,5 +303,16 @@ public class LeaveServiceImpl {
         history.setAction("CANCELLED");
         history.setComment("Cancelled by employee");
         requestApprovalHistoryRepository.save(history);
+    }
+
+    private String normalizeLeaveType(String leaveType) {
+        if (leaveType == null) {
+            return "";
+        }
+        return switch (leaveType.trim().toUpperCase(Locale.ROOT)) {
+            case "PERSONAL_LEAVE", "UNPAID_LEAVE" -> "UNPAID_LEAVE";
+            case "SICK_LEAVE" -> "SICK_LEAVE";
+            default -> "ANNUAL_LEAVE";
+        };
     }
 }

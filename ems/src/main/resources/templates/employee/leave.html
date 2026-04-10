@@ -58,28 +58,28 @@
     <div class="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
       <div th:each="balance : ${balances}"
            class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
-           th:attr="data-leave-balance=${balance.leaveType},data-remaining-days=${balance.remainingDays},data-requestable=${balance.requestable}">
+           th:attr="data-leave-balance=${balance.leaveType},data-remaining-days=${balance.remainingDays},data-requestable=${balance.requestable},data-unlimited=${balance.unlimited}">
         <div class="absolute right-0 top-0 p-4 opacity-10 transition-transform group-hover:scale-110">
           <span class="material-symbols-outlined text-6xl"
-                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'text-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-500' : 'text-amber-500')"
-                th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'beach_access' : (${balance.leaveType == 'SICK_LEAVE'} ? 'medical_services' : 'person_celebrate')"></span>
+                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'text-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-500' : 'text-slate-500')"
+                th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'beach_access' : (${balance.leaveType == 'SICK_LEAVE'} ? 'medical_services' : 'payments')"></span>
         </div>
         <p class="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400"
-           th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Personal Leave')"></p>
+           th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Unpaid Leave')"></p>
         <div class="flex items-baseline gap-2">
           <span class="text-3xl font-bold"
-                th:classappend="${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-600' : (${balance.leaveType == 'PERSONAL_LEAVE'} ? 'text-amber-600' : '')"
-                th:text="${balance.remainingDays}"></span>
-          <span class="text-sm text-slate-400">days left</span>
+                th:classappend="${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-600' : (${balance.leaveType == 'UNPAID_LEAVE'} ? 'text-slate-700' : '')"
+                th:text="${balance.unlimited} ? (${balance.usedDays + balance.pendingDays}) : ${balance.remainingDays}"></span>
+          <span class="text-sm text-slate-400" th:text="${balance.unlimited} ? 'days tracked' : 'days available'">days available</span>
         </div>
-        <div class="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
+        <div th:if="${!balance.unlimited}" class="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
           <div class="h-full rounded-full"
-               th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'bg-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'bg-red-500' : 'bg-amber-500')"
+               th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'bg-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'bg-red-500' : 'bg-slate-500')"
                th:style="'width: ' + ${balance.usagePercentage} + '%'"></div>
         </div>
         <p class="mt-3 text-xs font-medium"
-           th:classappend="${balance.requestable} ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500'"
-           th:text="${balance.requestable} ? 'Available for new requests' : 'No remaining days for this leave type'">
+           th:classappend="${balance.unlimited} ? 'text-slate-500 dark:text-slate-400' : (${balance.requestable} ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500')"
+           th:text="${balance.unlimited} ? ('Approved: ' + balance.usedDays + ' day(s) • Pending: ' + balance.pendingDays + ' day(s)') : (${balance.requestable} ? ('Approved: ' + balance.usedDays + ' day(s) • Pending hold: ' + balance.pendingDays + ' day(s)') : 'No remaining days for this leave type')">
           Available for new requests
         </p>
       </div>
@@ -102,6 +102,7 @@
             <option value="PENDING">Pending</option>
             <option value="APPROVED">Approved</option>
             <option value="REJECTED">Rejected</option>
+            <option value="CANCELLED">Cancelled</option>
           </select>
         </div>
       </div>
@@ -136,7 +137,7 @@
                 </div>
                 <div>
                   <span class="font-medium"
-                        th:text="${leave.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${leave.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Personal Leave')"></span>
+                        th:text="${leave.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${leave.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Unpaid Leave')"></span>
                   <p class="mt-1 text-xs text-slate-400"
                      th:text="${leave.createdAt != null ? 'Submitted ' + #temporals.format(leave.createdAt, 'MMM dd, yyyy') : ''}"></p>
                 </div>
@@ -166,7 +167,7 @@
                       class="inline-flex items-center gap-2 rounded-lg border border-slate-200 px-3 py-2 text-xs font-semibold text-slate-600 transition hover:border-primary hover:text-primary"
                       th:attr="data-id=${leave.id},
                                data-cancelable=${leave.cancelable},
-                               data-type-label=${leave.leaveType == 'ANNUAL_LEAVE' ? 'Annual Leave' : (leave.leaveType == 'SICK_LEAVE' ? 'Sick Leave' : 'Personal Leave')},
+                               data-type-label=${leave.leaveType == 'ANNUAL_LEAVE' ? 'Annual Leave' : (leave.leaveType == 'SICK_LEAVE' ? 'Sick Leave' : 'Unpaid Leave')},
                                data-dates=${#temporals.format(leave.leaveFrom, 'MMM dd, yyyy')} + ' - ' + ${#temporals.format(leave.leaveTo, 'MMM dd, yyyy')},
                                data-days=${leave.daysCount} + ' day' + (${leave.daysCount > 1} ? 's' : ''),
                                data-reason=${leave.content},
@@ -210,8 +211,8 @@
           <select id="leave-type-select" name="leaveType" required class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800">
             <option th:each="balance : ${balances}"
                     th:value="${balance.leaveType}"
-                    th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Personal Leave')"
-                    th:attr="data-remaining=${balance.remainingDays},data-requestable=${balance.requestable}"
+                    th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Unpaid Leave')"
+                    th:attr="data-remaining=${balance.remainingDays},data-requestable=${balance.requestable},data-unlimited=${balance.unlimited},data-approved=${balance.usedDays},data-pending=${balance.pendingDays}"
                     th:disabled="${!balance.requestable}">
               Annual Leave
             </option>
@@ -491,7 +492,16 @@
       const from = new Date(leaveFromInput.value);
       const to = new Date(leaveToInput.value);
       if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) return null;
-      return Math.round((to - from) / (1000 * 60 * 60 * 24)) + 1;
+      let days = 0;
+      const cursor = new Date(from);
+      while (cursor <= to) {
+        const day = cursor.getDay();
+        if (day !== 0 && day !== 6) {
+          days += 1;
+        }
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return days;
     }
 
     function updateLeaveRequestState() {
@@ -501,15 +511,20 @@
 
       const remaining = Number(selectedOption.dataset.remaining || 0);
       const requestable = selectedOption.dataset.requestable === 'true';
+      const unlimited = selectedOption.dataset.unlimited === 'true';
+      const approved = Number(selectedOption.dataset.approved || 0);
+      const pending = Number(selectedOption.dataset.pending || 0);
       const requestedDays = calculateRequestedDays();
 
       if (leaveBalanceHint) {
-        leaveBalanceHint.textContent = requestable
-          ? `Remaining balance: ${remaining} day(s)`
-          : 'This leave type has no remaining days.';
+        leaveBalanceHint.textContent = unlimited
+          ? `Unpaid leave tracked separately. Approved: ${approved} day(s), pending: ${pending} day(s).`
+          : (requestable
+              ? `Remaining balance: ${remaining} working day(s). Approved: ${approved} day(s), pending hold: ${pending} day(s).`
+              : 'This leave type has no remaining working days.');
       }
 
-      if (!requestable) {
+      if (!unlimited && !requestable) {
         showLeaveFeedback('This leave type is no longer available because your remaining balance is 0 day.', 'error');
         if (leaveSubmitBtn) leaveSubmitBtn.disabled = true;
         return;
@@ -521,13 +536,19 @@
         return;
       }
 
-      if (requestedDays > remaining) {
+      if (!unlimited && requestedDays > remaining) {
         showLeaveFeedback(`You selected ${requestedDays} day(s), but only ${remaining} day(s) remain for this leave type.`, 'error');
         if (leaveSubmitBtn) leaveSubmitBtn.disabled = true;
         return;
       }
 
-      showLeaveFeedback(`Requesting ${requestedDays} day(s). Remaining balance after approval would be ${Math.max(0, remaining - requestedDays)} day(s).`, 'success');
+      if (unlimited) {
+        showLeaveFeedback(`Requesting ${requestedDays} working day(s) as unpaid leave. This request will be tracked separately from paid leave quotas.`, 'success');
+        if (leaveSubmitBtn) leaveSubmitBtn.disabled = false;
+        return;
+      }
+
+      showLeaveFeedback(`Requesting ${requestedDays} working day(s). Remaining balance after approval would be ${Math.max(0, remaining - requestedDays)} day(s).`, 'success');
       if (leaveSubmitBtn) leaveSubmitBtn.disabled = false;
     }
 
