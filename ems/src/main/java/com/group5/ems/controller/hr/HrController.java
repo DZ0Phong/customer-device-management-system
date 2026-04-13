@@ -66,6 +66,11 @@ import com.group5.ems.service.hr.HrRecruitmentService;
 import com.group5.ems.service.hr.HrRequestService;
 import com.group5.ems.service.hr.HrReportService;
 import com.group5.ems.service.common.LogService;
+import com.group5.ems.service.hr.HrCalendarService;
+import com.group5.ems.dto.request.hr.HrEventCreateDTO;
+import com.group5.ems.dto.request.hr.HrEventUpdateDTO;
+import com.group5.ems.dto.response.hr.HrEventResponseDTO;
+import com.group5.ems.dto.response.hr.HrEventDTO;
 import com.group5.ems.exception.ReportExportException;
 
 import org.thymeleaf.TemplateEngine;
@@ -104,6 +109,7 @@ public class HrController {
     private final LogService logService;
     private final TemplateEngine templateEngine;
     private final SkillRepository skillRepository;
+    private final HrCalendarService calendarService;
 
     @GetMapping({ "", "/", "/dashboard" })
     public String dashboard(Model model) {
@@ -186,8 +192,6 @@ public class HrController {
         */
 
         // ── Wizard Form Data ──────────────────────────
-        model.addAttribute("positions", positionRepository.findAll());
-        model.addAttribute("managers", employeeRepository.findAllWithUser());
         // model.addAttribute("onboardingTemplates", onboardingService.getActiveTemplates());
 
         model.addAttribute("activeTab", tab != null ? tab : "directory");
@@ -208,20 +212,6 @@ public class HrController {
     public ResponseEntity<HrEmployeeDetailDTO> employeeDetail(@PathVariable Long id) {
         HrEmployeeDetailDTO detail = employeeService.getEmployeeDetail(id);
         return ResponseEntity.ok(detail);
-    }
-
-    @PostMapping("/employees/{id}/update-job")
-    public String updateEmployeeJob(@PathVariable Long id,
-                                   @RequestParam Long departmentId,
-                                   @RequestParam Long positionId,
-                                   RedirectAttributes ra) {
-        try {
-            employeeService.updateJobInfo(id, departmentId, positionId);
-            ra.addFlashAttribute("successMessage", "Employee job information updated successfully.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("errorMessage", "Failed to update job information: " + e.getMessage());
-        }
-        return "redirect:/hr/employees?viewId=" + id;
     }
 
     @GetMapping("/attendance")
@@ -1157,6 +1147,74 @@ public class HrController {
         return ResponseEntity.ok(onboardingService.getTemplatesForDepartment(departmentId));
     }
 */
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALENDAR MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/calendar")
+    public String calendar(Model model, 
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        
+        int currentMonth = (month != null) ? month : LocalDate.now().getMonthValue();
+        int currentYear = (year != null) ? year : LocalDate.now().getYear();
+        
+        model.addAttribute("currentMonth", currentMonth);
+        model.addAttribute("currentYear", currentYear);
+        model.addAttribute("departments", departmentRepository.findAll());
+        return "hr/calendar";
+    }
+
+    @GetMapping("/calendar/events")
+    @ResponseBody
+    public ResponseEntity<List<HrEventResponseDTO>> getCalendarEvents(
+            @RequestParam int month,
+            @RequestParam int year) {
+        return ResponseEntity.ok(calendarService.getEventsByMonth(month, year));
+    }
+
+    @PostMapping("/calendar/create")
+    public String createEvent(
+            @ModelAttribute HrEventCreateDTO dto,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.createEvent(dto, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event created successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to create event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
+
+    @PostMapping("/calendar/update")
+    public String updateEvent(
+            @ModelAttribute HrEventUpdateDTO dto,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.updateEvent(dto, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event updated successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to update event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
+
+    @PostMapping("/calendar/delete")
+    public String deleteEvent(
+            @RequestParam Long id,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.deleteEvent(id, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event deleted.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to delete event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
 
     // ═══════════════════════════════════════════════════════════════════════════
     // REPORTS & ANALYTICS
