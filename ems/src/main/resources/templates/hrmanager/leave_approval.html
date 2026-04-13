@@ -617,6 +617,7 @@
                                         <!-- Row 1: Alex Rivera — has overlap warning -->
                                         <tr class="hover:bg-slate-50/80 transition-colors data-row"
                                             data-name="alex rivera" data-type="annual" data-dept="marketing"
+                                            data-status="pending" data-priority="normal"
                                             data-id="1">
                                             <td class="px-6 py-4">
                                                 <input type="checkbox" onchange="onRowCheck(this,1)"
@@ -887,7 +888,9 @@
 
                                         <!-- Row 2: Jordan Lee -->
                                         <tr class="hover:bg-slate-50/80 transition-colors data-row"
-                                            data-name="jordan lee" data-type="sick" data-dept="engineering" data-id="2">
+                                            data-name="jordan lee" data-type="sick" data-dept="engineering" 
+                                            data-status="pending" data-priority="urgent"
+                                            data-id="2">
                                             <td class="px-6 py-4">
                                                 <input type="checkbox" onchange="onRowCheck(this,2)"
                                                     class="row-check w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" />
@@ -1094,7 +1097,9 @@
 
                                         <!-- Row 3: Maria Garcia -->
                                         <tr class="hover:bg-slate-50/80 transition-colors data-row"
-                                            data-name="maria garcia" data-type="personal" data-dept="hr" data-id="3">
+                                            data-name="maria garcia" data-type="personal" data-dept="hr" 
+                                            data-status="pending" data-priority="high"
+                                            data-id="3">
                                             <td class="px-6 py-4">
                                                 <input type="checkbox" onchange="onRowCheck(this,3)"
                                                     class="row-check w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" />
@@ -1251,6 +1256,7 @@
                                         <!-- Row 4: Robert Chen — long leave -->
                                         <tr class="hover:bg-slate-50/80 transition-colors data-row"
                                             data-name="robert chen" data-type="annual" data-dept="marketing"
+                                            data-status="pending" data-priority="normal"
                                             data-id="4">
                                             <td class="px-6 py-4">
                                                 <input type="checkbox" onchange="onRowCheck(this,4)"
@@ -1417,7 +1423,7 @@
                                             <tr th:id="'row-' + ${req.id}"
                                                 class="hover:bg-slate-50/80 transition-colors data-row"
                                                 th:data-name="${#strings.toLowerCase(req.employeeName)}"
-                                                th:data-type="${#strings.toLowerCase(req.leaveType)}"
+                                                th:data-type="${req.leaveType != null ? #strings.toLowerCase(#strings.replace(#strings.replace(req.leaveType, ' Leave', ''), ' ', '')) : ''}"
                                                 th:data-dept="${req.department != null ? #strings.toLowerCase(req.department) : ''}"
                                                 th:data-priority="${req.priority != null ? #strings.toLowerCase(req.priority) : 'normal'}"
                                                 th:data-status="${req.status != null ? #strings.toLowerCase(req.status) : 'pending'}"
@@ -1890,6 +1896,7 @@
         var rejectTargetId = null;
         var confirmCallback = null; // For custom confirm modal
         var activeFilters = { type: 'all', priority: 'all', status: 'all' };
+        var selectedStatuses = new Set(); // Multi-select status filter
         var currentCategory = 'all'; // Phase 3: Track current category
         
         // ── Custom Confirm Modal (No System Alert) ────────────────────
@@ -2017,22 +2024,27 @@
         }
 
         // ── Filter bar ────────────────────────────────────────────────
-        // Toggle status filter (can be turned on/off)
+        // Toggle status filter (multi-select - can select multiple statuses)
         function toggleStatusFilter(el, value) {
             var isActive = el.classList.contains('active');
             
             if (isActive) {
-                // Turn off - back to "all"
+                // Deselect this status
                 el.classList.remove('active');
-                activeFilters.status = 'all';
+                selectedStatuses.delete(value);
             } else {
-                // Turn off other status pills
-                document.querySelectorAll('.status-pill').forEach(function (p) {
-                    p.classList.remove('active');
-                });
-                // Turn on this one
+                // Select this status
                 el.classList.add('active');
-                activeFilters.status = value;
+                selectedStatuses.add(value);
+            }
+            
+            // Update activeFilters for backward compatibility
+            if (selectedStatuses.size === 0) {
+                activeFilters.status = 'all';
+            } else if (selectedStatuses.size === 1) {
+                activeFilters.status = Array.from(selectedStatuses)[0];
+            } else {
+                activeFilters.status = 'multi';
             }
             
             filterTable();
@@ -2048,12 +2060,10 @@
         }
 
         function filterTable() {
-            var search = (document.getElementById('search-input').value || '').toLowerCase();
-            var dept = (document.getElementById('dept-filter').value || '').toLowerCase();
-            var type = (document.getElementById('type-filter').value || '').toLowerCase();
-            var priority = (document.getElementById('priority-filter').value || '').toLowerCase();
-            var dateFrom = document.getElementById('date-from').value;
-            var dateTo = document.getElementById('date-to').value;
+            var search = (document.getElementById('search-input')?.value || '').toLowerCase();
+            var dept = (document.getElementById('dept-filter')?.value || '').toLowerCase();
+            var type = (document.getElementById('type-filter')?.value || '').toLowerCase();
+            var priority = (document.getElementById('priority-filter')?.value || '').toLowerCase();
             var status = activeFilters.status || 'all';
 
             // Update dropdown styles when active
@@ -2061,22 +2071,28 @@
             var prioritySelect = document.getElementById('priority-filter');
             var deptSelect = document.getElementById('dept-filter');
             
-            if (type) {
-                typeSelect.classList.add('active-filter');
-            } else {
-                typeSelect.classList.remove('active-filter');
+            if (typeSelect) {
+                if (type) {
+                    typeSelect.classList.add('active-filter');
+                } else {
+                    typeSelect.classList.remove('active-filter');
+                }
             }
             
-            if (priority) {
-                prioritySelect.classList.add('active-filter');
-            } else {
-                prioritySelect.classList.remove('active-filter');
+            if (prioritySelect) {
+                if (priority) {
+                    prioritySelect.classList.add('active-filter');
+                } else {
+                    prioritySelect.classList.remove('active-filter');
+                }
             }
             
-            if (dept) {
-                deptSelect.classList.add('active-filter');
-            } else {
-                deptSelect.classList.remove('active-filter');
+            if (deptSelect) {
+                if (dept) {
+                    deptSelect.classList.add('active-filter');
+                } else {
+                    deptSelect.classList.remove('active-filter');
+                }
             }
 
             var rows = document.querySelectorAll('.data-row');
@@ -2092,10 +2108,16 @@
                 var rowCategory = (row.dataset.category || '').toLowerCase();
 
                 var matchSearch = !search || name.includes(search);
-                var matchType = !type || rowType.includes(type);
-                var matchDept = !dept || rowDept.includes(dept);
+                // For type: support both exact match and contains (for flexibility)
+                var matchType = !type || rowType === type || rowType.includes(type);
+                var matchDept = !dept || rowDept === dept || rowDept.includes(dept);
                 var matchPriority = !priority || rowPriority === priority;
-                var matchStatus = status === 'all' || rowStatus === status.toLowerCase();
+                
+                // Multi-select status filter
+                var matchStatus = true;
+                if (selectedStatuses.size > 0) {
+                    matchStatus = selectedStatuses.has(rowStatus);
+                }
                 
                 // Category filter - improved logic
                 var matchCategory = true;
@@ -2127,7 +2149,7 @@
             if (countEl) countEl.textContent = visible + ' of ' + total;
 
             // Show/hide clear button
-            var hasActiveFilters = search || dept || type || priority || dateFrom || dateTo || status !== 'all';
+            var hasActiveFilters = search || dept || type || priority || selectedStatuses.size > 0;
             var clearBtn = document.getElementById('clear-filters-btn');
             if (clearBtn) {
                 clearBtn.style.display = hasActiveFilters ? 'flex' : 'none';
@@ -2138,13 +2160,18 @@
         }
 
         function clearFilters() {
-            document.getElementById('search-input').value = '';
-            document.getElementById('dept-filter').value = '';
-            document.getElementById('type-filter').value = '';
-            document.getElementById('priority-filter').value = '';
-            document.getElementById('date-from').value = '';
-            document.getElementById('date-to').value = '';
+            var searchInput = document.getElementById('search-input');
+            var deptFilter = document.getElementById('dept-filter');
+            var typeFilter = document.getElementById('type-filter');
+            var priorityFilter = document.getElementById('priority-filter');
+            
+            if (searchInput) searchInput.value = '';
+            if (deptFilter) deptFilter.value = '';
+            if (typeFilter) typeFilter.value = '';
+            if (priorityFilter) priorityFilter.value = '';
+            
             activeFilters = { status: 'all' };
+            selectedStatuses.clear(); // Clear multi-select status
             
             // Reset status pills - remove all active states
             document.querySelectorAll('.status-pill').forEach(function (p) { 
