@@ -866,7 +866,7 @@
     function getViewAllUrl(type, filter) {
         switch (type) {
             case 'leave':   return filter === 'pending' ? '/hrmanager/leave-approval?tab=pending' : '/hrmanager/leave-approval';
-            case 'payroll': return '/hrmanager/payroll-approval';
+            case 'payroll': return '/hrmanager/payroll-periods';
             case 'status':
             case 'hr':      return '/hrmanager/hr-analytics';
             default:        return '/hrmanager/dashboard';

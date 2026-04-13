@@ -339,17 +339,6 @@ public class HrManagerController {
         return response;
     }
 
-    // ── Payroll Approval ──────────────────────────────────────────────────────
-    @GetMapping("/payroll-approval")
-    public String payrollApproval(Model model,
-                                  @RequestParam(defaultValue = "1") int page) {
-        model.addAttribute("summary",     payrollApprovalService.getSummary());
-        model.addAttribute("payrollRuns", payrollApprovalService.getPayrollRuns(page));
-        model.addAttribute("pagination",  payrollApprovalService.getPagination(page));
-        model.addAttribute("activePage",  "payroll");
-        return "hrmanager/payroll_approval";
-    }
-
     // ── HR Analytics ──────────────────────────────────────────────────────────
     @GetMapping("/hr-analytics")
     public String hrAnalytics(Model model) {
@@ -522,36 +511,6 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
         return "redirect:/hrmanager/leave-approval";
-    }
-
-    // ── Payroll Approve by Department ─────────────────────────────────────────
-    @PostMapping("/payroll-approval/approve")
-    public String approvePayroll(@RequestParam Long deptId,
-                                 RedirectAttributes redirectAttributes) {
-        try {
-            payrollApprovalService.approveByDepartment(deptId, getCurrentUserId());
-            redirectAttributes.addFlashAttribute("flashMessage", "Payroll approved successfully!");
-            redirectAttributes.addFlashAttribute("flashType", "success");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("flashMessage", e.getMessage());
-            redirectAttributes.addFlashAttribute("flashType", "error");
-        }
-        return "redirect:/hrmanager/payroll-approval";
-    }
-
-    @PostMapping("/payroll-approval/reject")
-    public String rejectPayroll(@RequestParam Long deptId,
-                                @RequestParam(required = false) String note,
-                                RedirectAttributes redirectAttributes) {
-        try {
-            payrollApprovalService.rejectByDepartment(deptId, getCurrentUserId(), note);
-            redirectAttributes.addFlashAttribute("flashMessage", "Payroll rejected.");
-            redirectAttributes.addFlashAttribute("flashType", "success");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("flashMessage", e.getMessage());
-            redirectAttributes.addFlashAttribute("flashType", "error");
-        }
-        return "redirect:/hrmanager/payroll-approval";
     }
 
     // ── Helper ────────────────────────────────────────────────────────────────
