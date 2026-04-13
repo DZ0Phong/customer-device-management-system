@@ -1,13 +1,15 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 <head>
   <meta charset="utf-8"/>
   <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
   <title>EMS Pro - My Leave Management</title>
   <script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css"/>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
   <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}"/>
   <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
   <script id="tailwind-config">
     tailwind.config = {
       darkMode: "class",
@@ -55,33 +57,105 @@
       </button>
     </div>
 
-    <div class="mb-10 grid grid-cols-1 gap-6 md:grid-cols-3">
+    <div class="mb-6 grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-4">
       <div th:each="balance : ${balances}"
+           th:if="${balance.leaveType == 'ANNUAL_LEAVE' || balance.leaveType == 'SICK_LEAVE' || balance.leaveType == 'UNPAID_LEAVE'}"
            class="group relative overflow-hidden rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-slate-800 dark:bg-slate-900"
            th:attr="data-leave-balance=${balance.leaveType},data-remaining-days=${balance.remainingDays},data-requestable=${balance.requestable},data-unlimited=${balance.unlimited}">
         <div class="absolute right-0 top-0 p-4 opacity-10 transition-transform group-hover:scale-110">
           <span class="material-symbols-outlined text-6xl"
-                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'text-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-500' : (${balance.leaveType == 'MATERNITY_LEAVE'} ? 'text-pink-500' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'text-violet-500' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'text-slate-500' : (${balance.leaveType == 'STUDY_LEAVE'} ? 'text-emerald-500' : 'text-slate-500')))))"
-                th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'beach_access' : (${balance.leaveType == 'SICK_LEAVE'} ? 'medical_services' : (${balance.leaveType == 'MATERNITY_LEAVE'} ? 'child_friendly' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'family_restroom' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'heart_broken' : (${balance.leaveType == 'STUDY_LEAVE'} ? 'school' : 'payments')))))"></span>
+                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'text-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-500' : 'text-slate-500')"
+                th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'calendar_today' : (${balance.leaveType == 'SICK_LEAVE'} ? 'health_and_safety' : 'account_balance_wallet')"></span>
         </div>
-        <p class="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400"
-           th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : (${balance.leaveType == 'UNPAID_LEAVE'} ? 'Unpaid Leave' : (${balance.leaveType == 'MATERNITY_LEAVE'} ? 'Maternity Leave' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'Paternity Leave' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'Bereavement Leave' : 'Study Leave')))))"></p>
-        <div class="flex items-baseline gap-2">
-          <span class="text-3xl font-bold"
-                th:classappend="${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-600' : (${balance.leaveType == 'UNPAID_LEAVE'} ? 'text-slate-700' : (${balance.leaveType == 'MATERNITY_LEAVE'} ? 'text-pink-600' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'text-violet-600' : (${balance.leaveType == 'STUDY_LEAVE'} ? 'text-emerald-600' : ''))))"
-                th:text="${balance.unlimited} ? (${balance.usedDays + balance.pendingDays}) : ${balance.remainingDays}"></span>
-          <span class="text-sm text-slate-400" th:text="${balance.unlimited} ? 'days tracked' : 'days available'">days available</span>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400"
+               th:text="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'Annual Leave' : (${balance.leaveType == 'SICK_LEAVE'} ? 'Sick Leave' : 'Unpaid Leave')"></p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-bold"
+                    th:classappend="${balance.leaveType == 'SICK_LEAVE'} ? 'text-red-600' : (${balance.leaveType == 'UNPAID_LEAVE'} ? 'text-slate-700' : 'text-primary')"
+                    th:text="${balance.unlimited ? (balance.usedDays + balance.pendingDays) : balance.remainingDays}"></span>
+              <span class="text-sm text-slate-400" th:text="${balance.unlimited} ? 'days tracked' : 'days left'">days left</span>
+            </div>
+          </div>
+          <span class="rounded-full px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em]"
+                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'bg-primary/10 text-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'bg-red-100 text-red-600' : 'bg-slate-200 text-slate-700')"
+                th:text="${balance.unlimited} ? 'Tracked' : 'Core'">Core</span>
         </div>
         <div th:if="${!balance.unlimited}" class="mt-4 h-2 w-full overflow-hidden rounded-full bg-slate-100 dark:bg-slate-800">
           <div class="h-full rounded-full"
                th:classappend="${balance.leaveType == 'ANNUAL_LEAVE'} ? 'bg-primary' : (${balance.leaveType == 'SICK_LEAVE'} ? 'bg-red-500' : 'bg-slate-500')"
                th:style="'width: ' + ${balance.usagePercentage} + '%'"></div>
         </div>
+        
+        
         <p class="mt-3 text-xs font-medium"
            th:classappend="${balance.unlimited} ? 'text-slate-500 dark:text-slate-400' : (${balance.requestable} ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500')"
-           th:text="${balance.unlimited} ? ('Approved: ' + balance.usedDays + ' day(s) • Pending: ' + balance.pendingDays + ' day(s)') : (${balance.requestable} ? ('Approved: ' + balance.usedDays + ' day(s) • Pending hold: ' + balance.pendingDays + ' day(s)') : 'No remaining days for this leave type')">
+           th:text="${balance.unlimited} ? 'Tracked separately from paid leave' : (${balance.requestable} ? 'Ready for a new request' : 'Fully allocated right now')">
           Available for new requests
         </p>
+      </div>
+      <button type="button"
+              id="other-leave-toggle"
+              class="group relative overflow-hidden rounded-xl border border-dashed border-slate-300 bg-white p-6 text-left shadow-sm transition hover:border-primary hover:shadow-md dark:border-slate-700 dark:bg-slate-900">
+        <div class="absolute right-0 top-0 p-4 opacity-10 transition-transform group-hover:scale-110">
+          <span class="material-symbols-outlined text-6xl text-primary">folder_open</span>
+        </div>
+        <div class="flex items-start justify-between gap-4">
+          <div>
+            <p class="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400">Other Leave Types</p>
+            <div class="flex items-baseline gap-2">
+              <span class="text-3xl font-bold text-slate-900 dark:text-slate-100">4</span>
+              <span class="text-sm text-slate-400">special categories</span>
+            </div>
+          </div>
+          <span class="rounded-full bg-primary/10 px-3 py-1 text-[11px] font-bold uppercase tracking-[0.2em] text-primary">More</span>
+        </div>
+        <p class="mt-3 text-xs font-medium text-slate-500 dark:text-slate-400">Open a compact popup for maternity, paternity, bereavement, and study leave.</p>
+      </button>
+    </div>
+
+    <div id="other-leave-modal" class="hidden fixed inset-0 z-40 bg-slate-950/40 p-4">
+      <div class="flex min-h-full items-start justify-center pt-16">
+        <div class="w-full max-w-lg rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl dark:border-slate-800 dark:bg-slate-900">
+          <div class="mb-5 flex items-start justify-between gap-3">
+            <div>
+              <h3 class="text-lg font-bold">Other Leave Types</h3>
+              <p class="mt-1 text-sm text-slate-500 dark:text-slate-400">These less common leave categories are grouped here so the main leave overview stays cleaner.</p>
+            </div>
+            <button type="button" id="other-leave-close" class="inline-flex h-9 w-9 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition hover:border-primary hover:text-primary">
+              <span class="material-symbols-outlined text-base">close</span>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+        <div th:each="balance : ${balances}"
+             th:if="${balance.leaveType == 'MATERNITY_LEAVE' || balance.leaveType == 'PATERNITY_LEAVE' || balance.leaveType == 'BEREAVEMENT_LEAVE' || balance.leaveType == 'STUDY_LEAVE'}"
+             class="rounded-xl border border-slate-200 bg-slate-50 p-5 dark:border-slate-700 dark:bg-slate-800/40">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="mb-1 text-sm font-medium text-slate-500 dark:text-slate-400"
+                 th:text="${balance.leaveType == 'MATERNITY_LEAVE'} ? 'Maternity Leave' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'Paternity Leave' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'Bereavement Leave' : 'Study Leave'))"></p>
+              <div class="flex items-baseline gap-2">
+                <span class="text-2xl font-bold"
+                      th:classappend="${balance.leaveType == 'MATERNITY_LEAVE'} ? 'text-pink-600' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'text-violet-600' : (${balance.leaveType == 'STUDY_LEAVE'} ? 'text-emerald-600' : 'text-slate-700'))"
+                      th:text="${balance.unlimited ? (balance.usedDays + balance.pendingDays) : balance.remainingDays}"></span>
+                <span class="text-xs text-slate-400" th:text="${balance.unlimited} ? 'tracked' : 'days left'">days left</span>
+              </div>
+            </div>
+            <span class="material-symbols-outlined text-2xl"
+                  th:classappend="${balance.leaveType == 'MATERNITY_LEAVE'} ? 'text-pink-500' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'text-violet-500' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'text-slate-500' : 'text-emerald-500'))"
+                  th:text="${balance.leaveType == 'MATERNITY_LEAVE'} ? 'workspace_premium' : (${balance.leaveType == 'PATERNITY_LEAVE'} ? 'groups' : (${balance.leaveType == 'BEREAVEMENT_LEAVE'} ? 'history' : 'school'))"></span>
+          </div>
+          
+          <p class="mt-3 text-xs font-medium"
+             th:classappend="${balance.requestable} ? 'text-slate-500 dark:text-slate-400' : 'text-rose-500'"
+             th:text="${balance.requestable} ? 'Available when needed' : 'Fully allocated right now'">
+            Available for new requests
+          </p>
+        </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -125,6 +199,8 @@
           <tr th:each="leave : ${leaveHistory}"
               class="leave-row transition-colors hover:bg-slate-50 dark:hover:bg-slate-800/30"
               th:attr="data-status=${leave.status},
+                       data-leave-from=${leave.leaveFrom},
+                       data-leave-to=${leave.leaveTo},
                        data-type=${leave.leaveType},
                        data-search=${#strings.toLowerCase((leave.content ?: '') + ' ' + (leave.leaveType ?: ''))},
                        data-created=${leave.createdAt}">
@@ -133,7 +209,7 @@
                 <div class="flex h-8 w-8 items-center justify-center rounded"
                      th:classappend="${leave.leaveType == 'ANNUAL_LEAVE'} ? 'bg-primary/10 text-primary' : (${leave.leaveType == 'SICK_LEAVE'} ? 'bg-red-100 text-red-600' : (${leave.leaveType == 'MATERNITY_LEAVE'} ? 'bg-pink-100 text-pink-600' : (${leave.leaveType == 'PATERNITY_LEAVE'} ? 'bg-violet-100 text-violet-600' : (${leave.leaveType == 'BEREAVEMENT_LEAVE'} ? 'bg-slate-200 text-slate-700' : (${leave.leaveType == 'STUDY_LEAVE'} ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-700')))))">
                   <span class="material-symbols-outlined text-lg"
-                        th:text="${leave.leaveType == 'ANNUAL_LEAVE'} ? 'beach_access' : (${leave.leaveType == 'SICK_LEAVE'} ? 'medical_services' : (${leave.leaveType == 'MATERNITY_LEAVE'} ? 'child_friendly' : (${leave.leaveType == 'PATERNITY_LEAVE'} ? 'family_restroom' : (${leave.leaveType == 'BEREAVEMENT_LEAVE'} ? 'heart_broken' : (${leave.leaveType == 'STUDY_LEAVE'} ? 'school' : 'payments')))))"></span>
+                        th:text="${leave.leaveType == 'ANNUAL_LEAVE'} ? 'calendar_today' : (${leave.leaveType == 'SICK_LEAVE'} ? 'health_and_safety' : (${leave.leaveType == 'MATERNITY_LEAVE'} ? 'workspace_premium' : (${leave.leaveType == 'PATERNITY_LEAVE'} ? 'groups' : (${leave.leaveType == 'BEREAVEMENT_LEAVE'} ? 'history' : (${leave.leaveType == 'STUDY_LEAVE'} ? 'school' : 'account_balance_wallet')))))"></span>
                 </div>
                 <div>
                   <span class="font-medium"
@@ -228,19 +304,13 @@
             <span class="block text-xs text-slate-500">Tick this only for exceptional situations that need faster review.</span>
           </span>
         </label>
-        <div class="grid grid-cols-2 gap-4">
-          <div>
-            <label class="mb-2 block text-sm font-medium">From Date</label>
-            <input type="date" id="leave-from-input" name="leaveFrom" required
-                   th:attr="min=${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
-                   class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800">
-          </div>
-          <div>
-            <label class="mb-2 block text-sm font-medium">To Date</label>
-            <input type="date" id="leave-to-input" name="leaveTo" required
-                   th:attr="min=${#temporals.format(#temporals.createNow(), 'yyyy-MM-dd')}"
-                   class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800">
-          </div>
+        <div>
+          <label class="mb-2 block text-sm font-medium">Leave Dates</label>
+          <input type="text" id="leave-date-range" placeholder="Select a date range"
+                 class="w-full rounded-lg border border-slate-300 bg-white px-4 py-2 focus:ring-2 focus:ring-primary dark:border-slate-700 dark:bg-slate-800">
+          <input type="hidden" id="leave-from-input" name="leaveFrom" required>
+          <input type="hidden" id="leave-to-input" name="leaveTo" required>
+          <p class="mt-2 text-xs text-slate-500">Past dates and dates already covered by another leave request are disabled automatically.</p>
         </div>
         <div id="leave-request-feedback" class="hidden rounded-lg border px-4 py-3 text-sm"></div>
 
@@ -479,11 +549,16 @@
     const rejectedReason = document.getElementById('detail-rejected-reason');
     const detailUrgentBox = document.getElementById('detail-urgent-box');
     const leaveTypeSelect = document.getElementById('leave-type-select');
+    const leaveDateRangeInput = document.getElementById('leave-date-range');
     const leaveFromInput = document.getElementById('leave-from-input');
     const leaveToInput = document.getElementById('leave-to-input');
     const leaveFeedback = document.getElementById('leave-request-feedback');
     const leaveSubmitBtn = document.getElementById('leave-submit-btn');
     const leaveBalanceHint = document.getElementById('leave-balance-hint');
+    const otherLeaveToggle = document.getElementById('other-leave-toggle');
+    const otherLeaveModal = document.getElementById('other-leave-modal');
+    const otherLeaveClose = document.getElementById('other-leave-close');
+    let leaveDatePicker = null;
 
     function showLeaveFeedback(message, tone) {
       if (!leaveFeedback) return;
@@ -500,6 +575,70 @@
 
     function hideLeaveFeedback() {
       leaveFeedback?.classList.add('hidden');
+    }
+
+    function enumerateDates(fromValue, toValue) {
+      if (!fromValue || !toValue) return [];
+      const from = new Date(`${fromValue}T00:00:00`);
+      const to = new Date(`${toValue}T00:00:00`);
+      if (Number.isNaN(from.getTime()) || Number.isNaN(to.getTime()) || to < from) return [];
+      const dates = [];
+      const cursor = new Date(from);
+      while (cursor <= to) {
+        dates.push(cursor.toISOString().slice(0, 10));
+        cursor.setDate(cursor.getDate() + 1);
+      }
+      return dates;
+    }
+
+    function getBlockedLeaveDates() {
+      const blocked = new Set();
+      document.querySelectorAll('.leave-row').forEach((row) => {
+        const status = row.dataset.status;
+        if (status === 'REJECTED' || status === 'CANCELLED') return;
+        const from = row.dataset.leaveFrom;
+        const to = row.dataset.leaveTo;
+        enumerateDates(from, to).forEach(date => blocked.add(date));
+      });
+      return Array.from(blocked);
+    }
+
+    function initializeLeaveDatePicker() {
+      if (!leaveDateRangeInput || typeof flatpickr === 'undefined') return;
+
+      const blockedDates = getBlockedLeaveDates();
+      leaveDatePicker = flatpickr(leaveDateRangeInput, {
+        mode: 'range',
+        minDate: 'today',
+        dateFormat: 'Y-m-d',
+        altInput: true,
+        altFormat: 'M d, Y',
+        disableMobile: true,
+        disable: blockedDates,
+        onChange: (selectedDates) => {
+          if (selectedDates.length >= 1) {
+            leaveFromInput.value = leaveDatePicker.formatDate(selectedDates[0], 'Y-m-d');
+          } else {
+            leaveFromInput.value = '';
+          }
+
+          if (selectedDates.length >= 2) {
+            leaveToInput.value = leaveDatePicker.formatDate(selectedDates[1], 'Y-m-d');
+          } else {
+            leaveToInput.value = '';
+          }
+
+          updateLeaveRequestState();
+        }
+      });
+    }
+
+    function openOtherLeaveModal() {
+      otherLeaveModal?.classList.remove('hidden');
+    }
+
+    function closeOtherLeaveModal() {
+      otherLeaveModal?.classList.add('hidden');
     }
 
     function calculateRequestedDays() {
@@ -533,10 +672,10 @@
 
       if (leaveBalanceHint) {
         leaveBalanceHint.textContent = unlimited
-          ? `Unpaid leave tracked separately. Approved: ${approved} day(s), pending: ${pending} day(s).`
+          ? `Unpaid leave is tracked separately. Used ${approved} day(s) with ${pending} day(s) still pending.`
           : (requestable
-              ? `Remaining balance: ${remaining} working day(s). Approved: ${approved} day(s), pending hold: ${pending} day(s).`
-              : 'This leave type has no remaining working days.');
+              ? `${remaining} working day(s) left. Used ${approved} day(s), with ${pending} day(s) currently reserved.`
+              : 'All available working days for this leave type are already reserved.');
       }
 
       if (!unlimited && !requestable) {
@@ -546,7 +685,7 @@
       }
 
       if (requestedDays == null) {
-        hideLeaveFeedback();
+        showLeaveFeedback('Choose an available date range to see the final leave summary before submitting.', 'neutral');
         if (leaveSubmitBtn) leaveSubmitBtn.disabled = false;
         return;
       }
@@ -568,8 +707,13 @@
     }
 
     leaveTypeSelect?.addEventListener('change', updateLeaveRequestState);
-    leaveFromInput?.addEventListener('change', updateLeaveRequestState);
-    leaveToInput?.addEventListener('change', updateLeaveRequestState);
+    otherLeaveToggle?.addEventListener('click', openOtherLeaveModal);
+    otherLeaveClose?.addEventListener('click', closeOtherLeaveModal);
+    otherLeaveModal?.addEventListener('click', (event) => {
+      if (event.target === otherLeaveModal) {
+        closeOtherLeaveModal();
+      }
+    });
 
     document.querySelectorAll('[data-leave-review]').forEach(button => {
       button.addEventListener('click', () => {
@@ -644,9 +788,11 @@
       leaveCancelForm.submit();
     });
 
+    initializeLeaveDatePicker();
     updateLeaveRequestState();
     renderRows();
   });
 </script>
 </body>
 </html>
+
