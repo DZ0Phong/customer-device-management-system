@@ -302,9 +302,9 @@ public class HrManagerController {
     // END ACTIVITY CENTER ENDPOINTS
     // ══════════════════════════════════════════════════════════════════════════
 
-    // ── Request Management (renamed from Leave Approval) ─────────────────────
-    @GetMapping({"/leave-approval", "/request-management"})
-    public String requestManagement(Model model,
+    // ── Request Approval (renamed from Leave Approval) ───────────────────────
+    @GetMapping({"/request-approval", "/leave-approval", "/request-management"})
+    public String requestApproval(Model model,
                                 @RequestParam(defaultValue = "pending") String tab,
                                 @RequestParam(defaultValue = "all") String category,
                                 @RequestParam(defaultValue = "1") int page,
@@ -314,13 +314,13 @@ public class HrManagerController {
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
         model.addAttribute("activeTab",     tab);
         model.addAttribute("activeCategory", category);
-        model.addAttribute("activePage",    "leave");
+        model.addAttribute("activePage",    "request");
         model.addAttribute("requestId",     requestId); // For auto-expand
-        return "hrmanager/leave_approval";
+        return "hrmanager/request_approval";
     }
     
     // ── Notify Critical Items (Email Notification) ───────────────────────────
-    @PostMapping({"/leave-approval/notify-critical", "/request-management/notify-critical"})
+    @PostMapping({"/request-approval/notify-critical", "/leave-approval/notify-critical", "/request-management/notify-critical"})
     @ResponseBody
     public Map<String, Object> notifyCriticalItems(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         Map<String, Object> response = new HashMap<>();
@@ -413,8 +413,8 @@ public class HrManagerController {
         return "redirect:/hrmanager/calendar";
     }
 
-    // ── Request Management Actions (renamed from Leave Approval Actions) ─────
-    @PostMapping({"/leave-approval/approve", "/request-management/approve"})
+    // ── Request Approval Actions (renamed from Leave Approval Actions) ───────
+    @PostMapping({"/request-approval/approve", "/leave-approval/approve", "/request-management/approve"})
     public String approveRequest(@RequestParam Long requestId,
                                       @RequestParam Long approverId,
                                       RedirectAttributes redirectAttributes) {
@@ -426,10 +426,10 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to approve: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/leave-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=pending";
     }
 
-    @PostMapping({"/leave-approval/reject", "/request-management/reject"})
+    @PostMapping({"/request-approval/reject", "/leave-approval/reject", "/request-management/reject"})
     public String rejectRequest(@RequestParam Long requestId,
                                      @RequestParam Long approverId,
                                      @RequestParam String rejectedReason,
@@ -442,11 +442,11 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to reject: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/leave-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=pending";
     }
     
     // ── Bulk Actions ──────────────────────────────────────────────────────────
-    @PostMapping({"/leave-approval/bulk-approve", "/request-management/bulk-approve"})
+    @PostMapping({"/request-approval/bulk-approve", "/leave-approval/bulk-approve", "/request-management/bulk-approve"})
     @ResponseBody
     public Map<String, Object> bulkApprove(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         try {
@@ -468,7 +468,7 @@ public class HrManagerController {
         }
     }
     
-    @PostMapping({"/leave-approval/bulk-reject", "/request-management/bulk-reject"})
+    @PostMapping({"/request-approval/bulk-reject", "/leave-approval/bulk-reject", "/request-management/bulk-reject"})
     @ResponseBody
     public Map<String, Object> bulkReject(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
         try {
@@ -492,7 +492,7 @@ public class HrManagerController {
     }
 
     // ── Revert Request (24h window) - Phase 3 ────────────────────────────────
-    @PostMapping({"/leave-approval/revert", "/request-management/revert"})
+    @PostMapping({"/request-approval/revert", "/leave-approval/revert", "/request-management/revert"})
     public String revertRequest(@RequestParam Long requestId,
                                 @RequestParam(required = false) String reason,
                                 RedirectAttributes redirectAttributes) {
