@@ -8,17 +8,17 @@ import java.time.format.DateTimeFormatter;
 @Builder
 public record HrEventDTO(
     String title,
-    LocalDate startDate,
+    LocalDate date,
     LocalTime startTime,
     LocalTime endTime,
     String color
 ) {
     public String getMonthLabel() {
-        return startDate.format(DateTimeFormatter.ofPattern("MMM")).toUpperCase();
+        return date.format(DateTimeFormatter.ofPattern("MMM")).toUpperCase();
     }
 
     public String getDayLabel() {
-        return String.valueOf(startDate.getDayOfMonth());
+        return String.valueOf(date.getDayOfMonth());
     }
 
     public String getTimeLabel() {

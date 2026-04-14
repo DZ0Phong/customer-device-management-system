@@ -138,7 +138,7 @@ public class HrController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String department,
             @RequestParam(required = false) String status,
-            @RequestParam(required = false) Long skillId,
+            @RequestParam(required = false) List<Long> skillIds,
             @RequestParam(required = false) Integer minProficiency,
             @RequestParam(defaultValue = "hireDate:desc") String sort,
             @RequestParam(required = false) String tab,
@@ -162,7 +162,7 @@ public class HrController {
         Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
         Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE, Sort.by(sortDirection, sortField));
         
-        Page<HrEmployeeDTO> employeePage = employeeService.searchEmployees(search, department, status, skillId, minProficiency, pageable);
+        Page<HrEmployeeDTO> employeePage = employeeService.searchEmployees(search, department, status, skillIds, minProficiency, pageable);
 
         model.addAttribute("employees", employeePage.getContent());
         model.addAttribute("currentPage", page);
@@ -171,7 +171,7 @@ public class HrController {
         model.addAttribute("search", search);
         model.addAttribute("department", department);
         model.addAttribute("status", status);
-        model.addAttribute("skillId", skillId);
+        model.addAttribute("skillIds", skillIds);
         model.addAttribute("minProficiency", minProficiency);
         model.addAttribute("sort", sort);
 
@@ -259,6 +259,35 @@ public class HrController {
 
         response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
         attendanceService.exportAttendanceToCsv(queryDate, search, departmentId, status, response.getWriter());
+    }
+
+    @GetMapping("/attendance/export/{employeeId}")
+    public void exportEmployeeAttendance(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) java.time.YearMonth month,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+
+        java.time.YearMonth targetMonth = month != null ? month : java.time.YearMonth.now();
+
+        if (targetMonth.isAfter(java.time.YearMonth.now())) {
+            throw new IllegalArgumentException("Cannot export attendance for future months.");
+        }
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+
+        response.setContentType("text/csv; charset=UTF-8");
+
+        String filename = "employee_" + employee.getEmployeeCode() + "_attendance_" + targetMonth.toString() + ".csv";
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+        java.io.PrintWriter writer = response.getWriter();
+        // Output BOM for Excel UTF-8 support
+        writer.write('\ufeff');
+        
+        attendanceService.exportEmployeeAttendanceToCsv(employeeId, targetMonth, search, status, writer);
     }
 
     @GetMapping("/leave")
