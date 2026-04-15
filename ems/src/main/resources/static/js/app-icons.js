@@ -34,6 +34,9 @@
             .join(' ');
 
         const filled = span.classList.contains('fill-icon');
+        if (filled) {
+            span.setAttribute('data-filled', 'true');
+        }
         span.textContent = '';
         span.appendChild(buildIcon(iconName, inheritedClasses, filled));
     }
