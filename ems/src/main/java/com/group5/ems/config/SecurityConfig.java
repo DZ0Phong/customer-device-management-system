@@ -38,6 +38,7 @@ public class SecurityConfig {
                                 "/activate", "/activate/**",
                                 "/css/**", "/js/**", "/icons/**", "/images/**")
                         .permitAll()
+                        .requestMatchers("/admin/company-info/image/**").permitAll()
                         .requestMatchers("/admin/**").hasRole("ADMIN")
                         .requestMatchers("/employee/**").hasAnyRole("EMPLOYEE", "DEPT_MANAGER", "HR", "HR_MANAGER")
                         .requestMatchers("/dept-manager/**").hasRole("DEPT_MANAGER")
