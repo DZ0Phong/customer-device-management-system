@@ -621,8 +621,6 @@ public class HrController {
         // Tab 3: Create request form data
         model.addAttribute("requestTypes", requestService.getCreatableRequestTypes());
 
-        // Tab 4: Analytics
-        model.addAttribute("stats", requestService.getRequestStats());
 
         // Rejection modal data
         model.addAttribute("rejectionCategories", requestService.getRejectionCategories());

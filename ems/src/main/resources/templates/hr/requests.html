@@ -90,11 +90,7 @@
                         <span class="material-symbols-outlined text-sm">add_circle</span>
                         Create Request
                     </button>
-                    <button onclick="switchTab('analytics')" id="tab-btn-analytics"
-                            class="tab-btn flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-bold transition-all">
-                        <span class="material-symbols-outlined text-sm">analytics</span>
-                        Analytics
-                    </button>
+
                 </div>
 
                 <!-- ══════════════════════════════════════════════════ -->
@@ -300,12 +296,7 @@
                 </div>
 
                 <!-- ══════════════════════════════════════════════════ -->
-                    <div th:if="${#lists.size(hrmPendingList) == 0}"
-                         class="bg-white rounded-2xl border border-slate-100 shadow-sm p-12 text-center anim anim-2">
-                        <span class="material-symbols-outlined text-5xl text-slate-200 mb-3">cloud_done</span>
-                        <h3 class="text-sm font-bold text-slate-600 mb-1">No requests currently with HRM</h3>
-                        <p class="text-xs text-slate-400">All escalated workflow requests have been processed.</p>
-                    </div>
+                
                 </div>
 
                 <!-- ══════════════════════════════════════════════════ -->
@@ -583,72 +574,7 @@
                     </div>
                 </div>
 
-                <!-- ══════════════════════════════════════════════════ -->
-                <!-- TAB 4: ANALYTICS                                  -->
-                <!-- ══════════════════════════════════════════════════ -->
-                <div id="tab-analytics" class="tab-panel hidden space-y-4">
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 anim anim-2">
-                        <!-- Pending -->
-                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-amber-600 text-lg">pending_actions</span>
-                                </div>
-                            </div>
-                            <p class="text-2xl font-black text-slate-900" th:text="${stats.totalPending()}">0</p>
-                            <p class="text-[10px] text-slate-400 font-medium mt-0.5">Pending Requests</p>
-                        </div>
-                        <!-- Approved This Month -->
-                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-9 h-9 rounded-xl bg-emerald-100 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-emerald-600 text-lg">check_circle</span>
-                                </div>
-                            </div>
-                            <p class="text-2xl font-black text-slate-900" th:text="${stats.approvedThisMonth()}">0</p>
-                            <p class="text-[10px] text-slate-400 font-medium mt-0.5">Approved This Month</p>
-                        </div>
-                        <!-- Rejected This Month -->
-                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-9 h-9 rounded-xl bg-rose-100 flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-rose-600 text-lg">cancel</span>
-                                </div>
-                            </div>
-                            <p class="text-2xl font-black text-slate-900" th:text="${stats.rejectedThisMonth()}">0</p>
-                            <p class="text-[10px] text-slate-400 font-medium mt-0.5">Rejected This Month</p>
-                        </div>
-                        <!-- Avg Processing Time -->
-                        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
-                            <div class="flex items-center justify-between mb-3">
-                                <div class="w-9 h-9 rounded-xl bg-primary-light flex items-center justify-center">
-                                    <span class="material-symbols-outlined text-primary text-lg">timer</span>
-                                </div>
-                            </div>
-                            <p class="text-2xl font-black text-slate-900">
-                                <span th:text="${#numbers.formatDecimal(stats.avgProcessingHours(), 0, 1)}">0</span>
-                                <span class="text-sm font-medium text-slate-400">hrs</span>
-                            </p>
-                            <p class="text-[10px] text-slate-400 font-medium mt-0.5">Avg. Processing Time</p>
-                        </div>
-                    </div>
 
-                    <!-- Top Request Type -->
-                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 anim anim-3">
-                        <h3 class="text-sm font-black text-slate-800 mb-3">Most Requested Type</h3>
-                        <div class="flex items-center gap-4">
-                            <div class="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-                                <span class="material-symbols-outlined text-primary text-2xl">trending_up</span>
-                            </div>
-                            <div>
-                                <p class="text-lg font-black text-slate-900" th:text="${stats.topRequestType()}">N/A</p>
-                                <p class="text-xs text-slate-400">
-                                    <span th:text="${stats.topRequestTypeCount()}">0</span> requests processed
-                                </p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
 
             </div>
         </div>

@@ -2,7 +2,7 @@ package com.group5.ems.service.hr;
 
 import com.group5.ems.dto.request.RecruitmentTicketDTO;
 import com.group5.ems.dto.response.HrRequestDTO;
-import com.group5.ems.dto.response.HrRequestStatsDTO;
+
 import com.group5.ems.constants.WorkflowConstants;
 import com.group5.ems.entity.BenefitType;
 import com.group5.ems.entity.Department;
@@ -317,37 +317,7 @@ public class HrRequestService {
         logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, saved.getId());
     }
 
-    // ══════════════════════════════════════════════════════════════════
-    // STATISTICS (Tab 4)
-    // ══════════════════════════════════════════════════════════════════
 
-    public HrRequestStatsDTO getRequestStats() {
-        YearMonth currentMonth = YearMonth.now();
-        LocalDateTime monthStart = currentMonth.atDay(1).atStartOfDay();
-
-        long totalPending = requestRepository.countPendingWorkflowRequests();
-        long approvedThisMonth = requestRepository.countWorkflowByStatusSince("APPROVED", monthStart);
-        long rejectedThisMonth = requestRepository.countWorkflowByStatusSince("REJECTED", monthStart);
-        Double avgHours = requestRepository.avgWorkflowProcessingHoursSince(monthStart);
-
-        List<Object[]> topTypes = requestRepository.findTopWorkflowTypes();
-        String topRequestType = "N/A";
-        long topRequestTypeCount = 0;
-        if (topTypes != null && !topTypes.isEmpty()) {
-            Object[] top = topTypes.get(0);
-            topRequestType = top[0] != null ? top[0].toString() : "N/A";
-            topRequestTypeCount = top[1] != null ? ((Number) top[1]).longValue() : 0;
-        }
-
-        return HrRequestStatsDTO.builder()
-                .totalPending(totalPending)
-                .approvedThisMonth(approvedThisMonth)
-                .rejectedThisMonth(rejectedThisMonth)
-                .avgProcessingHours(avgHours != null ? avgHours : 0.0)
-                .topRequestType(topRequestType)
-                .topRequestTypeCount(topRequestTypeCount)
-                .build();
-    }
 
     // ══════════════════════════════════════════════════════════════════
     // LOOKUP DATA
