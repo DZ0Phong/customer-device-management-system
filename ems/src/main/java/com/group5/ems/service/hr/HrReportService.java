@@ -39,6 +39,7 @@ public class HrReportService {
     private final org.thymeleaf.TemplateEngine templateEngine;
     private final LogService logService;
     private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
+    private final HrBackblazeStorageService hrBackblazeStorageService;
 
     // To prevent circular dependency, we can use ObjectProvider or just inject them. 
     // Given they don't depend on HrReportService, standard injection is fine.
@@ -55,23 +56,25 @@ public class HrReportService {
         // 1. Generate PDF Content
         byte[] pdfContent = generatePdfBytes(tab, year, from, to, remarks);
 
-        // 2. Ensure directory exists
-        java.io.File directory = new java.io.File(REPORT_BASE_DIR);
-        if (!directory.exists()) {
-            boolean created = directory.mkdirs();
-            if(!created) throw new RuntimeException("Could not create report storage directory");
-        }
-
-        // 3. Save to file system
-        String filename = "report_" + System.currentTimeMillis() + ".pdf";
-        String filePath = REPORT_BASE_DIR + filename;
+        // 2. Upload to Backblaze B2 (New Standard)
+        String cloudFilename = "reports/hr/report_" + System.currentTimeMillis() + ".pdf";
+        String filePath;
         try {
-            java.nio.file.Files.write(java.nio.file.Paths.get(filePath), pdfContent);
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Failed to save report file: " + e.getMessage());
+            filePath = hrBackblazeStorageService.uploadReport(cloudFilename, pdfContent);
+        } catch (Exception e) {
+            // Backup/Fallback: Save to local filesystem if cloud upload fails during transition 
+            // OR if user specifically wants to keep local copy. 
+            // Based on rules, we prioritize cloud but maintain fallback ability.
+            String localFilename = "report_" + System.currentTimeMillis() + ".pdf";
+            filePath = REPORT_BASE_DIR + localFilename;
+            try {
+                java.nio.file.Files.write(java.nio.file.Paths.get(filePath), pdfContent);
+            } catch (java.io.IOException ex) {
+                throw new RuntimeException("Failed to save report even to local storage: " + ex.getMessage());
+            }
         }
 
-        // 4. Persist Metadata
+        // 3. Persist Metadata
         HrReport report = new HrReport();
         report.setTitle(title);
         report.setReportType(tab.toUpperCase());
@@ -112,11 +115,12 @@ public class HrReportService {
     public byte[] getReportFileBytes(Long reportId) {
         HrReport report = hrReportRepository.findById(reportId)
                 .orElseThrow(() -> new RuntimeException("Report not found"));
-        try {
-            return java.nio.file.Files.readAllBytes(java.nio.file.Paths.get(report.getFilePath()));
-        } catch (java.io.IOException e) {
-            throw new RuntimeException("Could not read report file: " + e.getMessage());
-        }
+        
+        String path = report.getFilePath();
+        
+        // Cloud Storage Retrieval (Mandatory)
+        return hrBackblazeStorageService.downloadReport(path)
+                .orElseThrow(() -> new RuntimeException("Report file could not be found in cloud storage (Key: " + path + ")"));
     }
 
     private byte[] generatePdfBytes(String tab, Integer year, LocalDate from, LocalDate to, String remarks) {

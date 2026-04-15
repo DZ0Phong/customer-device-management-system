@@ -516,6 +516,11 @@
                                     </td>
                                     <td class="px-6 py-4 text-right">
                                         <div class="flex items-center justify-end gap-2">
+                                            <a th:href="@{/hr/reports/preview/{id}(id=${item.id()})}" 
+                                               target="_blank"
+                                               class="p-2 text-slate-400 hover:text-indigo-600 transition-colors" title="Preview">
+                                                <span class="material-symbols-outlined text-lg">visibility</span>
+                                            </a>
                                             <a th:href="@{/hr/reports/download/{id}(id=${item.id()})}" 
                                                class="p-2 text-slate-400 hover:text-primary transition-colors" title="Download">
                                                 <span class="material-symbols-outlined text-lg">download</span>

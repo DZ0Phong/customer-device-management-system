@@ -1406,8 +1406,21 @@ public class HrController {
     public ResponseEntity<byte[]> downloadSavedReport(@PathVariable Long id) {
         byte[] bytes = reportService.getReportFileBytes(id);
         
+        logService.log(com.group5.ems.enums.AuditAction.EXPORT, com.group5.ems.enums.AuditEntityType.HR_REPORTS, id);
+
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"HR_Report_" + id + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(bytes);
+    }
+
+    @GetMapping("/reports/preview/{id}")
+    public ResponseEntity<byte[]> previewReport(@PathVariable Long id) {
+        byte[] bytes = reportService.getReportFileBytes(id);
+        
+        // Use inline disposition for browser preview
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"HR_Report_Preview_" + id + ".pdf\"")
                 .contentType(MediaType.APPLICATION_PDF)
                 .body(bytes);
     }
