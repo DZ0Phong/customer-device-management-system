@@ -40,6 +40,10 @@ public class HrReportService {
     private final LogService logService;
     private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
 
+    // To prevent circular dependency, we can use ObjectProvider or just inject them. 
+    // Given they don't depend on HrReportService, standard injection is fine.
+    private final org.springframework.context.ApplicationContext applicationContext;
+
     private static final String REPORT_BASE_DIR = "uploads/reports/hr/";
 
     // ═══════════════════════════════════════════════════════════
@@ -424,5 +428,173 @@ public class HrReportService {
                 .scoreCounts(scoreCounts)
                 .topPerformers(topPerformers)
                 .build();
+    }
+
+    // ═══════════════════════════════════════════════════════════
+    // 6. CUSTOM REPORT BUILDER
+    // ═══════════════════════════════════════════════════════════
+
+    public void exportCustomReport(String dataSource, List<String> columns, LocalDate dateFrom, LocalDate dateTo, String format, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<List<String>> rows = new ArrayList<>();
+        List<String> headers = getHeadersForCustomReport(dataSource, columns);
+
+        if ("employees".equalsIgnoreCase(dataSource)) {
+            HrEmployeeService empService = applicationContext.getBean(HrEmployeeService.class);
+            org.springframework.data.domain.Page<HrEmployeeDTO> page = empService.searchEmployees(null, null, null, null, null, PageRequest.of(0, 10000));
+            for (HrEmployeeDTO emp : page.getContent()) {
+                // Date filtering is skipped for employees as hireDate is not available in HrEmployeeDTO
+                rows.add(extractEmployeeColumns(emp, columns));
+            }
+        } else if ("leave".equalsIgnoreCase(dataSource)) {
+            HrLeaveService leaveService = applicationContext.getBean(HrLeaveService.class);
+            org.springframework.data.domain.Page<HrLeaveRequestDTO> page = leaveService.getLeaveHistoryFiltered(null, null, null, null, dateFrom, dateTo, PageRequest.of(0, 10000));
+            for (HrLeaveRequestDTO leave : page.getContent()) {
+                rows.add(extractLeaveColumns(leave, columns));
+            }
+        } else if ("attendance".equalsIgnoreCase(dataSource)) {
+            HrAttendanceService attService = applicationContext.getBean(HrAttendanceService.class);
+            // Since attendance might be huge, we'll fetch day by day or just use DateFrom/DateTo if provided.
+            LocalDate queryFrom = dateFrom != null ? dateFrom : LocalDate.now().minusDays(30);
+            LocalDate queryTo = dateTo != null ? dateTo : LocalDate.now();
+            // Fetch for all days in range
+            for (LocalDate day = queryFrom; !day.isAfter(queryTo); day = day.plusDays(1)) {
+                org.springframework.data.domain.Page<HrAttendanceDetailDTO> page = attService.getAttendanceRecords(day, null, null, null, PageRequest.of(0, 10000));
+                for (HrAttendanceDetailDTO att : page.getContent()) {
+                    rows.add(extractAttendanceColumns(att, columns));
+                }
+            }
+        } else {
+            throw new IllegalArgumentException("Invalid data source");
+        }
+
+        if ("csv".equalsIgnoreCase(format)) {
+            response.setContentType("text/csv; charset=UTF-8");
+            response.setHeader("Content-Disposition", "attachment; filename=\"custom_report_" + dataSource + ".csv\"");
+            java.io.PrintWriter writer = response.getWriter();
+            writer.write('\ufeff'); // BOM for Excel
+            writer.println(String.join(",", headers.stream().map(this::escapeCsv).toList()));
+            for (List<String> row : rows) {
+                writer.println(String.join(",", row.stream().map(this::escapeCsv).toList()));
+            }
+        } else if ("pdf".equalsIgnoreCase(format)) {
+            boolean limitReached = rows.size() > 1000;
+            if (limitReached) {
+                rows = rows.subList(0, 1000); // Limit to prevent OOM
+            }
+
+            response.setContentType("application/pdf");
+            response.setHeader("Content-Disposition", "attachment; filename=\"custom_report_" + dataSource + ".pdf\"");
+            
+            org.thymeleaf.context.Context ctx = new org.thymeleaf.context.Context();
+            ctx.setVariable("title", "Custom Report: " + dataSource.toUpperCase());
+            ctx.setVariable("exportDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+            ctx.setVariable("headers", headers);
+            ctx.setVariable("rows", rows);
+            ctx.setVariable("limitReached", limitReached);
+            
+            String html = templateEngine.process("hr/custom-report-pdf", ctx);
+            
+            try (java.io.OutputStream os = response.getOutputStream()) {
+                org.xhtmlrenderer.pdf.ITextRenderer renderer = new org.xhtmlrenderer.pdf.ITextRenderer();
+                renderer.setDocumentFromString(html);
+                renderer.layout();
+                renderer.createPDF(os);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to generate PDF: " + e.getMessage());
+            }
+        }
+    }
+
+    private String escapeCsv(String value) {
+        if (value == null) return "";
+        String s = value.replace("\"", "\"\"");
+        if (s.contains(",") || s.contains("\n") || s.contains("\"")) {
+            return "\"" + s + "\"";
+        }
+        return s;
+    }
+
+    private List<String> getHeadersForCustomReport(String dataSource, List<String> columns) {
+        List<String> headers = new ArrayList<>();
+        Map<String, String> columnMap = switch (dataSource) {
+            case "employees" -> Map.of(
+                    "empCode", "Employee Code", "fullName", "Full Name",
+                    "email", "Email", "department", "Department",
+                    "position", "Position", "hireDate", "Hire Date", "status", "Status");
+            case "leave" -> Map.of(
+                    "empCode", "Employee Code", "fullName", "Full Name",
+                    "department", "Department", "leaveType", "Leave Type",
+                    "startDate", "Start Date", "endDate", "End Date",
+                    "totalDays", "Total Days", "status", "Status", "reason", "Reason");
+            case "attendance" -> Map.of(
+                    "empCode", "Employee Code", "fullName", "Full Name",
+                    "department", "Department", "workDate", "Work Date",
+                    "clockIn", "Clock In", "clockOut", "Clock Out",
+                    "status", "Status", "notes", "Notes");
+            default -> Map.of();
+        };
+
+        for (String col : columns) {
+            headers.add(columnMap.getOrDefault(col, col));
+        }
+        return headers;
+    }
+
+    private List<String> extractEmployeeColumns(HrEmployeeDTO emp, List<String> columns) {
+        List<String> row = new ArrayList<>();
+        for (String col : columns) {
+            row.add(switch (col) {
+                case "empCode" -> emp.code();
+                case "fullName" -> emp.fullName();
+                case "email" -> emp.email();
+                case "phone" -> emp.phone();
+                case "department" -> emp.department();
+                case "position" -> emp.position();
+                case "skills" -> emp.skills() != null ? String.join(", ", emp.skills()) : "";
+                case "status" -> emp.status();
+                default -> "";
+            });
+        }
+        return row;
+    }
+
+    private List<String> extractLeaveColumns(HrLeaveRequestDTO leave, List<String> columns) {
+        List<String> row = new ArrayList<>();
+        for (String col : columns) {
+            row.add(switch (col) {
+                case "empCode" -> leave.employeeCode();
+                case "fullName" -> leave.employeeName();
+                case "department" -> leave.department();
+                case "leaveType" -> leave.leaveType();
+                case "startDate" -> leave.leave_from() != null ? leave.leave_from().toString() : "";
+                case "endDate" -> leave.leave_to() != null ? leave.leave_to().toString() : "";
+                case "totalDays" -> leave.duration() != null ? leave.duration() : "";
+                case "status" -> leave.status();
+                case "reason" -> leave.reason();
+                case "submittedAt" -> leave.submittedAtDisplay();
+                case "processedAt" -> leave.processedAt() != null ? leave.processedAt().toString() : "";
+                case "approverName" -> leave.approverName() != null ? leave.approverName() : "";
+                default -> "";
+            });
+        }
+        return row;
+    }
+
+    private List<String> extractAttendanceColumns(HrAttendanceDetailDTO att, List<String> columns) {
+        List<String> row = new ArrayList<>();
+        for (String col : columns) {
+            row.add(switch (col) {
+                case "empCode" -> att.employeeCode();
+                case "fullName" -> att.fullName();
+                case "department" -> att.departmentName();
+                case "workDate" -> att.workDate() != null ? att.workDate().toString() : "";
+                case "clockIn" -> att.checkIn() != null ? att.checkIn().toString() : "";
+                case "clockOut" -> att.checkOut() != null ? att.checkOut().toString() : "";
+                case "status" -> att.status();
+                case "notes" -> att.note();
+                default -> "";
+            });
+        }
+        return row;
     }
 }

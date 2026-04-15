@@ -219,13 +219,29 @@ public class HrController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String status,
-            @RequestParam(defaultValue = "0") int page) {
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "checkIn:asc") String sort) {
 
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
 
         model.addAttribute("stats", attendanceService.getAttendanceStats(queryDate));
 
-        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
+        String sortBy = "checkIn";
+        String direction = "asc";
+        if (sort != null && sort.contains(":")) {
+            String[] parts = sort.split(":");
+            sortBy = parts[0];
+            direction = parts[1];
+        }
+
+        String sortField = "checkIn";
+        if ("checkOut".equals(sortBy)) {
+            sortField = "checkOut";
+        }
+        
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE, Sort.by(sortDirection, "a." + sortField));
+
         org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> attendancePage = attendanceService
                 .getAttendanceRecords(queryDate, search, departmentId, status, pageable);
 
@@ -238,6 +254,7 @@ public class HrController {
         model.addAttribute("search", search);
         model.addAttribute("departmentId", departmentId);
         model.addAttribute("status", status);
+        model.addAttribute("sort", sort);
         model.addAttribute("departments", departmentRepository.findAll());
 
         return "hr/attendance";
@@ -1328,6 +1345,22 @@ public class HrController {
         } catch (Exception e) {
             throw new ReportExportException("Failed to generate PDF report: " + e.getMessage());
         }
+    }
+
+    @GetMapping("/reports/builder/export")
+    public void exportCustomReport(
+            @RequestParam String dataSource,
+            @RequestParam(required = false) List<String> columns,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam String format,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+            
+        if (columns == null || columns.isEmpty()) {
+            throw new IllegalArgumentException("At least one column must be selected.");
+        }
+        
+        reportService.exportCustomReport(dataSource, columns, dateFrom, dateTo, format, response);
     }
 
     @PostMapping("/reports/prepare")
