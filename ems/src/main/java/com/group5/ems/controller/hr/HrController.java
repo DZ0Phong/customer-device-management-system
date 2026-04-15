@@ -66,10 +66,12 @@ import com.group5.ems.service.hr.HrRecruitmentService;
 import com.group5.ems.service.hr.HrRequestService;
 import com.group5.ems.service.hr.HrReportService;
 import com.group5.ems.service.common.LogService;
+/*
 import com.group5.ems.service.hr.HrCalendarService;
 import com.group5.ems.dto.request.hr.HrEventCreateDTO;
 import com.group5.ems.dto.request.hr.HrEventUpdateDTO;
 import com.group5.ems.dto.response.hr.HrEventResponseDTO;
+*/
 import com.group5.ems.exception.ReportExportException;
 
 import org.thymeleaf.TemplateEngine;
@@ -108,7 +110,7 @@ public class HrController {
     private final LogService logService;
     private final TemplateEngine templateEngine;
     private final SkillRepository skillRepository;
-    private final HrCalendarService calendarService;
+    // private final HrCalendarService calendarService;
 
     @GetMapping({ "", "/", "/dashboard" })
     public String dashboard(Model model) {
@@ -1191,6 +1193,7 @@ public class HrController {
     }
 */
 
+    /*
     // ═══════════════════════════════════════════════════════════════════════════
     // CALENDAR MANAGEMENT
     // ═══════════════════════════════════════════════════════════════════════════
@@ -1258,6 +1261,7 @@ public class HrController {
         }
         return "redirect:/hr/calendar";
     }
+    */
 
     // ═══════════════════════════════════════════════════════════════════════════
     // REPORTS & ANALYTICS
