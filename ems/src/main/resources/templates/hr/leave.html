@@ -6,9 +6,10 @@
     <meta content="width=device-width, initial-scale=1.0" name="viewport" />
     <title>EMS Pro - Leave Requests</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}" />
+    <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
+<link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
     <!-- Flatpickr -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
     <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
@@ -108,7 +109,7 @@
     <!-- SIDEBAR -->
     <div th:replace="~{fragments/hr-sidebar :: sidebar('leave')}"></div>
 
-    <!-- ─── Main ───────────────────────────────────────────────── -->
+    <!-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Main Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
             <div>
@@ -165,9 +166,9 @@
         <div class="flex-1 overflow-y-auto p-8 dot-grid">
             <div class="max-w-7xl mx-auto">
 
-                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
                 <!-- TAB 1: Current Requests                            -->
-                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
                 <div id="lpanel-current" class="leave-panel active">
                     <div id="bulkActionBar" class="hidden sticky top-4 z-40 mb-6 bg-white/90 backdrop-blur-md border border-primary/20 rounded-2xl p-4 items-center justify-between shadow-xl shadow-primary/10 anim anim-1 flex ring-4 ring-primary/5">
 
@@ -272,7 +273,7 @@
                                                     </div>
                                                     <div>
                                                         <p class="text-sm font-bold text-slate-900" th:text="${leave.employeeName}">Lucy Morgan</p>
-                                                        <p class="text-xs text-slate-500"><span th:text="${leave.department}">Sales Dept</span> · <span th:text="${leave.employeeCode}">EMP-0042</span></p>
+                                                        <p class="text-xs text-slate-500"><span th:text="${leave.department}">Sales Dept</span> Ã‚Â· <span th:text="${leave.employeeCode}">EMP-0042</span></p>
                                                     </div>
                                                 </div>
                                             </td>
@@ -282,7 +283,7 @@
                                                       th:text="${leave.leaveType}">Annual Leave</span>
                                             </td>
                                             <td class="px-4 py-4">
-                                                <p class="text-sm font-medium text-slate-900 truncate max-w-xs" th:title="${leave.dates}" th:text="${leave.dates}">Oct 12 – Oct 17</p>
+                                                <p class="text-sm font-medium text-slate-900 truncate max-w-xs" th:title="${leave.dates}" th:text="${leave.dates}">Oct 12 Ã¢â‚¬â€œ Oct 17</p>
                                             </td>
                                             <td class="px-4 py-4 text-right" onclick="event.stopPropagation()">
                                                 <div class="flex flex-row justify-end items-center gap-2">
@@ -371,9 +372,9 @@
                     </div>
                 </div>
 
-                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
                 <!-- TAB 2: Leave History (server-side filtered)        -->
-                <!-- ═══════════════════════════════════════════════════ -->
+                <!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
                 <div id="lpanel-history" class="leave-panel">
                     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex flex-col anim anim-1">
                         <div class="p-5 border-b border-slate-50">
@@ -586,9 +587,9 @@
 </div>
 
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
 <!-- REJECTION MODAL (improvement #4)                               -->
-<!-- ═══════════════════════════════════════════════════════════════ -->
+<!-- Ã¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢ÂÃ¢â€¢Â -->
 <div id="rejectModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40 backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl border border-slate-100 w-full max-w-md mx-4 overflow-hidden"
          onclick="event.stopPropagation()">
@@ -751,7 +752,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
-    // ── Tab Switching ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Tab Switching Ã¢â€â‚¬Ã¢â€â‚¬
     function switchLeaveTab(tab) {
         if (window.history && window.history.pushState) {
             const url = new URL(window.location);
@@ -785,7 +786,7 @@
         switchLeaveTab(activeTab);
     });
 
-    // ── Reject Modal ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Reject Modal Ã¢â€â‚¬Ã¢â€â‚¬
     function openRejectModal(id, name) {
         const modal = document.getElementById('rejectModal');
         const form = document.getElementById('rejectForm');
@@ -814,7 +815,7 @@
         document.getElementById('rejectCharCount').className = len >= 10 ? 'text-emerald-500' : '';
     });
 
-    // ── Export CSV Modal ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Export CSV Modal Ã¢â€â‚¬Ã¢â€â‚¬
     function openExportModal() {
         const modal = document.getElementById('exportModal');
         const modalForm = document.getElementById('exportCsvForm');
@@ -871,10 +872,10 @@
         if (e.target === this) closeExportModal();
     });
 
-    // ── Bulk Actions (Implementation at bottom) ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Bulk Actions (Implementation at bottom) Ã¢â€â‚¬Ã¢â€â‚¬
 
 
-    // ── Calendar (improvement #3) ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Calendar (improvement #3) Ã¢â€â‚¬Ã¢â€â‚¬
     function initCalendar() {
         const calendarEl = document.getElementById('leaveCalendar');
         const calendar = new FullCalendar.Calendar(calendarEl, {
@@ -922,7 +923,7 @@
                     .catch(err => { console.error('Calendar fetch error:', err); failureCallback(err); });
             },
             eventDidMount: function(info) {
-                info.el.title = info.event.extendedProps.department + ' — ' + info.event.extendedProps.leaveType + ' (' + info.event.extendedProps.status + ')';
+                info.el.title = info.event.extendedProps.department + ' Ã¢â‚¬â€ ' + info.event.extendedProps.leaveType + ' (' + info.event.extendedProps.status + ')';
             },
             height: 'auto',
             dayMaxEvents: 3,
@@ -1036,7 +1037,7 @@
         }
     }
 
-    // ── Bulk Selection Logic ──
+    // Ã¢â€â‚¬Ã¢â€â‚¬ Bulk Selection Logic Ã¢â€â‚¬Ã¢â€â‚¬
     let selectedIds = [];
 
     function onRowCheck(checkbox) {
