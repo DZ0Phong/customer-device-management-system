@@ -190,15 +190,6 @@
                         <option th:each="period : ${data.reviewPeriodOptions}" th:value="${period}" th:text="${period}">YEAR_2026</option>
                     </select>
                 </div>
-                <div class="md:col-span-2 rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">
-                    <div class="flex items-center justify-between gap-3">
-                        <div>
-                            <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Current Skills</p>
-                            <p class="mt-2 text-sm font-medium leading-6 text-slate-700" id="employee-skills-preview">Select an employee to load verified skills</p>
-                        </div>
-                        <span class="material-symbols-outlined text-slate-300">workspace_premium</span>
-                    </div>
-                </div>
                 <div>
                     <label class="mb-2 block text-sm font-semibold text-slate-700">Performance Score</label>
                     <input id="performance-score" name="performanceScore" type="number" min="1" max="5" step="0.01" class="w-full rounded-xl border border-slate-200 bg-slate-50 px-4 py-2.5 text-sm focus:border-primary focus:ring-primary" required/>
@@ -253,13 +244,8 @@
         status: document.getElementById('review-status'),
         strengths: document.getElementById('strengths'),
         areasToImprove: document.getElementById('areas-to-improve'),
-        modalTitle: document.getElementById('modal-title'),
-        employeeSkillsPreview: document.getElementById('employee-skills-preview')
+        modalTitle: document.getElementById('modal-title')
     };
-
-    const employeeSkillMap = new Map(
-        (/*[[${data.employees}]]*/ []).map(employee => [String(employee.id), employee.skillsLabel || 'No verified skills recorded yet'])
-    );
 
     let currentStatusFilter = 'ALL';
     let currentSearch = '';
@@ -291,11 +277,6 @@
         modal.classList.remove('flex');
     }
 
-    function refreshEmployeeSkillsPreview(employeeId) {
-        formFields.employeeSkillsPreview.textContent =
-            employeeSkillMap.get(String(employeeId || '')) || 'No verified skills recorded yet';
-    }
-
     function setIdentityLocked(locked) {
         [formFields.employeeId, formFields.reviewPeriod].forEach(field => {
             field.dataset.locked = locked ? 'true' : 'false';
@@ -315,7 +296,6 @@
         formFields.areasToImprove.value = '';
         setIdentityLocked(false);
         formFields.modalTitle.textContent = employeeId ? 'Start Performance Review' : 'New Performance Review';
-        refreshEmployeeSkillsPreview(employeeId);
     }
 
     async function loadReview(id, employeeId) {
@@ -343,7 +323,6 @@
             formFields.areasToImprove.value = review.areasToImprove || '';
             setIdentityLocked(true);
             formFields.modalTitle.textContent = review.employeeName ? `Review: ${review.employeeName}` : 'Performance Review';
-            formFields.employeeSkillsPreview.textContent = review.skillsLabel || employeeSkillMap.get(String(review.employeeId || '')) || 'No verified skills recorded yet';
             openModal();
         } catch (error) {
             alert('Unable to load this review right now.');
@@ -379,7 +358,6 @@
     });
 
     formFields.employeeId.addEventListener('change', event => {
-        refreshEmployeeSkillsPreview(event.target.value);
         if (event.target.dataset.locked === 'true') {
             event.preventDefault();
         }

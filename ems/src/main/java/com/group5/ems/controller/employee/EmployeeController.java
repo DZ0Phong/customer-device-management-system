@@ -554,7 +554,7 @@ public class EmployeeController {
                     .currentRating(java.math.BigDecimal.ZERO)
                     .previousRating(java.math.BigDecimal.ZERO)
                     .totalReviews(0)
-                    .kpisMet(0).kpisTotal(0).skillsCount(0).build());
+                    .build());
             model.addAttribute("reviews", List.of());
         }
 
