@@ -6,7 +6,6 @@ import com.group5.ems.entity.PerformanceReview;
 import com.group5.ems.entity.User;
 import com.group5.ems.enums.AuditAction;
 import com.group5.ems.enums.AuditEntityType;
-import com.group5.ems.repository.EmployeeSkillRepository;
 import com.group5.ems.repository.EmployeeRepository;
 import com.group5.ems.repository.PerformanceReviewRepository;
 import com.group5.ems.service.common.LogService;
@@ -37,7 +36,6 @@ public class PerformanceService {
     private final DeptManagerUtilService utilService;
     private final PerformanceReviewRepository reviewRepository;
     private final EmployeeRepository employeeRepository;
-    private final EmployeeSkillRepository employeeSkillRepository;
     private final LogService logService;
 
     public Map<String, Object> getPerformanceReviewData() {
@@ -147,7 +145,6 @@ public class PerformanceService {
                     item.put("id", employee.getId());
                     item.put("name", employee.getUser() != null ? employee.getUser().getFullName() : "Employee #" + employee.getId());
                     item.put("position", employee.getPosition() != null ? employee.getPosition().getName() : "Employee");
-                    item.put("skillsLabel", buildSkillsLabel(employee.getId()));
                     return item;
                 })
                 .collect(Collectors.toList());
@@ -259,7 +256,6 @@ public class PerformanceService {
         detail.put("reviewerName", review.getReviewer() != null && review.getReviewer().getUser() != null
                 ? review.getReviewer().getUser().getFullName()
                 : "N/A");
-        detail.put("skillsLabel", buildSkillsLabel(review.getEmployeeId()));
         return detail;
     }
 
@@ -283,22 +279,6 @@ public class PerformanceService {
         row.put("areasToImprove", null);
         row.put("reviewerName", "Department Manager");
         return row;
-    }
-
-    private String buildSkillsLabel(Long employeeId) {
-        List<String> skills = employeeSkillRepository.findByEmployeeId(employeeId).stream()
-                .filter(employeeSkill -> employeeSkill.getSkill() != null && employeeSkill.getSkill().getName() != null)
-                .sorted(Comparator.comparing(employeeSkill -> employeeSkill.getSkill().getName(), String.CASE_INSENSITIVE_ORDER))
-                .map(employeeSkill -> {
-                    String skillName = employeeSkill.getSkill().getName();
-                    Integer proficiency = employeeSkill.getProficiency();
-                    return proficiency != null ? skillName + " (" + proficiency + "/5)" : skillName;
-                })
-                .toList();
-        if (skills.isEmpty()) {
-            return "No verified skills recorded yet";
-        }
-        return String.join(" • ", skills);
     }
 
     private String computeDisplayStatus(PerformanceReview review) {
