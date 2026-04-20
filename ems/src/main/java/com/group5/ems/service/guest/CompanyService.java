@@ -34,8 +34,25 @@ public class CompanyService {
     }
 
     // ─── All entries (admin) ─────────────────────────────────────────
+    // Order: NEWS entries (newest updatedAt first) → CONFIG entries (special keys) at bottom
+    private static final java.util.Set<String> SPECIAL_KEYS_SET = java.util.Set.of(
+            "hero_title", "hero_subtitle",
+            "stats_employees", "stats_offices", "stats_founded", "stats_rating",
+            "cta_title", "cta_subtitle");
+
     public List<CompanyInfo> getAllCompanyInfo() {
-        return companyInfoRepository.findAll();
+        return companyInfoRepository.findAll()
+                .stream()
+                .sorted(java.util.Comparator
+                        // config keys go to the bottom (isConfig → 1, news → 0)
+                        .<CompanyInfo, Integer>comparing(
+                                c -> SPECIAL_KEYS_SET.contains(c.getInfoKey()) ? 1 : 0)
+                        // within each group: newest updatedAt first
+                        .thenComparing(
+                                c -> c.getUpdatedAt() != null ? c.getUpdatedAt()
+                                        : java.time.LocalDateTime.MIN,
+                                java.util.Comparator.reverseOrder()))
+                .toList();
     }
 
     // ─── Lấy theo key ────────────────────────────────────────────────

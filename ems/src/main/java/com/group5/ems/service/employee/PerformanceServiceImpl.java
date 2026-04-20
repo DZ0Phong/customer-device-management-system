@@ -2,11 +2,7 @@ package com.group5.ems.service.employee;
 
 import com.group5.ems.dto.response.PerformanceReviewDTO;
 import com.group5.ems.dto.response.PerformanceSummaryDTO;
-import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.PerformanceReview;
-import com.group5.ems.repository.EmployeeKpiRepository;
-import com.group5.ems.repository.EmployeeRepository;
-import com.group5.ems.repository.EmployeeSkillRepository;
 import com.group5.ems.repository.PerformanceReviewRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -22,9 +18,6 @@ import java.util.stream.Collectors;
 public class PerformanceServiceImpl implements PerformanceService {
 
     private final PerformanceReviewRepository reviewRepository;
-    private final EmployeeRepository employeeRepository;
-    private final EmployeeKpiRepository kpiRepository;
-    private final EmployeeSkillRepository employeeSkillRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -40,21 +33,10 @@ public class PerformanceServiceImpl implements PerformanceService {
             previousRating = reviews.get(1).getPerformanceScore();
         }
 
-        long kpisTotal = kpiRepository.findByEmployeeId(employeeId).size();
-        long kpisMet = kpiRepository.findByEmployeeId(employeeId).stream()
-                .filter(kpi -> "COMPLETED".equalsIgnoreCase(kpi.getStatus()))
-                .count();
-
-        Employee employee = employeeRepository.findById(employeeId).orElse(null);
-        int skillsCount = employee != null ? employeeSkillRepository.findByEmployeeId(employee.getId()).size() : 0;
-
         return PerformanceSummaryDTO.builder()
                 .currentRating(currentRating)
                 .previousRating(previousRating)
                 .totalReviews(reviews.size())
-                .kpisMet((int) kpisMet)
-                .kpisTotal((int) kpisTotal)
-                .skillsCount(skillsCount)
                 .build();
     }
 

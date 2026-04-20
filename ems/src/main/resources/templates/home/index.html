@@ -862,14 +862,19 @@
         <h2 class="section-title">Latest News &amp; Announcements</h2>
         <p class="section-sub">Stay up to date with what's happening at EMS Pro</p>
         <div class="news-grid">
-          <div th:each="info,idx : ${companyNews}" class="news-card">
-            <div th:if="${info.hasImage()}" class="news-card-img" style="padding:0; overflow:hidden;">
-              <img th:src="@{/admin/company-info/image/{id}(id=${info.id})}" th:alt="${info.title}" style="width:100%; height:100%; object-fit:cover; display:block;
-                          transition: transform .3s ease;" onmouseover="this.style.transform='scale(1.04)'"
-                onmouseout="this.style.transform='scale(1)'" />
-            </div>
+          <!-- News đã được sắp xếp mới nhất lên trước từ controller -->
+          <div th:each="info,idx : ${companyNews}" class="news-card" th:attr="data-id=${info.id},
+                        data-title=${info.title},
+                        data-content=${info.content},
+                        data-key=${info.infoKey},
+                        data-date=${#temporals.format(info.updatedAt,'dd MMM yyyy')},
+                        data-has-img=${info.hasImage()}" onclick="openNewsModal(this)">
 
-            <!-- Fallback: gradient placeholder -->
+            <div th:if="${info.hasImage()}" class="news-card-img" style="padding:0;overflow:hidden;">
+              <img th:src="@{/admin/company-info/image/{id}(id=${info.id})}" th:alt="${info.title}"
+                style="width:100%;height:100%;object-fit:cover;display:block;transition:transform .3s ease;"
+                onmouseover="this.style.transform='scale(1.04)'" onmouseout="this.style.transform='scale(1)'" />
+            </div>
             <div th:unless="${info.hasImage()}" class="news-card-img"
               th:classappend="${idx.index % 3 == 0 ? 'bg1' : (idx.index % 3 == 1 ? 'bg2' : 'bg3')}">
               <span class="material-symbols-outlined fill-icon"
@@ -884,11 +889,202 @@
                 <span class="material-symbols-outlined" style="font-size:14px">calendar_month</span>
                 <span th:text="${#temporals.format(info.updatedAt,'MMM yyyy')}">Jan 2025</span>
               </div>
+              <div style="margin-top:10px;font-size:12px;font-weight:600;color:var(--primary);
+                          display:flex;align-items:center;gap:4px;">
+                Read more
+                <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+              </div>
             </div>
           </div>
         </div>
       </div>
     </section>
+
+    <!-- ── NEWS MODAL ────────────────────────────────────────── -->
+    <div id="newsModal" class="news-modal-overlay" onclick="closeNewsModal(event)">
+      <div class="news-modal-box">
+        <button class="news-modal-close" onclick="closeNewsModalDirect()">
+          <span class="material-symbols-outlined">close</span>
+        </button>
+        <div id="newsModalImg" class="news-modal-img" style="display:none;">
+          <img id="newsModalImgEl" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </div>
+        <div id="newsModalImgPlaceholder" class="news-modal-img-placeholder" style="display:none;">
+          <span class="material-symbols-outlined fill-icon"
+            style="font-size:56px;opacity:.25;color:var(--primary)">newspaper</span>
+        </div>
+        <div class="news-modal-body">
+          <span id="newsModalTag" class="news-tag" style="margin-bottom:12px;display:inline-block;">Tag</span>
+          <h2 id="newsModalTitle" style="font-size:20px;font-weight:800;margin-bottom:10px;line-height:1.35;">Title</h2>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;">
+            <span class="material-symbols-outlined" style="font-size:14px;color:var(--text-muted)">calendar_month</span>
+            <span id="newsModalDate" style="font-size:12px;color:var(--text-muted);">Date</span>
+          </div>
+          <div id="newsModalContent"
+            style="font-size:14px;color:var(--text-mid);line-height:1.85;white-space:pre-wrap;max-height:320px;overflow-y:auto;padding-right:4px;">
+            Content
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <style>
+      /* News modal */
+      .news-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .52);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: modalFadeIn .2s ease;
+      }
+
+      .news-modal-overlay.open {
+        display: flex;
+      }
+
+      @keyframes modalFadeIn {
+        from {
+          opacity: 0
+        }
+
+        to {
+          opacity: 1
+        }
+      }
+
+      @keyframes modalSlideUp {
+        from {
+          opacity: 0;
+          transform: translateY(24px)
+        }
+
+        to {
+          opacity: 1;
+          transform: translateY(0)
+        }
+      }
+
+      .news-modal-box {
+        background: white;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 640px;
+        overflow: hidden;
+        position: relative;
+        animation: modalSlideUp .25s ease;
+        box-shadow: 0 24px 64px -12px rgba(0, 0, 0, .35);
+      }
+
+      .news-modal-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0, 0, 0, .08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: background .15s;
+      }
+
+      .news-modal-close:hover {
+        background: rgba(0, 0, 0, .16);
+      }
+
+      .news-modal-img {
+        height: 200px;
+        overflow: hidden;
+      }
+
+      .news-modal-img-placeholder {
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--primary-light), #ddd6fe);
+      }
+
+      .news-modal-body {
+        padding: 24px 28px 28px;
+      }
+
+      /* Scrollbar inside modal content */
+      #newsModalContent::-webkit-scrollbar {
+        width: 4px;
+      }
+
+      #newsModalContent::-webkit-scrollbar-track {
+        background: transparent;
+      }
+
+      #newsModalContent::-webkit-scrollbar-thumb {
+        background: var(--border);
+        border-radius: 99px;
+      }
+
+      /* Cursor pointer on news cards */
+      .news-card {
+        cursor: pointer;
+      }
+    </style>
+
+    <script>
+      function openNewsModal(card) {
+        var id = card.getAttribute('data-id');
+        var title = card.getAttribute('data-title');
+        var content = card.getAttribute('data-content');
+        var key = card.getAttribute('data-key');
+        var date = card.getAttribute('data-date');
+        var hasImg = card.getAttribute('data-has-img') === 'true';
+
+        document.getElementById('newsModalTitle').textContent = title;
+        document.getElementById('newsModalContent').textContent = content;
+        document.getElementById('newsModalTag').textContent = key;
+        document.getElementById('newsModalDate').textContent = date;
+
+        var imgDiv = document.getElementById('newsModalImg');
+        var placeholderDiv = document.getElementById('newsModalImgPlaceholder');
+        var imgEl = document.getElementById('newsModalImgEl');
+
+        if (hasImg) {
+          imgEl.src = '/admin/company-info/image/' + id;
+          imgEl.alt = title;
+          imgDiv.style.display = 'block';
+          placeholderDiv.style.display = 'none';
+        } else {
+          imgDiv.style.display = 'none';
+          placeholderDiv.style.display = 'flex';
+        }
+
+        document.getElementById('newsModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeNewsModal(event) {
+        if (event.target === document.getElementById('newsModal')) {
+          closeNewsModalDirect();
+        }
+      }
+
+      function closeNewsModalDirect() {
+        document.getElementById('newsModal').classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeNewsModalDirect();
+      });
+    </script>
 
     <!-- ── FEATURED JOBS ─────────────────────────────────────── -->
     <section class="jobs-preview">

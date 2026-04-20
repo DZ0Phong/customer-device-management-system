@@ -29,7 +29,6 @@ public class PerformanceReview {
     @Column(name = "potential_score", nullable = false, precision = 3, scale = 2)
     private BigDecimal potentialScore;
 
-
     @Column(name = "strengths", columnDefinition = "TEXT")
     private String strengths;
 

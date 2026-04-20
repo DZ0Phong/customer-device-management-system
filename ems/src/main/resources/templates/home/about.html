@@ -1,235 +1,912 @@
 <!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org"
-      th:replace="~{home/layout :: layout('About Us', ~{::content}, 'about')}">
+  th:replace="~{home/layout :: layout('About Us', ~{::content}, 'about')}">
+
 <body>
-<th:block th:fragment="content">
-<style>
-  @keyframes fadeUp{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
-  .anim-1{animation:fadeUp .6s ease both .05s}.anim-2{animation:fadeUp .6s ease both .15s}
-  .anim-3{animation:fadeUp .6s ease both .25s}.anim-4{animation:fadeUp .6s ease both .35s}
+  <th:block th:fragment="content">
+    <style>
+      @keyframes fadeUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px)
+        }
 
-  .page-hero {
-    background:linear-gradient(135deg,#1414b8,#4f46e5);
-    padding:52px 24px 120px; position:relative; overflow:hidden;
-  }
-  .page-hero::before { content:''; position:absolute; inset:0; background-image:radial-gradient(circle,rgba(255,255,255,.06) 1px,transparent 1px); background-size:24px 24px; }
-  .page-hero::after  { content:''; position:absolute; bottom:-2px; left:0; right:0; height:80px; background:var(--bg-light); clip-path:ellipse(60% 100% at 50% 100%); }
-  .page-hero-inner   { max-width:1200px; margin:0 auto; position:relative; z-index:1; color:white; }
-  .breadcrumb { display:flex; align-items:center; gap:6px; font-size:12px; color:rgba(255,255,255,.6); margin-bottom:16px; }
-  .breadcrumb a { color:rgba(255,255,255,.6); text-decoration:none; } .breadcrumb a:hover { color:white; }
+        to {
+          opacity: 1;
+          transform: translateY(0)
+        }
+      }
 
-  .section { max-width:1200px; margin:0 auto; padding:64px 24px; }
-  .section-eyebrow { font-size:12px; font-weight:700; color:var(--primary); text-transform:uppercase; letter-spacing:2px; margin-bottom:6px; }
-  .section-title { font-size:26px; font-weight:800; margin-bottom:6px; }
-  .section-sub { font-size:14px; color:var(--text-muted); margin-bottom:36px; }
+      .anim-1 {
+        animation: fadeUp .6s ease both .05s
+      }
 
-  /* Intro */
-  .intro-wrap { display:grid; grid-template-columns:1fr 1fr; gap:48px; align-items:center; }
-  .intro-visual {
-    border-radius:20px; overflow:hidden; position:relative;
-    background:linear-gradient(135deg,var(--primary-light),#ddd6fe);
-    min-height:320px; display:flex; align-items:center; justify-content:center;
-  }
-  .intro-icon-big { width:90px; height:90px; border-radius:22px; background:var(--primary); margin:0 auto 18px; display:flex; align-items:center; justify-content:center; color:white; box-shadow:0 10px 28px -6px #1414b870; }
-  .intro-text p { font-size:15px; color:var(--text-mid); line-height:1.85; margin-bottom:14px; }
-  .perks-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-top:24px; }
-  .perk-card { display:flex; align-items:center; gap:12px; background:white; border:1px solid var(--border); padding:14px 16px; border-radius:14px; transition:all .18s; }
-  .perk-card:hover { border-color:var(--primary); background:var(--primary-light); }
-  .perk-icon { width:36px; height:36px; border-radius:10px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; flex-shrink:0; transition:all .18s; }
-  .perk-card:hover .perk-icon { background:var(--primary); color:white; }
-  .perk-label { font-size:13px; font-weight:600; }
+      .anim-2 {
+        animation: fadeUp .6s ease both .15s
+      }
 
-  /* Stats */
-  .stats-section { background:white; border-top:1px solid var(--border); border-bottom:1px solid var(--border); }
-  .stats-grid { max-width:1200px; margin:0 auto; padding:40px 24px; display:grid; grid-template-columns:repeat(4,1fr); gap:24px; text-align:center; }
-  .stat-card { padding:20px; }
-  .stat-num { font-family:'Sora',sans-serif; font-size:36px; font-weight:800; color:var(--primary); margin-bottom:6px; }
-  .stat-label { font-size:13px; color:var(--text-muted); }
+      .anim-3 {
+        animation: fadeUp .6s ease both .25s
+      }
 
-  /* Values */
-  .values-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:20px; }
-  .value-card { background:white; border-radius:16px; border:1px solid var(--border); padding:28px; transition:all .2s; }
-  .value-card:hover { transform:translateY(-4px); box-shadow:0 12px 32px -8px #1414b820; border-color:var(--primary); }
-  .value-icon { width:52px; height:52px; border-radius:14px; background:var(--primary-light); color:var(--primary); display:flex; align-items:center; justify-content:center; margin-bottom:16px; }
-  .value-card h3 { font-size:15px; font-weight:700; margin-bottom:8px; }
-  .value-card p  { font-size:13px; color:var(--text-mid); line-height:1.7; }
+      .anim-4 {
+        animation: fadeUp .6s ease both .35s
+      }
 
-  /* Team */
-  .team-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(200px,1fr)); gap:20px; }
-  .team-card { background:white; border-radius:16px; border:1px solid var(--border); padding:24px; text-align:center; transition:all .2s; }
-  .team-card:hover { transform:translateY(-3px); box-shadow:0 10px 28px -8px #1414b820; }
-  .team-avatar { width:70px; height:70px; border-radius:50%; background:linear-gradient(135deg,var(--primary),var(--accent)); margin:0 auto 14px; display:flex; align-items:center; justify-content:center; color:white; font-family:'Sora',sans-serif; font-size:22px; font-weight:800; }
-  .team-name  { font-size:15px; font-weight:700; margin-bottom:4px; }
-  .team-role  { font-size:12px; color:var(--text-muted); }
+      .page-hero {
+        background: linear-gradient(135deg, #1414b8, #4f46e5);
+        padding: 52px 24px 120px;
+        position: relative;
+        overflow: hidden;
+      }
 
-  /* Company info from DB */
-  .info-card { background:white; border-radius:16px; border:1px solid var(--border); padding:28px; margin-bottom:20px; }
-  .info-card h3 { font-size:16px; font-weight:700; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
-  .info-card h3 span { color:var(--primary); }
-  .info-card .content { font-size:14px; color:var(--text-mid); line-height:1.8; white-space:pre-wrap; }
+      .page-hero::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        background-image: radial-gradient(circle, rgba(255, 255, 255, .06) 1px, transparent 1px);
+        background-size: 24px 24px;
+      }
 
-  @media(max-width:900px) { .intro-wrap{grid-template-columns:1fr} .intro-visual{display:none} .values-grid{grid-template-columns:1fr 1fr} .stats-grid{grid-template-columns:repeat(2,1fr)} }
-  @media(max-width:600px) { .values-grid{grid-template-columns:1fr} .perks-grid{grid-template-columns:1fr} }
-</style>
+      .page-hero::after {
+        content: '';
+        position: absolute;
+        bottom: -2px;
+        left: 0;
+        right: 0;
+        height: 80px;
+        background: var(--bg-light);
+        clip-path: ellipse(60% 100% at 50% 100%);
+      }
 
-<!-- ── PAGE HERO ──────────────────────────────────────────── -->
-<div class="page-hero">
-  <div class="page-hero-inner">
-    <div class="breadcrumb">
-      <a th:href="@{/home}">Home</a>
-      <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
-      <span>About Us</span>
+      .page-hero-inner {
+        max-width: 1200px;
+        margin: 0 auto;
+        position: relative;
+        z-index: 1;
+        color: white;
+      }
+
+      .breadcrumb {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+        color: rgba(255, 255, 255, .6);
+        margin-bottom: 16px;
+      }
+
+      .breadcrumb a {
+        color: rgba(255, 255, 255, .6);
+        text-decoration: none;
+      }
+
+      .breadcrumb a:hover {
+        color: white;
+      }
+
+      .section {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 64px 24px;
+      }
+
+      .section-eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        color: var(--primary);
+        text-transform: uppercase;
+        letter-spacing: 2px;
+        margin-bottom: 6px;
+      }
+
+      .section-title {
+        font-size: 26px;
+        font-weight: 800;
+        margin-bottom: 6px;
+      }
+
+      .section-sub {
+        font-size: 14px;
+        color: var(--text-muted);
+        margin-bottom: 36px;
+      }
+
+      /* Intro */
+      .intro-wrap {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 48px;
+        align-items: center;
+      }
+
+      .intro-visual {
+        border-radius: 20px;
+        overflow: hidden;
+        position: relative;
+        background: linear-gradient(135deg, var(--primary-light), #ddd6fe);
+        min-height: 320px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .intro-icon-big {
+        width: 90px;
+        height: 90px;
+        border-radius: 22px;
+        background: var(--primary);
+        margin: 0 auto 18px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        box-shadow: 0 10px 28px -6px #1414b870;
+      }
+
+      .intro-text p {
+        font-size: 15px;
+        color: var(--text-mid);
+        line-height: 1.85;
+        margin-bottom: 14px;
+      }
+
+      .perks-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+        margin-top: 24px;
+      }
+
+      .perk-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        background: white;
+        border: 1px solid var(--border);
+        padding: 14px 16px;
+        border-radius: 14px;
+        transition: all .18s;
+      }
+
+      .perk-card:hover {
+        border-color: var(--primary);
+        background: var(--primary-light);
+      }
+
+      .perk-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 10px;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        transition: all .18s;
+      }
+
+      .perk-card:hover .perk-icon {
+        background: var(--primary);
+        color: white;
+      }
+
+      .perk-label {
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      /* Stats */
+      .stats-section {
+        background: white;
+        border-top: 1px solid var(--border);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .stats-grid {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 40px 24px;
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 24px;
+        text-align: center;
+      }
+
+      .stat-card {
+        padding: 20px;
+      }
+
+      .stat-num {
+        font-family: 'Sora', sans-serif;
+        font-size: 36px;
+        font-weight: 800;
+        color: var(--primary);
+        margin-bottom: 6px;
+      }
+
+      .stat-label {
+        font-size: 13px;
+        color: var(--text-muted);
+      }
+
+      /* Values */
+      .values-grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 20px;
+      }
+
+      .value-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 28px;
+        transition: all .2s;
+      }
+
+      .value-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 12px 32px -8px #1414b820;
+        border-color: var(--primary);
+      }
+
+      .value-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 14px;
+        background: var(--primary-light);
+        color: var(--primary);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin-bottom: 16px;
+      }
+
+      .value-card h3 {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 8px;
+      }
+
+      .value-card p {
+        font-size: 13px;
+        color: var(--text-mid);
+        line-height: 1.7;
+      }
+
+      /* Team */
+      .team-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+      }
+
+      .team-card {
+        background: white;
+        border-radius: 16px;
+        border: 1px solid var(--border);
+        padding: 24px;
+        text-align: center;
+        transition: all .2s;
+      }
+
+      .team-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 28px -8px #1414b820;
+      }
+
+      .team-avatar {
+        width: 70px;
+        height: 70px;
+        border-radius: 50%;
+        background: linear-gradient(135deg, var(--primary), var(--accent));
+        margin: 0 auto 14px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-family: 'Sora', sans-serif;
+        font-size: 22px;
+        font-weight: 800;
+      }
+
+      .team-name {
+        font-size: 15px;
+        font-weight: 700;
+        margin-bottom: 4px;
+      }
+
+      .team-role {
+        font-size: 12px;
+        color: var(--text-muted);
+      }
+
+      /* Company info from DB - redesigned */
+      .db-info-section {
+        padding: 64px 24px;
+      }
+
+      .db-info-header {
+        text-align: center;
+        margin-bottom: 48px;
+      }
+
+      .db-info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+        gap: 24px;
+      }
+
+      .db-info-card {
+        background: white;
+        border-radius: 20px;
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: all .22s;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .db-info-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 40px -10px #1414b825;
+        border-color: #c7d2fe;
+      }
+
+      .db-info-card-img {
+        height: 180px;
+        overflow: hidden;
+        flex-shrink: 0;
+        background: linear-gradient(135deg, var(--primary-light), #ddd6fe);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .db-info-card-img img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+        transition: transform .35s ease;
+      }
+
+      .db-info-card:hover .db-info-card-img img {
+        transform: scale(1.05);
+      }
+
+      .db-info-card-body {
+        padding: 22px 24px 24px;
+        flex: 1;
+      }
+
+      .db-info-card-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 11px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+        margin-bottom: 10px;
+      }
+
+      .db-info-card-title {
+        font-size: 16px;
+        font-weight: 700;
+        margin-bottom: 10px;
+        line-height: 1.35;
+        color: var(--text-dark, #111);
+      }
+
+      .db-info-card-content {
+        font-size: 13px;
+        color: var(--text-mid);
+        line-height: 1.8;
+        white-space: pre-wrap;
+      }
+
+      /* Collapsed long content with expand */
+      .db-info-card-content.collapsed {
+        display: -webkit-box;
+        -webkit-line-clamp: 5;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+      }
+
+      .db-info-expand-btn {
+        margin-top: 10px;
+        background: none;
+        border: none;
+        color: var(--primary);
+        font-size: 12px;
+        font-weight: 600;
+        cursor: pointer;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        gap: 3px;
+      }
+
+      .db-info-expand-btn:hover {
+        text-decoration: underline;
+      }
+
+      .db-info-empty {
+        text-align: center;
+        padding: 64px 24px;
+        color: var(--text-muted);
+      }
+
+      @media(max-width:600px) {
+        .db-info-grid {
+          grid-template-columns: 1fr;
+        }
+      }
+
+      @media(max-width:900px) {
+        .intro-wrap {
+          grid-template-columns: 1fr
+        }
+
+        .intro-visual {
+          display: none
+        }
+
+        .values-grid {
+          grid-template-columns: 1fr 1fr
+        }
+
+        .stats-grid {
+          grid-template-columns: repeat(2, 1fr)
+        }
+      }
+
+      @media(max-width:600px) {
+        .values-grid {
+          grid-template-columns: 1fr
+        }
+
+        .perks-grid {
+          grid-template-columns: 1fr
+        }
+      }
+    </style>
+
+    <!-- ── PAGE HERO ──────────────────────────────────────────── -->
+    <div class="page-hero">
+      <div class="page-hero-inner">
+        <div class="breadcrumb">
+          <a th:href="@{/home}">Home</a>
+          <span class="material-symbols-outlined" style="font-size:14px">chevron_right</span>
+          <span>About Us</span>
+        </div>
+        <h1 style="animation:fadeUp .5s ease both;">About EMS Pro</h1>
+        <p style="animation:fadeUp .5s ease both .1s;color:rgba(255,255,255,.75);font-size:15px;max-width:500px;">
+          Learn about our mission, values, and the people who make EMS Pro an exceptional place to work.
+        </p>
+      </div>
     </div>
-    <h1 style="animation:fadeUp .5s ease both;">About EMS Pro</h1>
-    <p style="animation:fadeUp .5s ease both .1s;color:rgba(255,255,255,.75);font-size:15px;max-width:500px;">
-      Learn about our mission, values, and the people who make EMS Pro an exceptional place to work.
-    </p>
-  </div>
-</div>
 
-<!-- ── INTRO SECTION ────────────────────────────────────── -->
-<section>
-  <div class="section">
-    <div class="intro-wrap">
-      <div class="intro-visual anim-1">
-        <div style="text-align:center;padding:40px;">
-          <div class="intro-icon-big">
-            <span class="material-symbols-outlined fill-icon" style="font-size:42px">corporate_fare</span>
+    <!-- ── INTRO SECTION ────────────────────────────────────── -->
+    <section>
+      <div class="section">
+        <div class="intro-wrap">
+          <div class="intro-visual anim-1">
+            <div style="text-align:center;padding:40px;">
+              <div class="intro-icon-big">
+                <span class="material-symbols-outlined fill-icon" style="font-size:42px">corporate_fare</span>
+              </div>
+              <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;color:var(--primary);">EMS Pro
+              </div>
+              <div style="font-size:13px;color:var(--text-mid);margin-top:6px;">Building the future of work</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
+                <div style="background:white;border-radius:10px;padding:12px;">
+                  <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--primary);">500+
+                  </div>
+                  <div style="font-size:11px;color:var(--text-muted);">Employees</div>
+                </div>
+                <div style="background:white;border-radius:10px;padding:12px;">
+                  <div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--primary);">2020
+                  </div>
+                  <div style="font-size:11px;color:var(--text-muted);">Founded</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <div style="font-family:'Sora',sans-serif;font-size:24px;font-weight:800;color:var(--primary);">EMS Pro</div>
-          <div style="font-size:13px;color:var(--text-mid);margin-top:6px;">Building the future of work</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px;">
-            <div style="background:white;border-radius:10px;padding:12px;"><div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--primary);">500+</div><div style="font-size:11px;color:var(--text-muted);">Employees</div></div>
-            <div style="background:white;border-radius:10px;padding:12px;"><div style="font-family:'Sora',sans-serif;font-size:20px;font-weight:800;color:var(--primary);">2020</div><div style="font-size:11px;color:var(--text-muted);">Founded</div></div>
+          <div class="intro-text anim-2">
+            <p class="section-eyebrow">Who We Are</p>
+            <h2 class="section-title">A Place Where Great<br />Careers Are Built</h2>
+            <p>EMS Pro is a leading human resource management company dedicated to empowering both businesses and
+              employees. We believe that the right talent in the right role creates extraordinary outcomes.</p>
+            <p>Our culture is built on innovation, inclusion, and continuous growth. We invest heavily in our people
+              through mentorship programs, competitive packages, and a supportive work environment.</p>
+
+            <div class="perks-grid">
+              <div class="perk-card">
+                <div class="perk-icon"><span class="material-symbols-outlined fill-icon">health_and_safety</span></div>
+                <span class="perk-label">Health &amp; Wellness</span>
+              </div>
+              <div class="perk-card">
+                <div class="perk-icon"><span class="material-symbols-outlined fill-icon">school</span></div><span
+                  class="perk-label">Learning Budget</span>
+              </div>
+              <div class="perk-card">
+                <div class="perk-icon"><span class="material-symbols-outlined fill-icon">home_work</span></div><span
+                  class="perk-label">Remote Friendly</span>
+              </div>
+              <div class="perk-card">
+                <div class="perk-icon"><span class="material-symbols-outlined fill-icon">volunteer_activism</span></div>
+                <span class="perk-label">Great Benefits</span>
+              </div>
+            </div>
           </div>
         </div>
       </div>
-      <div class="intro-text anim-2">
-        <p class="section-eyebrow">Who We Are</p>
-        <h2 class="section-title">A Place Where Great<br/>Careers Are Built</h2>
-        <p>EMS Pro is a leading human resource management company dedicated to empowering both businesses and employees. We believe that the right talent in the right role creates extraordinary outcomes.</p>
-        <p>Our culture is built on innovation, inclusion, and continuous growth. We invest heavily in our people through mentorship programs, competitive packages, and a supportive work environment.</p>
+    </section>
 
-        <!-- Dynamic content from CompanyInfo DB -->
-        <div th:each="info : ${companyInfoList}" class="info-card" style="margin-top:20px;padding:20px;">
-          <h3><span class="material-symbols-outlined fill-icon" style="font-size:18px">info</span> <span th:text="${info.title}">Section</span></h3>
-          <div class="content" th:text="${info.content}">Content</div>
+    <!-- ── COMPANY INFO FROM DB ──────────────────────────────── -->
+    <section th:if="${!#lists.isEmpty(companyInfoList)}"
+      style="background:var(--bg-light);border-top:1px solid var(--border);">
+      <div class="section" style="padding-bottom:64px;">
+        <p class="section-eyebrow">Company Info</p>
+        <h2 class="section-title">What We Share With You</h2>
+        <p class="section-sub">Latest policies, values, and updates from EMS Pro</p>
+
+        <div class="db-info-grid">
+          <div th:each="info : ${companyInfoList}"
+            class="db-info-card news-card"
+            th:attr="
+              data-id=${info.id},
+              data-title=${info.title},
+              data-content=${info.content},
+              data-key=${info.infoKey},
+              data-date=${info.updatedAt != null ? #temporals.format(info.updatedAt,'dd/MM/yyyy') : ''},
+              data-has-img=${info.hasImage()}"
+            onclick="openNewsModal(this)">
+
+            <!-- Image nếu có -->
+            <div th:if="${info.hasImage()}" class="db-info-card-img">
+              <img th:src="@{/admin/company-info/image/{id}(id=${info.id})}" th:alt="${info.title}" />
+            </div>
+            <!-- Placeholder gradient nếu không có ảnh -->
+            <div th:unless="${info.hasImage()}" class="db-info-card-img">
+              <span class="material-symbols-outlined fill-icon"
+                style="font-size:48px;opacity:.25;color:var(--primary)">article</span>
+            </div>
+
+            <div class="db-info-card-body">
+              <span class="db-info-card-tag">
+                <span class="material-symbols-outlined" style="font-size:12px">label</span>
+                <span th:text="${info.infoKey}">key</span>
+              </span>
+              <div class="db-info-card-title" th:text="${info.title}">Title</div>
+              <div class="db-info-card-content collapsed" th:text="${info.content}">Content</div>
+              <span style="margin-top:10px;display:inline-flex;align-items:center;gap:3px;font-size:12px;font-weight:600;color:var(--primary);">
+                Read more <span class="material-symbols-outlined" style="font-size:14px">arrow_forward</span>
+              </span>
+            </div>
+          </div>
         </div>
 
-        <div class="perks-grid">
-          <div class="perk-card"><div class="perk-icon"><span class="material-symbols-outlined fill-icon">health_and_safety</span></div><span class="perk-label">Health &amp; Wellness</span></div>
-          <div class="perk-card"><div class="perk-icon"><span class="material-symbols-outlined fill-icon">school</span></div><span class="perk-label">Learning Budget</span></div>
-          <div class="perk-card"><div class="perk-icon"><span class="material-symbols-outlined fill-icon">home_work</span></div><span class="perk-label">Remote Friendly</span></div>
-          <div class="perk-card"><div class="perk-icon"><span class="material-symbols-outlined fill-icon">volunteer_activism</span></div><span class="perk-label">Great Benefits</span></div>
+        <div th:if="${#lists.isEmpty(companyInfoList)}" class="db-info-empty">
+          <span class="material-symbols-outlined"
+            style="font-size:48px;display:block;margin-bottom:12px;opacity:.3">info</span>
+          No company information available yet.
+        </div>
+      </div>
+    </section>
+
+    <!-- ── NEWS MODAL (reused for Company Info) ──────────────── -->
+    <div class="news-modal-overlay" id="newsModal" onclick="closeNewsModal(event)">
+      <div class="news-modal-box">
+        <button class="news-modal-close" onclick="closeNewsModalDirect()">
+          <span class="material-symbols-outlined" style="font-size:18px">close</span>
+        </button>
+        <div id="newsModalImg" class="news-modal-img" style="display:none;">
+          <img id="newsModalImgEl" src="" alt="" style="width:100%;height:100%;object-fit:cover;display:block;" />
+        </div>
+        <div id="newsModalImgPlaceholder" class="news-modal-img-placeholder">
+          <span class="material-symbols-outlined fill-icon" style="font-size:52px;color:var(--primary);opacity:.3">article</span>
+        </div>
+        <div class="news-modal-body">
+          <span id="newsModalTag" class="news-tag" style="margin-bottom:12px;display:inline-block;">Tag</span>
+          <h2 id="newsModalTitle" style="font-size:20px;font-weight:800;margin-bottom:10px;line-height:1.35;">Title</h2>
+          <div style="display:flex;align-items:center;gap:6px;margin-bottom:18px;">
+            <span class="material-symbols-outlined" style="font-size:14px;color:var(--text-muted)">calendar_month</span>
+            <span id="newsModalDate" style="font-size:12px;color:var(--text-muted);">Date</span>
+          </div>
+          <div id="newsModalContent"
+            style="font-size:14px;color:var(--text-mid);line-height:1.85;white-space:pre-wrap;max-height:320px;overflow-y:auto;padding-right:4px;">
+            Content
+          </div>
         </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- ── STATS ─────────────────────────────────────────────── -->
-<div class="stats-section">
-  <div class="stats-grid">
-    <div class="stat-card"><div class="stat-num">500+</div><div class="stat-label">Employees Worldwide</div></div>
-    <div class="stat-card"><div class="stat-num">12</div><div class="stat-label">Global Offices</div></div>
-    <div class="stat-card"><div class="stat-num">2020</div><div class="stat-label">Founded</div></div>
-    <div class="stat-card"><div class="stat-num">4.8★</div><div class="stat-label">Employee Rating</div></div>
-  </div>
-</div>
+    <style>
+      /* News modal */
+      .news-modal-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, .52);
+        backdrop-filter: blur(4px);
+        z-index: 9999;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+        animation: modalFadeIn .2s ease;
+      }
 
-<!-- ── OUR VALUES ────────────────────────────────────────── -->
-<section style="background:white;border-top:1px solid var(--border);">
-  <div class="section">
-    <p class="section-eyebrow">Our Foundation</p>
-    <h2 class="section-title">Our Core Values</h2>
-    <p class="section-sub">The principles that guide every decision we make</p>
-    <div class="values-grid">
-      <div class="value-card anim-1">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">diversity_3</span></div>
-        <h3>Inclusivity</h3>
-        <p>We celebrate diverse backgrounds, perspectives, and experiences. Every voice is heard and valued at EMS Pro.</p>
-      </div>
-      <div class="value-card anim-2">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">lightbulb</span></div>
-        <h3>Innovation</h3>
-        <p>We constantly push boundaries and embrace change. Curiosity and experimentation are at the heart of everything we do.</p>
-      </div>
-      <div class="value-card anim-3">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">handshake</span></div>
-        <h3>Integrity</h3>
-        <p>Transparency, honesty, and ethical conduct define how we operate with our employees, clients, and partners.</p>
-      </div>
-      <div class="value-card anim-4">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">trending_up</span></div>
-        <h3>Growth</h3>
-        <p>We invest in the continuous development of our people, providing resources and opportunities to learn and advance.</p>
-      </div>
-      <div class="value-card" style="animation:fadeUp .6s ease both .45s;">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">groups</span></div>
-        <h3>Collaboration</h3>
-        <p>Great things happen when talented people work together. We foster a culture of teamwork and shared success.</p>
-      </div>
-      <div class="value-card" style="animation:fadeUp .6s ease both .55s;">
-        <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">star</span></div>
-        <h3>Excellence</h3>
-        <p>We hold ourselves to the highest standards in everything — from our products to how we treat each other.</p>
+      .news-modal-overlay.open {
+        display: flex;
+      }
+
+      @keyframes modalFadeIn {
+        from { opacity: 0 }
+        to { opacity: 1 }
+      }
+
+      @keyframes modalSlideUp {
+        from { opacity: 0; transform: translateY(24px) }
+        to { opacity: 1; transform: translateY(0) }
+      }
+
+      .news-modal-box {
+        background: white;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 640px;
+        overflow: hidden;
+        position: relative;
+        animation: modalSlideUp .25s ease;
+        box-shadow: 0 24px 64px -12px rgba(0, 0, 0, .35);
+      }
+
+      .news-modal-close {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        border: none;
+        background: rgba(0, 0, 0, .08);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        z-index: 10;
+        transition: background .15s;
+      }
+
+      .news-modal-close:hover {
+        background: rgba(0, 0, 0, .16);
+      }
+
+      .news-modal-img {
+        height: 200px;
+        overflow: hidden;
+      }
+
+      .news-modal-img-placeholder {
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: linear-gradient(135deg, var(--primary-light), #ddd6fe);
+      }
+
+      .news-modal-body {
+        padding: 24px 28px 28px;
+      }
+
+      .news-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 3px 11px;
+        border-radius: 99px;
+        font-size: 11px;
+        font-weight: 600;
+        background: var(--primary-light);
+        color: var(--primary);
+      }
+
+      #newsModalContent::-webkit-scrollbar { width: 4px; }
+      #newsModalContent::-webkit-scrollbar-track { background: transparent; }
+      #newsModalContent::-webkit-scrollbar-thumb { background: var(--border); border-radius: 99px; }
+
+      .db-info-card { cursor: pointer; }
+    </style>
+
+    <script>
+      function openNewsModal(card) {
+        var id = card.getAttribute('data-id');
+        var title = card.getAttribute('data-title');
+        var content = card.getAttribute('data-content');
+        var key = card.getAttribute('data-key');
+        var date = card.getAttribute('data-date');
+        var hasImg = card.getAttribute('data-has-img') === 'true';
+
+        document.getElementById('newsModalTitle').textContent = title;
+        document.getElementById('newsModalContent').textContent = content;
+        document.getElementById('newsModalTag').textContent = key;
+        document.getElementById('newsModalDate').textContent = date;
+
+        var imgDiv = document.getElementById('newsModalImg');
+        var placeholderDiv = document.getElementById('newsModalImgPlaceholder');
+        var imgEl = document.getElementById('newsModalImgEl');
+
+        if (hasImg) {
+          imgEl.src = '/admin/company-info/image/' + id;
+          imgEl.alt = title;
+          imgDiv.style.display = 'block';
+          placeholderDiv.style.display = 'none';
+        } else {
+          imgDiv.style.display = 'none';
+          placeholderDiv.style.display = 'flex';
+        }
+
+        document.getElementById('newsModal').classList.add('open');
+        document.body.style.overflow = 'hidden';
+      }
+
+      function closeNewsModal(event) {
+        if (event.target === document.getElementById('newsModal')) {
+          closeNewsModalDirect();
+        }
+      }
+
+      function closeNewsModalDirect() {
+        document.getElementById('newsModal').classList.remove('open');
+        document.body.style.overflow = '';
+      }
+
+      document.addEventListener('keydown', function (e) {
+        if (e.key === 'Escape') closeNewsModalDirect();
+      });
+    </script>
+
+    <!-- ── STATS ─────────────────────────────────────────────── -->
+    <div class="stats-section">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-num">500+</div>
+          <div class="stat-label">Employees Worldwide</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">12</div>
+          <div class="stat-label">Global Offices</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">2020</div>
+          <div class="stat-label">Founded</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-num">4.8★</div>
+          <div class="stat-label">Employee Rating</div>
+        </div>
       </div>
     </div>
-  </div>
-</section>
 
-<!-- ── LEADERSHIP TEAM ──────────────────────────────────── -->
-<section>
-  <div class="section">
-    <p class="section-eyebrow">Our People</p>
-    <h2 class="section-title">Leadership Team</h2>
-    <p class="section-sub">Meet the people steering EMS Pro's vision and growth</p>
-    <div class="team-grid">
-      <div class="team-card">
-        <div class="team-avatar">NA</div>
-        <div class="team-name">Nguyen Anh</div>
-        <div class="team-role">Chief Executive Officer</div>
+    <!-- ── OUR VALUES ────────────────────────────────────────── -->
+    <section style="background:white;border-top:1px solid var(--border);">
+      <div class="section">
+        <p class="section-eyebrow">Our Foundation</p>
+        <h2 class="section-title">Our Core Values</h2>
+        <p class="section-sub">The principles that guide every decision we make</p>
+        <div class="values-grid">
+          <div class="value-card anim-1">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon"
+                style="font-size:26px">diversity_3</span></div>
+            <h3>Inclusivity</h3>
+            <p>We celebrate diverse backgrounds, perspectives, and experiences. Every voice is heard and valued at EMS
+              Pro.</p>
+          </div>
+          <div class="value-card anim-2">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon"
+                style="font-size:26px">lightbulb</span></div>
+            <h3>Innovation</h3>
+            <p>We constantly push boundaries and embrace change. Curiosity and experimentation are at the heart of
+              everything we do.</p>
+          </div>
+          <div class="value-card anim-3">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon"
+                style="font-size:26px">handshake</span></div>
+            <h3>Integrity</h3>
+            <p>Transparency, honesty, and ethical conduct define how we operate with our employees, clients, and
+              partners.</p>
+          </div>
+          <div class="value-card anim-4">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon"
+                style="font-size:26px">trending_up</span></div>
+            <h3>Growth</h3>
+            <p>We invest in the continuous development of our people, providing resources and opportunities to learn and
+              advance.</p>
+          </div>
+          <div class="value-card" style="animation:fadeUp .6s ease both .45s;">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon"
+                style="font-size:26px">groups</span></div>
+            <h3>Collaboration</h3>
+            <p>Great things happen when talented people work together. We foster a culture of teamwork and shared
+              success.</p>
+          </div>
+          <div class="value-card" style="animation:fadeUp .6s ease both .55s;">
+            <div class="value-icon"><span class="material-symbols-outlined fill-icon" style="font-size:26px">star</span>
+            </div>
+            <h3>Excellence</h3>
+            <p>We hold ourselves to the highest standards in everything — from our products to how we treat each other.
+            </p>
+          </div>
+        </div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#0ea5e9,#6366f1)">TH</div>
-        <div class="team-name">Tran Hoa</div>
-        <div class="team-role">Chief Technology Officer</div>
+    </section>
+
+    <!-- ── LEADERSHIP TEAM ──────────────────────────────────── -->
+    <section>
+      <div class="section">
+        <p class="section-eyebrow">Our People</p>
+        <h2 class="section-title">Leadership Team</h2>
+        <p class="section-sub">Meet the people steering EMS Pro's vision and growth</p>
+        <div class="team-grid">
+          <div class="team-card">
+            <div class="team-avatar">NA</div>
+            <div class="team-name">Nguyen Anh</div>
+            <div class="team-role">Chief Executive Officer</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar" style="background:linear-gradient(135deg,#0ea5e9,#6366f1)">TH</div>
+            <div class="team-name">Tran Hoa</div>
+            <div class="team-role">Chief Technology Officer</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">LM</div>
+            <div class="team-name">Le Minh</div>
+            <div class="team-role">Head of Product</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar" style="background:linear-gradient(135deg,#10b981,#0ea5e9)">PT</div>
+            <div class="team-name">Pham Thu</div>
+            <div class="team-role">VP of Engineering</div>
+          </div>
+          <div class="team-card">
+            <div class="team-avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">VL</div>
+            <div class="team-name">Vu Lan</div>
+            <div class="team-role">Head of People &amp; Culture</div>
+          </div>
+        </div>
       </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#f59e0b,#ef4444)">LM</div>
-        <div class="team-name">Le Minh</div>
-        <div class="team-role">Head of Product</div>
-      </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#10b981,#0ea5e9)">PT</div>
-        <div class="team-name">Pham Thu</div>
-        <div class="team-role">VP of Engineering</div>
-      </div>
-      <div class="team-card">
-        <div class="team-avatar" style="background:linear-gradient(135deg,#8b5cf6,#ec4899)">VL</div>
-        <div class="team-name">Vu Lan</div>
-        <div class="team-role">Head of People &amp; Culture</div>
+    </section>
+
+    <!-- ── CTA ────────────────────────────────────────────────── -->
+    <div class="section" style="padding-top:0;">
+      <div
+        style="background:linear-gradient(135deg,#1414b8,#6366f1);border-radius:20px;padding:48px 40px;text-align:center;color:white;position:relative;overflow:hidden;">
+        <div
+          style="position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);background-size:22px 22px;">
+        </div>
+        <h2 style="font-size:28px;font-weight:800;margin-bottom:10px;position:relative;">Want to Join Our Team?</h2>
+        <p style="font-size:15px;color:rgba(255,255,255,.75);max-width:460px;margin:0 auto 28px;position:relative;">
+          Explore open roles and become part of a team that's shaping the future of human resources.</p>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;">
+          <a th:href="@{/home/jobs}"
+            style="display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;background:white;color:var(--primary);font-size:14px;font-weight:700;text-decoration:none;transition:all .2s;">
+            <span class="material-symbols-outlined">work</span> View Open Positions
+          </a>
+          <a th:href="@{/home/contact}"
+            style="display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:white;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;">
+            <span class="material-symbols-outlined">mail</span> Contact Us
+          </a>
+        </div>
       </div>
     </div>
-  </div>
-</section>
-
-<!-- ── CTA ────────────────────────────────────────────────── -->
-<div class="section" style="padding-top:0;">
-  <div style="background:linear-gradient(135deg,#1414b8,#6366f1);border-radius:20px;padding:48px 40px;text-align:center;color:white;position:relative;overflow:hidden;">
-    <div style="position:absolute;inset:0;background-image:radial-gradient(circle,rgba(255,255,255,.07) 1px,transparent 1px);background-size:22px 22px;"></div>
-    <h2 style="font-size:28px;font-weight:800;margin-bottom:10px;position:relative;">Want to Join Our Team?</h2>
-    <p style="font-size:15px;color:rgba(255,255,255,.75);max-width:460px;margin:0 auto 28px;position:relative;">Explore open roles and become part of a team that's shaping the future of human resources.</p>
-    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;position:relative;">
-      <a th:href="@{/home/jobs}" style="display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;background:white;color:var(--primary);font-size:14px;font-weight:700;text-decoration:none;transition:all .2s;">
-        <span class="material-symbols-outlined">work</span> View Open Positions
-      </a>
-      <a th:href="@{/home/contact}" style="display:inline-flex;align-items:center;gap:8px;padding:13px 26px;border-radius:12px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.3);color:white;font-size:14px;font-weight:600;text-decoration:none;transition:all .2s;">
-        <span class="material-symbols-outlined">mail</span> Contact Us
-      </a>
-    </div>
-  </div>
-</div>
-</th:block>
+  </th:block>
 </body>
+
 </html>
