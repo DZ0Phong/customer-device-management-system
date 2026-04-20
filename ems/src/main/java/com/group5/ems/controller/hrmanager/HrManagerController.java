@@ -48,7 +48,11 @@ public class HrManagerController {
         model.addAttribute("hiringData",         dashboardService.getHiringData());
         model.addAttribute("attritionData",      dashboardService.getAttritionData());
         model.addAttribute("upcomingEvents",     dashboardService.getUpcomingEvents());
-        model.addAttribute("recentActivities",   dashboardService.getRecentActivities(activityFilter));
+        
+        // Get pending non-attendance requests for HRM (same as request_approval)
+        model.addAttribute("recentActivities",   leaveApprovalService.getLeaveRequests("current", 1));
+        model.addAttribute("stats",              leaveApprovalService.getStats());
+        
         model.addAttribute("activityCategories", dashboardService.getActivityCategories());
         model.addAttribute("activityFilter",     activityFilter);
         model.addAttribute("activePage",         "dashboard");
