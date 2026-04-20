@@ -10,7 +10,6 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
     <script>
         tailwind.config = {
@@ -641,96 +640,130 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    
+    // Wait for window load to ensure Chart.js is fully loaded
+    window.addEventListener('load', function() {
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            return;
+        }
+        
+        console.log('Chart.js loaded, version:', Chart.version);
+        
+        // ── Chart.js: Hiring vs Attrition ─────────────────────────────────────────
+        // Data from backend (passed by Spring into model).
+        // Fallback sample data — prevents blank page before backend integration.
+        const chartLabels = /*[[${chartLabels}]]*/['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const hiringData = /*[[${hiringData}]]*/[45, 62, 38, 71, 55, 49];
+        const attritionData = /*[[${attritionData}]]*/[12, 18, 10, 22, 15, 20];
 
-    // ── Chart.js: Hiring vs Attrition ─────────────────────────────────────────
-    // Data from backend (passed by Spring into model).
-    // Fallback sample data — prevents blank page before backend integration.
-    const chartLabels = /*[[${chartLabels}]]*/['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const hiringData = /*[[${hiringData}]]*/[45, 62, 38, 71, 55, 49];
-    const attritionData = /*[[${attritionData}]]*/[12, 18, 10, 22, 15, 20];
+        console.log('Chart labels:', chartLabels);
+        console.log('Hiring data:', hiringData);
+        console.log('Attrition data:', attritionData);
 
-    // Detect dark mode for grid/text colors
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    const tickColor = isDark ? '#94a3b8' : '#64748b';
+        // Get canvas element
+        const canvas = document.getElementById('hiringAttritionChart');
+        if (!canvas) {
+            console.error('Canvas element not found');
+            return;
+        }
+        
+        console.log('Canvas found:', canvas);
 
-    const ctx = document.getElementById('hiringAttritionChart').getContext('2d');
+        // Detect dark mode for grid/text colors
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
 
-    // Gradient fill for Hiring line
-    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-    gradient.addColorStop(0, 'rgba(20,20,184,0.18)');
-    gradient.addColorStop(1, 'rgba(20,20,184,0)');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+            console.error('Could not get 2d context');
+            return;
+        }
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [
-                {
-                    label: 'Hiring',
-                    data: hiringData,
-                    borderColor: '#1414b8',
-                    backgroundColor: gradient,
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.45,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#1414b8',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointHoverRadius: 6,
+        // Gradient fill for Hiring line
+        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+        gradient.addColorStop(0, 'rgba(20,20,184,0.18)');
+        gradient.addColorStop(1, 'rgba(20,20,184,0)');
+
+        try {
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Hiring',
+                            data: hiringData,
+                            borderColor: '#1414b8',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.45,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#1414b8',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6,
+                        },
+                        {
+                            label: 'Attrition',
+                            data: attritionData,
+                            borderColor: '#94a3b8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.45,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#94a3b8',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6,
+                        }
+                    ]
                 },
-                {
-                    label: 'Attrition',
-                    data: attritionData,
-                    borderColor: '#94a3b8',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [6, 4],
-                    fill: false,
-                    tension: 0.45,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#94a3b8',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointHoverRadius: 6,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false }, // custom legend already present in HTML
-                tooltip: {
-                    backgroundColor: isDark ? '#1e293b' : '#fff',
-                    borderColor: isDark ? '#334155' : '#e2e8f0',
-                    borderWidth: 1,
-                    titleColor: isDark ? '#f1f5f9' : '#0f172a',
-                    bodyColor: isDark ? '#94a3b8' : '#475569',
-                    padding: 12,
-                    callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} `
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false }, // custom legend already present in HTML
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#fff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            titleColor: isDark ? '#f1f5f9' : '#0f172a',
+                            bodyColor: isDark ? '#94a3b8' : '#475569',
+                            padding: 12,
+                            callbacks: {
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} `
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: { color: tickColor, font: { family: 'Inter', size: 12, weight: '600' } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: {
+                                color: tickColor,
+                                font: { family: 'Inter', size: 12 },
+                                stepSize: 10,
+                                callback: val => val
+                            }
+                        }
                     }
                 }
-            },
-            scales: {
-                x: {
-                    grid: { color: gridColor, drawBorder: false },
-                    ticks: { color: tickColor, font: { family: 'Inter', size: 12, weight: '600' } }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: gridColor, drawBorder: false },
-                    ticks: {
-                        color: tickColor,
-                        font: { family: 'Inter', size: 12 },
-                        stepSize: 10,
-                        callback: val => val
-                    }
-                }
-            }
+            });
+            console.log('Chart initialized successfully:', chart);
+        } catch (error) {
+            console.error('Error initializing chart:', error);
         }
     });
 
@@ -762,38 +795,26 @@
     
     function filterActivityTable() {
         const searchValue = (document.getElementById('activity-search-input')?.value || '').toLowerCase();
-        const priorityValue = (document.getElementById('activity-priority-filter')?.value || '').toLowerCase();
+        const deptValue = (document.getElementById('activity-dept-filter')?.value || '').toLowerCase();
         
         const rows = document.querySelectorAll('.activity-row');
         rows.forEach(row => {
             const name = (row.dataset.name || '').toLowerCase();
-            const priority = (row.dataset.priority || 'normal').toLowerCase();
+            const dept = (row.dataset.dept || '').toLowerCase();
             
             const matchesSearch = !searchValue || name.includes(searchValue);
-            const matchesPriority = !priorityValue || priority === priorityValue;
+            const matchesDept = !deptValue || dept.includes(deptValue);
             
-            row.style.display = (matchesSearch && matchesPriority) ? '' : 'none';
+            row.style.display = (matchesSearch && matchesDept) ? '' : 'none';
         });
     }
     
     function clearActivityFilters() {
         document.getElementById('activity-search-input').value = '';
-        document.getElementById('activity-priority-filter').value = '';
+        document.getElementById('activity-dept-filter').value = '';
         filterActivityTable();
     }
                 const tab = this.dataset.tab;
-                if (tab) switchToTab(tab);
-            });
-        });
-        
-        // Add click event listeners to quick stat cards
-        document.querySelectorAll('[id^="quick-card-"]').forEach(card => {
-            card.addEventListener('click', function() {
-                const tab = this.id.replace('quick-card-', '');
-                if (tab) switchToTab(tab);
-            });
-        });
-    });
     
     // ══════════════════════════════════════════════════════════════════════════
     // APPROVE/REJECT ACTIONS (Legacy - kept for compatibility)
