@@ -808,6 +808,16 @@
                 }
             });
         });
+
+        // Auto-expand if viewId is present
+        const vid = '[[${viewId}]]';
+        if (vid && vid !== 'null' && vid.trim() !== '') {
+            setTimeout(() => {
+                toggleDetail(vid);
+                const row = document.getElementById('row-' + vid);
+                if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+        }
     });
 
     // ── Reject Modal ──

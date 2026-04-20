@@ -8,8 +8,9 @@ import java.util.List;
 public record HrDashboardMetricsDTO(
         Long activeEmployees,
         int pendingLeaveRequests,
+        int onLeaveToday,
         int openJobPosts,
-        int pendingWorkflowRequests,
+        List<HrLeaveRequestDTO> latestPendingLeaves,
         long newHiresThisMonth,
         int totalApplicants,
         List<String> attendanceLabels,
