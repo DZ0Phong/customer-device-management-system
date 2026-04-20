@@ -242,11 +242,12 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 	@Query("""
 			SELECT COUNT(r) FROM Request r
 			WHERE r.status = :status
-			AND r.leaveFrom <= :date AND r.leaveTo >= :date
+			AND r.leaveFrom <= :endDate AND r.leaveTo >= :startDate
 			""")
 	long countByStatusAndLeaveFromLessThanEqualAndLeaveToGreaterThanEqual(
 			@Param("status") String status,
-			@Param("date") java.time.LocalDate date);
+			@Param("startDate") java.time.LocalDate startDate,
+			@Param("endDate") java.time.LocalDate endDate);
 
 	@Query(value = """
 			SELECT r FROM Request r
