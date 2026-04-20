@@ -34,6 +34,8 @@ import com.group5.ems.entity.JobPost;
 import com.group5.ems.entity.Request;
 import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.User;
+import com.group5.ems.enums.AuditAction;
+import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.exception.JobPostException;
 import com.group5.ems.repository.ApplicationRepository;
 import com.group5.ems.repository.ApplicationStageRepository;
@@ -45,6 +47,7 @@ import com.group5.ems.repository.JobPostRepository;
 import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.UserRepository;
+import com.group5.ems.service.common.LogService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -75,6 +78,7 @@ public class HrRecruitmentService {
     private final InterviewRepository interviewRepository;
     private final UserRepository userRepository;
     private final HrEmailService emailService;
+    private final LogService logService;
 
     // ══════════════════════════════════════════════════════════════════════════
     // 1. JOB POSTS
@@ -127,6 +131,7 @@ public class HrRecruitmentService {
         app.getStages().add(entry);
 
         applicationRepository.save(app);
+        logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, applicationId);
 
         // ── Gửi email thông báo kết quả ──────────────────────────────────────
         if ("HIRED".equalsIgnoreCase(newStage)) {
@@ -192,7 +197,9 @@ public class HrRecruitmentService {
             cv.setFileName(file.getOriginalFilename());
             cv.setFileType(file.getContentType());
             cv.setFileData(file.getBytes());
-            return candidateCvRepository.save(cv);
+            CandidateCv saved = candidateCvRepository.save(cv);
+            logService.log(AuditAction.CREATE, AuditEntityType.CANDIDATE, candidateId);
+            return saved;
         } catch (Exception e) {
             throw new RuntimeException("Failed to save CV: " + e.getMessage(), e);
         }
@@ -204,6 +211,7 @@ public class HrRecruitmentService {
             throw new IllegalArgumentException("CV not found: " + cvId);
         }
         candidateCvRepository.deleteById(cvId);
+        logService.log(AuditAction.DELETE, AuditEntityType.CANDIDATE, cvId);
     }
 
     public MediaType resolveMediaType(String fileType) {
@@ -288,6 +296,8 @@ public class HrRecruitmentService {
                 .collect(Collectors.toList());
 
         interviewAssignmentRepository.saveAll(toSave);
+        logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, applicationId);
+        sendInterviewAssignedEmails(app, interviewerIds);
 
         // ── Gửi email thông báo cho từng interviewer được assign ──────────────
         sendInterviewAssignedEmails(app, interviewerIds);
@@ -356,6 +366,7 @@ public class HrRecruitmentService {
         hist.setAction("APPROVED");
         hist.setComment("Approved by HR");
         requestApprovalHistoryRepository.save(hist);
+        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, requestId);
     }
 
     @Transactional
@@ -373,6 +384,7 @@ public class HrRecruitmentService {
         hist.setAction("REJECTED");
         hist.setComment(reason);
         requestApprovalHistoryRepository.save(hist);
+        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, requestId);
     }
 
     public List<HrRecruitmentDTO> getAllJobPosts() {
@@ -402,6 +414,7 @@ public class HrRecruitmentService {
         if (status != null && !status.isBlank())
             job.setStatus(status);
         jobPostRepository.save(job);
+        logService.log(AuditAction.UPDATE, AuditEntityType.JOB_POST, id);
     }
 
     @Transactional
@@ -410,6 +423,7 @@ public class HrRecruitmentService {
                 .orElseThrow(() -> JobPostException.notFound(id));
         String title = job.getTitle();
         jobPostRepository.deleteById(id);
+        logService.log(AuditAction.DELETE, AuditEntityType.JOB_POST, id);
         return title;
     }
 
@@ -435,6 +449,7 @@ public class HrRecruitmentService {
         iv.setLocation(location);
         iv.setStatus("SCHEDULED");
         interviewRepository.save(iv);
+        logService.log(AuditAction.CREATE, AuditEntityType.CANDIDATE, applicationId);
     }
 
     public List<InterviewDTO> getMyInterviews(Long interviewerUserId) {
@@ -508,6 +523,7 @@ public class HrRecruitmentService {
         iv.setFeedback(feedback);
         iv.setStatus(status);
         interviewRepository.save(iv);
+        logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, interviewId);
     }
 
     @Transactional
@@ -516,6 +532,7 @@ public class HrRecruitmentService {
                 .orElseThrow(() -> new IllegalArgumentException("Interview not found: " + interviewId));
         iv.setStatus("CANCELLED");
         interviewRepository.save(iv);
+        logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, interviewId);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -622,50 +639,50 @@ public class HrRecruitmentService {
      * Variables: {{adminName}}, {{candidateName}}, {{jobTitle}}, {{applicationId}}
      */
     private void sendNewEmployeeRequestToAdmins(Application app) {
-    String candidateName  = resolveCandidateName(app);
-    String jobTitle       = resolveJobTitle(app);
-    String candidateEmail = "";
-    String candidatePhone = "";
-    String role           = "";
-    String department     = "";
+        String candidateName = resolveCandidateName(app);
+        String jobTitle = resolveJobTitle(app);
+        String candidateEmail = "";
+        String candidatePhone = "";
+        String role = "";
+        String department = "";
 
-    if (app.getCandidate() != null) {
-        var c = app.getCandidate();
-        candidateEmail = c.getEmail()  != null ? c.getEmail()  : "";
-        candidatePhone = c.getPhone()  != null ? c.getPhone()  : "";
+        if (app.getCandidate() != null) {
+            var c = app.getCandidate();
+            candidateEmail = c.getEmail() != null ? c.getEmail() : "";
+            candidatePhone = c.getPhone() != null ? c.getPhone() : "";
+        }
+
+        if (app.getJobPost() != null) {
+            var jp = app.getJobPost();
+            if (jp.getPosition() != null)
+                role = jp.getPosition().getName();
+            if (jp.getDepartment() != null)
+                department = jp.getDepartment().getName();
+        }
+
+        // ── Gửi cho từng Admin ────────────────────────────────────────────
+        List<User> admins = userRepository.findByRoleCode("ADMIN");
+        for (User admin : admins) {
+            if (admin.getEmail() == null || admin.getEmail().isBlank())
+                continue;
+
+            String adminName = admin.getFullName() != null
+                    ? admin.getFullName()
+                    : admin.getUsername();
+
+            Map<String, String> vars = Map.of(
+                    "adminName", adminName,
+                    "candidateName", candidateName,
+                    "candidateEmail", candidateEmail,
+                    "candidatePhone", candidatePhone,
+                    "jobTitle", jobTitle,
+                    "role", role,
+                    "department", department,
+                    "applicationId", String.valueOf(app.getId()));
+
+            emailService.sendFromTemplate(admin.getEmail(), TPL_NEW_EMPLOYEE_REQ, vars);
+        }
     }
-
-    if (app.getJobPost() != null) {
-        var jp = app.getJobPost();
-        if (jp.getPosition() != null)
-            role = jp.getPosition().getName();
-        if (jp.getDepartment() != null)
-            department = jp.getDepartment().getName();
-    }
-
-    // ── Gửi cho từng Admin ────────────────────────────────────────────
-    List<User> admins = userRepository.findByRoleCode("ADMIN");
-    for (User admin : admins) {
-        if (admin.getEmail() == null || admin.getEmail().isBlank())
-            continue;
-
-        String adminName = admin.getFullName() != null
-                ? admin.getFullName()
-                : admin.getUsername();
-
-        Map<String, String> vars = Map.of(
-                "adminName",      adminName,
-                "candidateName",  candidateName,
-                "candidateEmail", candidateEmail,
-                "candidatePhone", candidatePhone,
-                "jobTitle",       jobTitle,
-                "role",           role,
-                "department",     department,
-                "applicationId",  String.valueOf(app.getId()));
-
-        emailService.sendFromTemplate(admin.getEmail(), TPL_NEW_EMPLOYEE_REQ, vars);
-    }
-}
 
     // ── small resolvers ───────────────────────────────────────────────────────
 

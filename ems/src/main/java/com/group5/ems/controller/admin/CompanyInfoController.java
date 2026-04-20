@@ -8,7 +8,12 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -62,7 +67,7 @@ public class CompanyInfoController {
                             ? info.getImageType() : "image/jpeg";
                     headers.setContentType(MediaType.parseMediaType(mime));
                     // Cache 1 giờ để tránh tải lại mỗi lần
-                    headers.setCacheControl("max-age=3600, public");
+                    headers.setCacheControl("no-cache, no-store, must-revalidate");
                     return new ResponseEntity<>(info.getImageData(), headers, HttpStatus.OK);
                 })
                 .orElse(ResponseEntity.notFound().build());

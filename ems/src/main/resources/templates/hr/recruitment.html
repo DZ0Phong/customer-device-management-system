@@ -1125,50 +1125,6 @@
                                         <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed"
                                             th:text="${req.content}">Content...</p>
                                     </div>
-
-                                    <!-- Approval step indicator -->
-                                    <div class="mb-4">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            Approval Step</p>
-                                        <div class="flex items-center gap-1">
-                                            <!-- DM -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'check' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">DM</span>
-                                            </div>
-                                            <div class="flex-1 h-px bg-slate-200 mx-1"
-                                                th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'bg-primary' : 'bg-slate-200'}">
-                                            </div>
-                                            <!-- HRM -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'bg-primary text-white' :
-                                                   req.step == 'WAITING_HRM' ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'check' : req.step == 'WAITING_HRM' ? 'pending' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">HRM</span>
-                                            </div>
-                                            <div class="flex-1 h-px mx-1"
-                                                th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'bg-primary' : 'bg-slate-200'}">
-                                            </div>
-                                            <!-- HR -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' ? 'bg-primary text-white' :
-                                                   req.step == 'WAITING_HR' ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' ? 'check' : req.step == 'WAITING_HR' ? 'pending' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">HR</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <!-- Rejection reason -->
                                     <div th:if="${req.status == 'REJECTED' and req.rejectedReason != null and !req.rejectedReason.isEmpty()}"
                                         class="mb-3 bg-rose-50 rounded-xl p-3 border border-rose-100 flex items-start gap-2">
@@ -1590,29 +1546,7 @@
                     <div class="jd-section-content" id="jd-benefits"></div>
                 </div>
             </div>
-            <!-- Quick Actions row (inside body, before footer) -->
-            <div class="px-6 pb-4">
-                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                    <p class="text-xs font-bold text-slate-600 mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[15px] text-primary">bolt</span>Quick Actions
-                    </p>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="openEditJobModal()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:border-primary hover:text-primary transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">edit</span>Edit Post
-                        </button>
-                        <button id="jd-toggle-status-btn" onclick="toggleJobStatus()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:border-amber-500 hover:text-amber-600 transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">toggle_off</span>
-                            <span id="jd-toggle-label">Close Posting</span>
-                        </button>
-                        <button onclick="confirmDeleteJob()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-rose-200 text-rose-500 hover:bg-rose-50 hover:border-rose-400 transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">delete</span>Delete Post
-                        </button>
-                    </div>
-                </div>
-            </div>
+
             <div class="jd-footer">
                 <button onclick="closeJobDetail()"
                     class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Close</button>

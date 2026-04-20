@@ -244,7 +244,7 @@
                             <!-- ★ Image thumbnail — gọi endpoint /image/{id} -->
                             <td class="px-4 py-3.5">
                                 <img th:if="${info.hasImage()}"
-                                     th:src="@{/admin/company-info/image/{id}(id=${info.id})}"
+                                     th:src="${'/admin/company-info/image/' + info.id + '?v=' + (info.updatedAt != null ? info.updatedAt.toString() : '0')}"
                                      th:alt="${info.title}"
                                      class="img-thumb"/>
                                 <div th:unless="${info.hasImage()}"
