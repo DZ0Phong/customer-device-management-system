@@ -313,7 +313,10 @@ public class HrController {
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
-            @RequestParam(required = false) String statsMonth) {
+            @RequestParam(required = false) String statsMonth,
+            @RequestParam(required = false) Long viewId) {
+
+        model.addAttribute("viewId", viewId);
 
         if (tab == null) {
             tab = (String) session.getAttribute("leave_activeTab");

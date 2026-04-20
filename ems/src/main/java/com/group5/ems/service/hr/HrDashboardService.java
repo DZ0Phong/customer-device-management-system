@@ -1,6 +1,7 @@
 package com.group5.ems.service.hr;
 
 import com.group5.ems.dto.response.HrDashboardMetricsDTO;
+import com.group5.ems.dto.response.HrLeaveRequestDTO;
 import com.group5.ems.entity.Employee;
 import com.group5.ems.repository.ApplicationRepository;
 import com.group5.ems.repository.AttendanceRepository;
@@ -28,6 +29,7 @@ public class HrDashboardService {
     private final RequestRepository requestRepository;
     private final AttendanceRepository attendanceRepository;
     private final ApplicationRepository applicationRepository;
+    private final HrLeaveService hrLeaveService;
 
 
     public HrDashboardMetricsDTO getDashboardMetrics() {
@@ -38,9 +40,15 @@ public class HrDashboardService {
                 Arrays.asList("LV_ANNUAL", "LV_SICK", "LEAVE_ANNUAL", "LEAVE_SICK", "LEAVE_UNPAID")
         );
         int pendingLeaveRequests = (int) pendingLeaveRequestsLong;
-        int pendingWorkflowRequests = (int) requestRepository.countByStatusAndStepWaitingHRAndRequestTypeCategory("PENDING", "HR_STATUS");
+        int onLeaveToday = requestRepository.countOnLeaveToday();
         long newHiresThisMonth = employeeRepository.newThisMonth();
         int totalApplicants = (int) applicationRepository.count();
+
+        // Latest 5 Pending Leaves
+        List<HrLeaveRequestDTO> latestPendingLeaves = hrLeaveService.getPendingLeaves(null, null, null);
+        if (latestPendingLeaves.size() > 5) {
+            latestPendingLeaves = latestPendingLeaves.subList(0, 5);
+        }
 
         // Attendance last 7 days
         List<String> attendanceLabels = new ArrayList<>();
@@ -72,8 +80,9 @@ public class HrDashboardService {
         return HrDashboardMetricsDTO.builder()
                 .activeEmployees(activeEmployees)
                 .pendingLeaveRequests(pendingLeaveRequests)
+                .onLeaveToday(onLeaveToday)
                 .openJobPosts(openJobPosts)
-                .pendingWorkflowRequests(pendingWorkflowRequests)
+                .latestPendingLeaves(latestPendingLeaves)
                 .newHiresThisMonth(newHiresThisMonth)
                 .totalApplicants(totalApplicants)
                 .attendanceLabels(attendanceLabels)

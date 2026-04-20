@@ -264,10 +264,7 @@
                                             <td class="px-4 py-4">
                                                 <div class="flex items-center gap-2">
                                                     <span th:if="${req.urgentFlag}" 
-                                                          class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-sm shadow-rose-200 animate-pulse">
-                                                        <span class="material-symbols-outlined text-[10px]">priority_high</span>
-                                                        URGENT
-                                                    </span>
+                                                          class="px-1.5 py-0.5 rounded text-[9px] font-black bg-rose-500 text-white shadow-sm shadow-rose-200 animate-pulse">URGENT</span>
                                                     <span th:class="'text-[10px] tracking-widest font-bold uppercase px-2 py-1 rounded-lg border ' + ${req.statusClass}" 
                                                           th:text="${req.statusDisplay}">Status</span>
                                                 </div>
@@ -305,10 +302,7 @@
                                                                     <span class="material-symbols-outlined text-primary text-sm">verified</span>Decision Trace
                                                                 </h4>
                                                                 <div class="bg-white rounded-xl p-6 border border-slate-100 shadow-sm space-y-4">
-                                                                    <div th:if="${req.urgentFlag}" class="flex justify-between border-b border-slate-50 pb-3">
-                                                                        <span class="text-[10px] font-bold text-rose-500 uppercase flex items-center gap-1">
-                                                                            <span class="material-symbols-outlined text-[12px]">notification_important</span>Urgency
-                                                                        </span>
+                                                                    <div th:if="${req.urgentFlag}" class="flex justify-end border-b border-slate-50 pb-3">
                                                                         <span class="text-[11px] font-black text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-100">URGENT</span>
                                                                     </div>
                                                                     <div th:if="${req.processedAt != null}" class="flex justify-between border-b border-slate-50 pb-3">
