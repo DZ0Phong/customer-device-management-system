@@ -47,24 +47,41 @@
                 <h2 class="text-base font-black text-slate-900 leading-tight">Reports &amp; Analytics</h2>
                 <p class="text-xs text-slate-400">Data-driven workforce insights</p>
             </div>
-            <div class="flex items-center gap-3">
-                <!-- Prepare Package Button -->
-                <button type="button" 
-                        th:if="${activeTab != 'saved'}"
-                        onclick="openPrepareModal()"
-                        class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 hover:-translate-y-0.5"
-                        id="prepareReportBtn">
-                    <span class="material-symbols-outlined text-sm">archive</span>
-                    Create Report
-                </button>
+            <div class="flex items-center gap-6">
+                <!-- Trash Dropwell (Header Integrated) -->
+                <div id="trashDropwell" 
+                     th:if="${activeTab == 'saved'}"
+                     class="flex items-center gap-3 px-4 py-1.5 rounded-2xl border-2 border-dashed border-slate-200 bg-slate-50/50 text-slate-500 transition-all duration-300 group hover:border-red-200 hover:bg-red-50/30"
+                     title="Drag drafts here to delete">
+                    <div class="flex flex-col items-end">
+                        <span class="text-[10px] font-black uppercase tracking-wider text-slate-700 group-[.drag-over]:text-red-600 leading-none">Trash Bin</span>
+                        <span class="text-[8px] font-bold text-slate-400 group-[.drag-over]:text-red-400 leading-none mt-1">Drag drafts here</span>
+                    </div>
+                    <div class="w-9 h-9 rounded-xl bg-white border border-slate-100 flex items-center justify-center shadow-sm transition-all duration-300 group-[.drag-over]:bg-red-600 group-[.drag-over]:text-white group-[.drag-over]:scale-110 group-[.drag-over]:border-red-600 group-[.drag-over]:shadow-lg group-[.drag-over]:shadow-red-200">
+                        <span class="material-symbols-outlined text-xl transition-all group-[.drag-over]:rotate-12">delete_sweep</span>
+                    </div>
+                </div>
 
-                <!-- Export PDF Button -->
-                <a th:href="@{/hr/reports/export(tab=${activeTab}, year=${selectedYear}, dateFrom=${dateFrom}, dateTo=${dateTo})}"
-                   class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
-                   id="exportPdfBtn">
-                    <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
-                    PDF Export
-                </a>
+                <div class="flex items-center gap-3">
+                    <!-- Prepare Package Button -->
+                    <button type="button" 
+                            th:if="${activeTab != 'saved' && activeTab != 'builder'}"
+                            onclick="openPrepareModal()"
+                            class="flex items-center gap-2 bg-indigo-600 text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-200 hover:shadow-lg hover:shadow-indigo-300 hover:-translate-y-0.5"
+                            id="prepareReportBtn">
+                        <span class="material-symbols-outlined text-sm">archive</span>
+                        Create Report
+                    </button>
+
+                    <!-- Export PDF Button -->
+                    <a th:if="${activeTab != 'saved' && activeTab != 'builder'}"
+                       th:href="@{/hr/reports/export(tab=${activeTab}, year=${selectedYear}, dateFrom=${dateFrom}, dateTo=${dateTo})}"
+                       class="flex items-center gap-2 bg-primary text-white px-4 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 hover:shadow-lg hover:shadow-primary/30 hover:-translate-y-0.5"
+                       id="exportPdfBtn">
+                        <span class="material-symbols-outlined text-sm">picture_as_pdf</span>
+                        PDF Export
+                    </a>
+                </div>
             </div>
         </header>
 
@@ -95,15 +112,15 @@
                id="tabPerformance">
                 <span class="material-symbols-outlined text-sm align-middle mr-1">military_tech</span> Performance
             </a>
-            <a th:href="@{/hr/reports(tab='saved')}"
-               th:class="${activeTab == 'saved'} ? 'leave-tab active px-4 py-3 text-xs font-bold' : 'leave-tab px-4 py-3 text-xs font-bold'"
-               id="tabSaved">
-                <span class="material-symbols-outlined text-sm align-middle mr-1">history_edu</span> Saved Reports
-            </a>
             <a th:href="@{/hr/reports(tab='builder')}"
                th:class="${activeTab == 'builder'} ? 'leave-tab active px-4 py-3 text-xs font-bold' : 'leave-tab px-4 py-3 text-xs font-bold'"
                id="tabBuilder">
                 <span class="material-symbols-outlined text-sm align-middle mr-1">build</span> Builder
+            </a>
+            <a th:href="@{/hr/reports(tab='saved')}"
+               th:class="${activeTab == 'saved'} ? 'leave-tab active px-4 py-3 text-xs font-bold' : 'leave-tab px-4 py-3 text-xs font-bold'"
+               id="tabSaved">
+                <span class="material-symbols-outlined text-sm align-middle mr-1">history_edu</span> Saved Reports
             </a>
 
             <!-- Year Filter (for overview/leave tabs) -->
@@ -490,10 +507,14 @@
                                         <p class="text-sm font-bold">No saved reports found</p>
                                     </td>
                                 </tr>
-                                <tr th:each="item : ${history}" class="hover:bg-slate-50/50 transition-colors">
+                                <tr th:each="item : ${history}" 
+                                    th:class="${item.status() == 'DRAFT'} ? 'hover:bg-slate-50/50 transition-all duration-300 draggable-row border-l-4 border-l-transparent hover:border-l-primary' : 'hover:bg-slate-50/50 transition-colors'"
+                                    th:attr="draggable=${item.status() == 'DRAFT' ? 'true' : 'false'}, data-id=${item.id()}"
+                                    th:ondragstart="${item.status() == 'DRAFT'} ? 'handleDragStart(event, this)' : null"
+                                    th:ondragend="${item.status() == 'DRAFT'} ? 'handleDragEnd(event, this)' : null">
                                     <td class="px-6 py-4">
                                         <div class="flex flex-col">
-                                            <span class="text-sm font-black text-slate-800" th:text="${item.title()}">Title</span>
+                                            <span class="text-sm font-black text-slate-800 report-title" th:text="${item.title()}">Title</span>
                                             <div class="flex items-center gap-2 mt-1">
                                                 <span class="text-[10px] font-bold px-1.5 py-0.5 bg-slate-100 text-slate-500 rounded uppercase" th:text="${item.reportType()}">TYPE</span>
                                                 <span th:if="${item.remarks() != null}" class="text-[10px] text-slate-400 italic truncate max-w-[200px]" th:text="${item.remarks()}">Summary...</span>
@@ -501,7 +522,7 @@
                                         </div>
                                     </td>
                                     <td class="px-4 py-4">
-                                        <div class="flex flex-col">
+                                        <div class="flex flex-col gen-info">
                                             <span class="text-[11px] font-bold text-slate-700" th:text="${#temporals.format(item.generatedAt(), 'dd MMM yyyy HH:mm')}">Date</span>
                                             <span class="text-[10px] text-slate-400" th:text="'by ' + ${item.generatedByName()}">Creator</span>
                                         </div>
@@ -566,11 +587,11 @@
                                 <div class="flex items-end gap-3">
                                     <div class="flex-1">
                                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Date From</label>
-                                        <input type="text" name="dateFrom" class="hr-datepicker w-full text-sm border-slate-200 rounded-xl py-2.5 px-3 focus:ring-primary/20 focus:border-primary" placeholder="YYYY-MM-DD" />
+                                        <input type="text" name="dateFrom" id="builderDateFrom" class="hr-datepicker w-full text-sm border-slate-200 rounded-xl py-2.5 px-3 focus:ring-primary/20 focus:border-primary" placeholder="DD-MM-YYYY" />
                                     </div>
                                     <div class="flex-1">
                                         <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Date To</label>
-                                        <input type="text" name="dateTo" class="hr-datepicker w-full text-sm border-slate-200 rounded-xl py-2.5 px-3 focus:ring-primary/20 focus:border-primary" placeholder="YYYY-MM-DD" />
+                                        <input type="text" name="dateTo" id="builderDateTo" class="hr-datepicker w-full text-sm border-slate-200 rounded-xl py-2.5 px-3 focus:ring-primary/20 focus:border-primary" placeholder="DD-MM-YYYY" />
                                     </div>
                                 </div>
                             </div>
@@ -585,13 +606,13 @@
                                 </div>
                             </div>
                             
-                            <!-- Step 3: Export Options -->
+                            <!-- Step 3: Create Report Action -->
                             <div class="flex items-center justify-end gap-3 pt-4 border-t border-slate-100">
-                                <button type="submit" name="format" value="csv" class="flex items-center gap-2 bg-slate-800 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-slate-700 transition-all shadow-md">
-                                    <span class="material-symbols-outlined text-[18px]">data_table</span> Export CSV
+                                <button type="button" onclick="openPrepareModal()" class="flex items-center gap-2 bg-indigo-600 text-white px-6 py-3 rounded-xl text-sm font-bold hover:bg-indigo-700 transition-all shadow-md shadow-indigo-100 active:scale-95">
+                                    <span class="material-symbols-outlined text-[18px]">add_circle</span> Create Report
                                 </button>
-                                <button type="submit" name="format" value="pdf" class="flex items-center gap-2 bg-primary text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20">
-                                    <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> Export PDF
+                                <button type="submit" class="flex items-center gap-2 bg-primary text-white px-5 py-3 rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-md shadow-primary/20 hover:-translate-y-0.5 active:scale-95">
+                                    <span class="material-symbols-outlined text-[18px]">picture_as_pdf</span> PDF Export
                                 </button>
                             </div>
                             
@@ -806,10 +827,13 @@
 
                 <form th:action="@{/hr/reports/prepare}" method="post" class="p-8">
                     <!-- Context Propagation -->
-                    <input type="hidden" name="tab" th:value="${activeTab}" />
-                    <input type="hidden" name="year" th:value="${selectedYear}" />
-                    <input type="hidden" name="dateFrom" th:value="${dateFrom}" />
-                    <input type="hidden" name="dateTo" th:value="${dateTo}" />
+                    <input type="hidden" name="tab" id="modalTab" th:value="${activeTab}" />
+                    <input type="hidden" name="year" id="modalYear" th:value="${selectedYear}" />
+                    <input type="hidden" name="dateFrom" id="modalDateFrom" th:value="${dateFrom}" />
+                    <input type="hidden" name="dateTo" id="modalDateTo" th:value="${dateTo}" />
+                    <!-- Builder specific (only used if tab is builder) -->
+                    <input type="hidden" name="dataSource" id="modalDataSource" />
+                    <div id="modalColumnsContainer" class="hidden"></div>
 
                     <div class="space-y-6">
                         <div>
@@ -841,8 +865,65 @@
         </div>
     </div>
 
+    <!-- Deletion Confirmation Modal -->
+    <div id="deleteConfirmModal" class="fixed inset-0 z-[101] hidden">
+        <div class="absolute inset-0 bg-slate-900/60 backdrop-blur-md" onclick="closeDeleteModal()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm anim-scale-up p-4">
+            <div class="bg-white rounded-[2.5rem] shadow-2xl border border-rose-100 overflow-hidden text-center p-8">
+                <div class="w-20 h-20 bg-rose-50 rounded-full flex items-center justify-center mx-auto mb-6 shadow-inner">
+                    <div class="w-14 h-14 bg-rose-100 rounded-full flex items-center justify-center text-rose-600 animate-pulse">
+                        <span class="material-symbols-outlined text-3xl">warning</span>
+                    </div>
+                </div>
+                
+                <h3 class="text-xl font-black text-slate-800 mb-2">Delete Report Draft?</h3>
+                <p class="text-sm text-slate-500 font-medium leading-relaxed mb-8 px-2">
+                    This action is permanent and will remove all cloud archives and database records related to this package.
+                </p>
+
+                <div class="flex flex-col gap-3">
+                    <button type="button" onclick="confirmDeletion()"
+                            class="w-full py-4 rounded-2xl bg-rose-600 text-white text-sm font-black hover:bg-rose-700 transition-all shadow-xl shadow-rose-200 active:scale-95">
+                        Permanently Delete
+                    </button>
+                    <button type="button" onclick="closeDeleteModal()"
+                            class="w-full py-4 rounded-2xl bg-white text-slate-500 text-sm font-bold hover:bg-slate-50 transition-all border border-slate-100 active:scale-95">
+                        Keep Report
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden Global Deletion Form -->
+    <form id="globalDeleteForm" method="post" class="hidden">
+        <input type="hidden" name="_csrf" th:value="${_csrf.token}" />
+    </form>
+
     <script th:inline="javascript">
         function openPrepareModal() {
+            // Propagate Builder state if on builder tab
+            if (activeTab === 'builder') {
+                const dataSource = document.getElementById('dataSource').value;
+                const dateFrom = document.getElementById('builderDateFrom').value;
+                const dateTo = document.getElementById('builderDateTo').value;
+                
+                document.getElementById('modalDataSource').value = dataSource;
+                document.getElementById('modalDateFrom').value = dateFrom;
+                document.getElementById('modalDateTo').value = dateTo;
+                
+                // Clear and sync columns
+                const columnsContainer = document.getElementById('modalColumnsContainer');
+                columnsContainer.innerHTML = '';
+                document.querySelectorAll('input[name="columns"]:checked').forEach(cb => {
+                    const hidden = document.createElement('input');
+                    hidden.type = 'hidden';
+                    hidden.name = 'columns';
+                    hidden.value = cb.value;
+                    columnsContainer.appendChild(hidden);
+                });
+            }
+
             document.getElementById('prepareModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         }
@@ -851,9 +932,31 @@
             document.body.style.overflow = '';
         }
 
+        // Deletion Confirmation Logic
+        let reportIdToDelete = null;
+        function openDeleteModal(id) {
+            reportIdToDelete = id;
+            document.getElementById('deleteConfirmModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+        function closeDeleteModal() {
+            document.getElementById('deleteConfirmModal').classList.add('hidden');
+            document.body.style.overflow = '';
+            reportIdToDelete = null;
+        }
+        function confirmDeletion() {
+            if (!reportIdToDelete) return;
+            const form = document.getElementById('globalDeleteForm');
+            form.action = `/hr/reports/${reportIdToDelete}/delete`;
+            form.submit();
+        }
+
         // Auto Close Modal on ESC
         document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') closePrepareModal();
+            if (e.key === 'Escape') {
+                closePrepareModal();
+                closeDeleteModal();
+            }
         });
 
         // Builder Columns Logic
@@ -964,6 +1067,120 @@
                     }
                 });
             });
+        });
+    </script>
+
+    <!-- Drag-to-Trash Logic -->
+    <script th:inline="javascript">
+        let draggedElement = null;
+
+        function handleDragStart(e, element) {
+            draggedElement = element;
+            e.dataTransfer.setData('text/plain', element.getAttribute('data-id'));
+            e.dataTransfer.effectAllowed = 'move';
+            
+            // Extract info for sleek drag icon
+            const title = element.querySelector('.report-title').innerText;
+            const genInfo = element.querySelector('.gen-info').innerText;
+            
+            // Visual feedback for original row - more subtle
+            element.classList.add('opacity-20', 'bg-slate-50');
+            
+            // Create a sleek, lightweight drag image
+            const dragCard = document.createElement('div');
+            dragCard.style.position = 'absolute';
+            dragCard.style.top = '-1000px'; // Offscreen
+            dragCard.className = 'bg-white border-2 border-primary rounded-xl p-3 shadow-2xl flex flex-col gap-1 min-w-[200px] pointer-events-none';
+            dragCard.innerHTML = `
+                <span class="text-xs font-black text-slate-800">${title}</span>
+                <span class="text-[9px] font-bold text-primary uppercase tracking-tighter">${genInfo}</span>
+            `;
+            document.body.appendChild(dragCard);
+            
+            // Set drag image
+            e.dataTransfer.setDragImage(dragCard, 100, 20);
+            
+            // Cleanup offscreen element
+            setTimeout(() => document.body.removeChild(dragCard), 0);
+        }
+
+        function handleDragEnd(e, element) {
+            element.classList.remove('opacity-20', 'bg-slate-50');
+            draggedElement = null;
+        }
+
+        const trashWell = document.getElementById('trashDropwell');
+
+        trashWell.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            trashWell.classList.add('drag-over', 'border-red-200', 'shadow-lg', 'shadow-red-50');
+            e.dataTransfer.dropEffect = 'move';
+        });
+
+        trashWell.addEventListener('dragleave', () => {
+            trashWell.classList.remove('drag-over', 'border-red-200', 'shadow-lg', 'shadow-red-50');
+        });
+
+        trashWell.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            trashWell.classList.remove('drag-over', 'border-red-200', 'shadow-lg', 'shadow-red-50');
+            
+            const id = e.dataTransfer.getData('text/plain');
+            if (!id || !draggedElement) return;
+
+            // FLY-TO-TRASH ANIMATION
+            const rect = draggedElement.getBoundingClientRect();
+            const trashRect = trashWell.getBoundingClientRect();
+            const title = draggedElement.querySelector('.report-title').innerText;
+            const genInfo = draggedElement.querySelector('.gen-info').innerText;
+            
+            // Create a sleek ghost card for animation, not the whole row
+            const ghost = document.createElement('div');
+            ghost.className = 'fixed bg-white border-2 border-primary rounded-xl p-3 shadow-2xl flex flex-col gap-1 min-w-[200px] z-[9999] pointer-events-none transition-all duration-500 ease-in-out';
+            ghost.style.top = rect.top + 'px';
+            ghost.style.left = rect.left + 50 + 'px'; // Center it a bit relative to row
+            ghost.innerHTML = `
+                <span class="text-xs font-black text-slate-800">${title}</span>
+                <span class="text-[9px] font-bold text-primary uppercase tracking-tighter">${genInfo}</span>
+            `;
+            document.body.appendChild(ghost);
+
+            // Hide original immediately
+            draggedElement.style.display = 'none';
+
+            // Start animation frame
+            requestAnimationFrame(() => {
+                ghost.style.transform = `translate(${trashRect.left - rect.left - 50}px, ${trashRect.top - rect.top}px) scale(0.05)`;
+                ghost.style.opacity = '0';
+            });
+
+            setTimeout(() => document.body.removeChild(ghost), 500);
+
+            // PERFORM DELETION
+            try {
+                const response = await fetch(`/hr/reports/${id}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRF-TOKEN': /*[[${_csrf.token}]]*/ ''
+                    }
+                });
+
+                if (response.ok) {
+                    // Success pulse on trash well
+                    trashWell.classList.add('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
+                    setTimeout(() => {
+                        trashWell.classList.remove('bg-emerald-50', 'text-emerald-600', 'border-emerald-200');
+                        draggedElement.remove();
+                    }, 500);
+                } else {
+                    // Revert UI if failed
+                    draggedElement.style.display = 'table-row';
+                    alert('Failed to delete report draft.');
+                }
+            } catch (err) {
+                console.error(err);
+                draggedElement.style.display = 'table-row';
+            }
         });
     </script>
 </body>
