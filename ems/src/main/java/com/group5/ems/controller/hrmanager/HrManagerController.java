@@ -35,6 +35,7 @@ public class HrManagerController {
     private final CalendarService calendarService;
     private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
     private final com.group5.ems.repository.DepartmentRepository departmentRepository;
+    private final com.group5.ems.repository.PositionRepository positionRepository;
 
     private final com.group5.ems.repository.UserRepository userRepository;
     private final com.group5.ems.repository.EmployeeRepository employeeRepository;
@@ -55,6 +56,7 @@ public class HrManagerController {
         
         model.addAttribute("activityCategories", dashboardService.getActivityCategories());
         model.addAttribute("activityFilter",     activityFilter);
+        model.addAttribute("positions",          positionRepository.findAll());
         model.addAttribute("activePage",         "dashboard");
         return "hrmanager/dashboard";
     }
@@ -398,6 +400,7 @@ public class HrManagerController {
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
         model.addAttribute("activeTab",     tab);
         model.addAttribute("activeCategory", category);
+        model.addAttribute("positions",     positionRepository.findAll());
         model.addAttribute("activePage",    "request");
         model.addAttribute("requestId",     requestId); // For auto-expand
         return "hrmanager/request_approval";
@@ -432,6 +435,7 @@ public class HrManagerController {
         model.addAttribute("diversityData",   analyticsService.getDiversityData());
         model.addAttribute("trainingCourses", analyticsService.getTrainingCourses());
         model.addAttribute("policyReviews",   analyticsService.getPolicyReviews());
+        model.addAttribute("positions",       positionRepository.findAll());
         model.addAttribute("activePage",      "analytics");
         return "hrmanager/hr_analytics";
     }
@@ -447,6 +451,7 @@ public class HrManagerController {
 
         model.addAttribute("events",       calendarService.getEventsByMonth(currentMonth, currentYear));
         model.addAttribute("departments",  departmentRepository.findAll());
+        model.addAttribute("positions",    positionRepository.findAll());
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("currentYear",  currentYear);
         model.addAttribute("activePage",   "calendar");
