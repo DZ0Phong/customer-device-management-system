@@ -10,7 +10,6 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet"/>
     <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}"/>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
     <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
     <script>
         tailwind.config = {
@@ -384,7 +383,7 @@
                     <div class="flex items-center gap-3">
                         <h4 class="text-lg font-bold">Activity Center</h4>
                         <span id="total-pending-badge" class="px-2.5 py-1 bg-rose-100 text-rose-700 text-xs font-bold rounded-full">
-                            9 needs attention
+                            <span th:text="${stats?.pendingCount ?: 0}">0</span> needs attention
                         </span>
                     </div>
                     <div class="flex gap-2">
@@ -395,42 +394,144 @@
                     </div>
                 </div>
 
-                <!-- Tabs Navigation - Dynamic -->
-                <div class="border-b border-slate-200 px-6">
-                    <nav class="flex gap-8 -mb-px overflow-x-auto">
-                        <!-- Dynamic tabs from backend -->
-                        <button th:each="cat : ${activityCategories}"
-                                th:data-tab="${cat.type}"
-                                th:classappend="${cat.type == 'all' ? 'border-primary text-primary' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300'}"
-                                class="activity-tab flex items-center gap-2 px-1 py-4 text-sm font-semibold border-b-2 transition-colors whitespace-nowrap">
-                            <span th:text="${cat.label}">Category</span>
-                            <span th:if="${cat.count > 0}"
-                                  th:text="${cat.count}"
-                                  class="tab-badge px-2 py-0.5 bg-slate-100 text-slate-600 text-xs font-bold rounded-full">0</span>
-                        </button>
-                    </nav>
-                </div>
+                <!-- Filter Bar (like request_approval) -->
+                <div class="px-6 py-4 border-b border-slate-100">
+                    <div class="grid grid-cols-[1fr_auto_auto] gap-4 items-end">
+                        <!-- Search -->
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">SEARCH</label>
+                            <div class="relative">
+                                <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                                <input id="activity-search-input" type="text" placeholder="Search activities..." 
+                                    oninput="filterActivityTable()"
+                                    class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                            </div>
+                        </div>
 
-                <!-- Sub-filters -->
-                <div class="px-6 py-4 border-b border-slate-200 overflow-x-auto">
-                    <div id="sub-filters" class="flex gap-2 flex-nowrap">
-                        <!-- Rendered by JavaScript -->
+                        <!-- Priority Filter -->
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">PRIORITY</label>
+                            <select id="activity-priority-filter" onchange="filterActivityTable()"
+                                class="px-4 py-2 pr-10 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer">
+                                <option value="">All Priority</option>
+                                <option value="critical">Critical</option>
+                                <option value="urgent">Urgent</option>
+                                <option value="high">High</option>
+                                <option value="normal">Normal</option>
+                            </select>
+                        </div>
+
+                        <!-- Buttons -->
+                        <div class="flex gap-2">
+                            <button onclick="filterActivityTable()" 
+                                class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                <span class="material-symbols-outlined text-[16px]">filter_list</span>
+                                Filter
+                            </button>
+                            <button onclick="clearActivityFilters()" 
+                                class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors">
+                                Clear
+                            </button>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Activity Items List -->
-                <div id="activity-list" class="divide-y divide-slate-100">
-                    <div class="px-6 py-12 text-center">
-                        <span class="material-symbols-outlined text-slate-300 text-4xl animate-spin">progress_activity</span>
-                        <p class="text-sm text-slate-400 mt-2">Loading activities...</p>
-                    </div>
+                <!-- Activity Table (Simple List) -->
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50">
+                                <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Employee</th>
+                                <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Title</th>
+                                <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Priority</th>
+                                <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100" id="activity-table-body">
+                            <!-- No data message -->
+                            <th:block th:if="${recentActivities == null or #lists.isEmpty(recentActivities)}">
+                                <tr>
+                                    <td colspan="4" class="px-6 py-12 text-center">
+                                        <div class="flex flex-col items-center gap-3">
+                                            <span class="material-symbols-outlined text-emerald-400 text-[48px]">check_circle</span>
+                                            <p class="text-slate-600 font-bold text-lg">All caught up!</p>
+                                            <p class="text-xs text-slate-400">No pending requests to review</p>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </th:block>
+                            
+                            <!-- Dynamic rows from backend -->
+                            <th:block th:if="${recentActivities != null and !#lists.isEmpty(recentActivities)}">
+                                <tr th:each="req : ${recentActivities}"
+                                    class="activity-row hover:bg-slate-50/80 transition-colors cursor-pointer"
+                                    th:data-name="${req.employeeName != null ? #strings.toLowerCase(req.employeeName) : ''}"
+                                    th:data-priority="${req.priority != null ? #strings.toLowerCase(req.priority) : 'normal'}"
+                                    th:onclick="|window.location.href='/hrmanager/request-approval?requestId=' + [[${req.id}]]|">
+                                    <td class="px-4 py-4">
+                                        <div class="flex items-center gap-3">
+                                            <div class="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-xs"
+                                                 th:text="${req.employeeInitials ?: 'NA'}">NA</div>
+                                            <div>
+                                                <p class="text-sm font-bold" th:text="${req.employeeName ?: 'N/A'}">Name</p>
+                                                <p class="text-xs text-slate-500" th:text="${req.employeePosition ?: ''}">Position</p>
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <p class="text-sm font-medium text-slate-700" th:text="${req.title != null and !req.title.isEmpty() ? req.title : 'No title'}">Request</p>
+                                        <p class="text-xs text-slate-400" th:text="${req.reason ?: ''}">Details</p>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <th:block th:switch="${req.priority}">
+                                            <span th:case="'CRITICAL'" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold priority-critical">
+                                                <span class="material-symbols-outlined text-[16px]">error</span>
+                                                CRITICAL
+                                            </span>
+                                            <span th:case="'URGENT'" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold priority-urgent">
+                                                <span class="material-symbols-outlined text-[16px]">warning</span>
+                                                URGENT
+                                            </span>
+                                            <span th:case="'HIGH'" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold priority-high">
+                                                <span class="material-symbols-outlined text-[16px]">flag</span>
+                                                HIGH
+                                            </span>
+                                            <span th:case="*" class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold priority-normal">
+                                                <span class="material-symbols-outlined text-[16px]">outlined_flag</span>
+                                                NORMAL
+                                            </span>
+                                        </th:block>
+                                    </td>
+                                    <td class="px-4 py-4">
+                                        <th:block th:switch="${req.status}">
+                                            <span th:case="'PENDING'"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700">
+                                                PENDING
+                                            </span>
+                                            <span th:case="'APPROVED'"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700">
+                                                APPROVED
+                                            </span>
+                                            <span th:case="'REJECTED'"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-100 text-rose-700">
+                                                REJECTED
+                                            </span>
+                                            <span th:case="*"
+                                                class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 text-slate-700"
+                                                th:text="${req.status}">—</span>
+                                        </th:block>
+                                    </td>
+                                </tr>
+                            </th:block>
+                        </tbody>
+                    </table>
                 </div>
 
-                <!-- Footer / Load More -->
+                <!-- Footer -->
                 <div class="px-6 py-4 border-t border-slate-200 text-center">
-                    <button id="load-more-btn" class="text-primary font-bold text-sm hover:underline transition-all">
-                        Load all activities →
-                    </button>
+                    <a href="/hrmanager/request-approval" class="text-primary font-bold text-sm hover:underline transition-all">
+                        View all requests →
+                    </a>
                 </div>
             </div>
 
@@ -539,96 +640,130 @@
 
 <script th:inline="javascript">
     /*<![CDATA[*/
+    
+    // Wait for window load to ensure Chart.js is fully loaded
+    window.addEventListener('load', function() {
+        // Check if Chart.js is loaded
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js is not loaded');
+            return;
+        }
+        
+        console.log('Chart.js loaded, version:', Chart.version);
+        
+        // ── Chart.js: Hiring vs Attrition ─────────────────────────────────────────
+        // Data from backend (passed by Spring into model).
+        // Fallback sample data — prevents blank page before backend integration.
+        const chartLabels = /*[[${chartLabels}]]*/['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
+        const hiringData = /*[[${hiringData}]]*/[45, 62, 38, 71, 55, 49];
+        const attritionData = /*[[${attritionData}]]*/[12, 18, 10, 22, 15, 20];
 
-    // ── Chart.js: Hiring vs Attrition ─────────────────────────────────────────
-    // Data from backend (passed by Spring into model).
-    // Fallback sample data — prevents blank page before backend integration.
-    const chartLabels = /*[[${chartLabels}]]*/['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'];
-    const hiringData = /*[[${hiringData}]]*/[45, 62, 38, 71, 55, 49];
-    const attritionData = /*[[${attritionData}]]*/[12, 18, 10, 22, 15, 20];
+        console.log('Chart labels:', chartLabels);
+        console.log('Hiring data:', hiringData);
+        console.log('Attrition data:', attritionData);
 
-    // Detect dark mode for grid/text colors
-    const isDark = document.documentElement.classList.contains('dark');
-    const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
-    const tickColor = isDark ? '#94a3b8' : '#64748b';
+        // Get canvas element
+        const canvas = document.getElementById('hiringAttritionChart');
+        if (!canvas) {
+            console.error('Canvas element not found');
+            return;
+        }
+        
+        console.log('Canvas found:', canvas);
 
-    const ctx = document.getElementById('hiringAttritionChart').getContext('2d');
+        // Detect dark mode for grid/text colors
+        const isDark = document.documentElement.classList.contains('dark');
+        const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+        const tickColor = isDark ? '#94a3b8' : '#64748b';
 
-    // Gradient fill for Hiring line
-    const gradient = ctx.createLinearGradient(0, 0, 0, 256);
-    gradient.addColorStop(0, 'rgba(20,20,184,0.18)');
-    gradient.addColorStop(1, 'rgba(20,20,184,0)');
+        const ctx = canvas.getContext('2d');
+        
+        if (!ctx) {
+            console.error('Could not get 2d context');
+            return;
+        }
 
-    new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: chartLabels,
-            datasets: [
-                {
-                    label: 'Hiring',
-                    data: hiringData,
-                    borderColor: '#1414b8',
-                    backgroundColor: gradient,
-                    borderWidth: 2.5,
-                    fill: true,
-                    tension: 0.45,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#1414b8',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointHoverRadius: 6,
+        // Gradient fill for Hiring line
+        const gradient = ctx.createLinearGradient(0, 0, 0, 256);
+        gradient.addColorStop(0, 'rgba(20,20,184,0.18)');
+        gradient.addColorStop(1, 'rgba(20,20,184,0)');
+
+        try {
+            const chart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: chartLabels,
+                    datasets: [
+                        {
+                            label: 'Hiring',
+                            data: hiringData,
+                            borderColor: '#1414b8',
+                            backgroundColor: gradient,
+                            borderWidth: 2.5,
+                            fill: true,
+                            tension: 0.45,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#1414b8',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6,
+                        },
+                        {
+                            label: 'Attrition',
+                            data: attritionData,
+                            borderColor: '#94a3b8',
+                            backgroundColor: 'transparent',
+                            borderWidth: 2,
+                            borderDash: [6, 4],
+                            fill: false,
+                            tension: 0.45,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#94a3b8',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6,
+                        }
+                    ]
                 },
-                {
-                    label: 'Attrition',
-                    data: attritionData,
-                    borderColor: '#94a3b8',
-                    backgroundColor: 'transparent',
-                    borderWidth: 2,
-                    borderDash: [6, 4],
-                    fill: false,
-                    tension: 0.45,
-                    pointRadius: 4,
-                    pointBackgroundColor: '#94a3b8',
-                    pointBorderColor: '#fff',
-                    pointBorderWidth: 2,
-                    pointHoverRadius: 6,
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-                legend: { display: false }, // custom legend already present in HTML
-                tooltip: {
-                    backgroundColor: isDark ? '#1e293b' : '#fff',
-                    borderColor: isDark ? '#334155' : '#e2e8f0',
-                    borderWidth: 1,
-                    titleColor: isDark ? '#f1f5f9' : '#0f172a',
-                    bodyColor: isDark ? '#94a3b8' : '#475569',
-                    padding: 12,
-                    callbacks: {
-                        label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} `
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    interaction: { mode: 'index', intersect: false },
+                    plugins: {
+                        legend: { display: false }, // custom legend already present in HTML
+                        tooltip: {
+                            backgroundColor: isDark ? '#1e293b' : '#fff',
+                            borderColor: isDark ? '#334155' : '#e2e8f0',
+                            borderWidth: 1,
+                            titleColor: isDark ? '#f1f5f9' : '#0f172a',
+                            bodyColor: isDark ? '#94a3b8' : '#475569',
+                            padding: 12,
+                            callbacks: {
+                                label: ctx => ` ${ctx.dataset.label}: ${ctx.parsed.y} `
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: { color: tickColor, font: { family: 'Inter', size: 12, weight: '600' } }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: gridColor, drawBorder: false },
+                            ticks: {
+                                color: tickColor,
+                                font: { family: 'Inter', size: 12 },
+                                stepSize: 10,
+                                callback: val => val
+                            }
+                        }
                     }
                 }
-            },
-            scales: {
-                x: {
-                    grid: { color: gridColor, drawBorder: false },
-                    ticks: { color: tickColor, font: { family: 'Inter', size: 12, weight: '600' } }
-                },
-                y: {
-                    beginAtZero: true,
-                    grid: { color: gridColor, drawBorder: false },
-                    ticks: {
-                        color: tickColor,
-                        font: { family: 'Inter', size: 12 },
-                        stepSize: 10,
-                        callback: val => val
-                    }
-                }
-            }
+            });
+            console.log('Chart initialized successfully:', chart);
+        } catch (error) {
+            console.error('Error initializing chart:', error);
         }
     });
 
@@ -656,428 +791,30 @@
 
     if (flashMessage) showToast(flashMessage, flashType);
 
-    // ── Activity Center ────────────────────────────────────────────────────────
-    let currentTab = 'all';
-    let currentFilter = 'all';
-    let quickStats = {};
-    let rejectTargetId = null;
-
-    // Sub-filter definitions for each tab
-    const subFilters = {
-        all: [
-            { value: 'all',      label: 'All' },
-            { value: 'pending',  label: 'Pending' },
-            { value: 'approved', label: 'Approved' }
-        ],
-        request: [
-            { value: 'all',       label: 'All' },
-            { value: 'contract',  label: 'Contract' },
-            { value: 'benefits',  label: 'Benefits' },
-            { value: 'documents', label: 'Documents' },
-            { value: 'pending',   label: 'Pending' },
-            { value: 'completed', label: 'Completed' }
-        ],
-        payroll: [
-            { value: 'all',      label: 'All' },
-            { value: 'pending',  label: 'Pending' },
-            { value: 'approved', label: 'Approved' }
-        ],
-        status: [
-            { value: 'all',         label: 'All' },
-            { value: 'newhire',     label: 'New Hire' },
-            { value: 'termination', label: 'Termination' },
-            { value: 'promotion',   label: 'Promotion' },
-            { value: 'transfer',    label: 'Transfer' }
-        ],
-        staffing: [
-            { value: 'all',         label: 'All' },
-            { value: 'recruitment', label: 'Recruitment' },
-            { value: 'transfer',    label: 'Transfer' },
-            { value: 'pending',     label: 'Pending' },
-            { value: 'approved',    label: 'Approved' }
-        ],
-        history: [
-            { value: 'all',      label: 'All' },
-            { value: 'approved', label: 'Approved' },
-            { value: 'rejected', label: 'Rejected' }
-        ]
-    };
-
-    // Load quick stats on page load
-    function loadQuickStats() {
-        fetch('/hrmanager/dashboard/quick-stats')
-            .then(res => res.json())
-            .then(data => {
-                quickStats = data;
-                updateQuickStatsUI(data);
-            })
-            .catch(err => console.error('Error loading quick stats:', err));
-    }
-
-    function updateQuickStatsUI(data) {
-        document.getElementById('request-total').textContent = data.requestTotal || 0;
-        document.getElementById('request-pending-badge').textContent = `${data.requestPending || 0} pending`;
-
-        document.getElementById('payroll-total').textContent = data.payrollTotal || 0;
-        document.getElementById('payroll-pending-badge').textContent = `${data.payrollPending || 0} pending`;
-
-        document.getElementById('status-total').textContent = data.statusChanges || 0;
-
-        document.getElementById('staffing-total').textContent = data.staffingTotal || 0;
-        document.getElementById('staffing-pending-badge').textContent = `${data.staffingPending || 0} pending`;
-
-        document.getElementById('total-pending-badge').textContent = `${data.totalPending || 0} needs attention`;
-
-        updateTabBadge('request',  data.requestPending);
-        updateTabBadge('payroll',  data.payrollPending);
-        updateTabBadge('staffing', data.staffingPending);
-    }
-
-    function updateTabBadge(tab, count) {
-        const tabBtn = document.querySelector(`[data-tab="${tab}"]`);
-        if (!tabBtn) return;
-        const badge = tabBtn.querySelector('.tab-badge');
-        if (badge && count > 0) {
-            badge.textContent = count;
-            badge.style.display = 'inline-block';
-        } else if (badge) {
-            badge.style.display = 'none';
-        }
-    }
-
-    // Switch tab
-    function switchToTab(tab) {
-        currentTab = tab;
-        currentFilter = 'all';
-
-        // Highlight active quick card
-        document.querySelectorAll('[id^="quick-card-"]').forEach(card => {
-            card.classList.remove('border-primary', 'shadow-md', 'shadow-primary/20');
+    // ── Activity Center (Simplified) ──────────────────────────────────────────
+    
+    function filterActivityTable() {
+        const searchValue = (document.getElementById('activity-search-input')?.value || '').toLowerCase();
+        const deptValue = (document.getElementById('activity-dept-filter')?.value || '').toLowerCase();
+        
+        const rows = document.querySelectorAll('.activity-row');
+        rows.forEach(row => {
+            const name = (row.dataset.name || '').toLowerCase();
+            const dept = (row.dataset.dept || '').toLowerCase();
+            
+            const matchesSearch = !searchValue || name.includes(searchValue);
+            const matchesDept = !deptValue || dept.includes(deptValue);
+            
+            row.style.display = (matchesSearch && matchesDept) ? '' : 'none';
         });
-        const activeCard = document.getElementById(`quick-card-${tab}`);
-        if (activeCard) activeCard.classList.add('border-primary', 'shadow-md', 'shadow-primary/20');
-
-        // Update tab buttons
-        document.querySelectorAll('.activity-tab').forEach(btn => {
-            if (btn.dataset.tab === tab) {
-                btn.classList.add('border-primary', 'text-primary');
-                btn.classList.remove('border-transparent', 'text-slate-500');
-            } else {
-                btn.classList.remove('border-primary', 'text-primary');
-                btn.classList.add('border-transparent', 'text-slate-500');
-            }
-        });
-
-        renderSubFilters(tab);
-        loadActivities(tab, 'all');
-    }
-
-    function renderSubFilters(tab) {
-        const container = document.getElementById('sub-filters');
-        const filters = subFilters[tab] || [];
-        container.innerHTML = filters.map(filter => `
-            <button data-filter="${filter.value}"
-                    class="sub-filter px-4 py-2 text-sm font-semibold rounded-full transition-colors whitespace-nowrap
-                           ${filter.value === 'all' ? 'bg-primary text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}">
-                ${filter.label}
-            </button>
-        `).join('');
-        
-        // Add event listeners to sub-filter buttons
-        container.querySelectorAll('.sub-filter').forEach(btn => {
-            btn.addEventListener('click', function() {
-                const filter = this.dataset.filter;
-                if (filter) applyFilter(filter);
-            });
-        });
-    }
-
-    function applyFilter(filter) {
-        currentFilter = filter;
-        document.querySelectorAll('.sub-filter').forEach(btn => {
-            if (btn.dataset.filter === filter) {
-                btn.classList.remove('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
-                btn.classList.add('bg-primary', 'text-white');
-            } else {
-                btn.classList.add('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
-                btn.classList.remove('bg-primary', 'text-white');
-            }
-        });
-        loadActivities(currentTab, filter);
-    }
-
-    function loadActivities(type, filter) {
-        const listContainer = document.getElementById('activity-list');
-        listContainer.innerHTML = `
-            <div class="px-6 py-12 text-center">
-                <span class="material-symbols-outlined text-slate-300 text-4xl animate-spin">progress_activity</span>
-                <p class="text-sm text-slate-400 mt-2">Loading activities...</p>
-            </div>`;
-        window.hydrateAppIcons?.(listContainer);
-
-        const url = type === 'all'
-            ? `/hrmanager/dashboard/activities/combined?filter=${filter}&days=30`
-            : `/hrmanager/dashboard/activities/${type}?filter=${filter}&days=30&limit=10`;
-
-        fetch(url)
-            .then(res => res.json())
-            .then(data => {
-                if (data.success) {
-                    renderActivities(data.activities);
-                    updateLoadMoreButton(type, filter, data);
-                } else {
-                    listContainer.innerHTML = `
-                        <div class="px-6 py-12 text-center text-rose-500">
-                            <p>Error: ${data.error || 'Failed to load activities'}</p>
-                        </div>`;
-                    window.hydrateAppIcons?.(listContainer);
-                }
-            })
-            .catch(() => {
-                listContainer.innerHTML = `
-                    <div class="px-6 py-12 text-center text-rose-500">
-                        <p>Failed to load activities</p>
-                    </div>`;
-                window.hydrateAppIcons?.(listContainer);
-            });
-    }
-
-    function updateLoadMoreButton(type, filter, data) {
-        const loadMoreBtn = document.getElementById('load-more-btn');
-        const typeLabels = {
-            request:  'Requests',
-            payroll:  'Payroll Reports',
-            status:   'Status Changes',
-            staffing: 'Staffing Requests',
-            history:  'History',
-            all:      'Activities'
-        };
-        if (data.hasMore) {
-            loadMoreBtn.innerHTML = `View all ${typeLabels[type] || 'Activities'} (${data.totalCount}) →`;
-            loadMoreBtn.onclick = () => window.location.href = getViewAllUrl(type, filter);
-            loadMoreBtn.style.display = 'inline-block';
-            window.hydrateAppIcons?.(loadMoreBtn);
-        } else {
-            loadMoreBtn.style.display = 'none';
-        }
-    }
-
-    function getViewAllUrl(type, filter) {
-        switch (type) {
-            case 'request':  return '/hrmanager/request-approval';
-            case 'payroll':  return '/hrmanager/payroll-periods';
-            case 'status':   return '/hrmanager/hr-analytics';
-            case 'staffing': return '/hrmanager/staffing-requests';
-            case 'history':  return '/hrmanager/request-approval?tab=history';
-            default:         return '/hrmanager/dashboard';
-        }
-    }
-
-    function renderActivities(activities) {
-        const listContainer = document.getElementById('activity-list');
-        if (!activities || activities.length === 0) {
-            listContainer.innerHTML = `
-                <div class="px-6 py-12 text-center">
-                    <span class="material-symbols-outlined text-slate-300 text-4xl">inbox</span>
-                    <p class="text-sm text-slate-400 mt-2">No activities found</p>
-                </div>`;
-            window.hydrateAppIcons?.(listContainer);
-            return;
-        }
-        listContainer.innerHTML = activities.map((activity, index) => `
-            <div class="activity-item px-6 py-4 hover:bg-slate-50 transition-colors cursor-pointer"
-                 onclick="toggleActivityDetail(${index})" data-index="${index}">
-                <div class="flex items-center justify-between">
-                    <div class="flex items-center gap-3 flex-1">
-                        <div class="w-10 h-10 rounded-full bg-slate-200 flex items-center justify-center font-bold text-slate-600 text-sm">
-                            ${activity.employeeInitials || 'NA'}
-                        </div>
-                        <div class="flex-1">
-                            <p class="text-sm font-bold text-slate-900">
-                                ${activity.employeeName || 'N/A'}
-                                <span class="text-slate-500 font-normal">— ${activity.employeePosition || ''}</span>
-                            </p>
-                            <p class="text-xs text-slate-500 mt-0.5">
-                                ${activity.details || activity.actionLabel} • ${formatDate(activity.date)}
-                            </p>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        ${getPriorityBadge(activity.priority)}
-                        ${getStatusBadge(activity.status, activity.statusLabel)}
-                    </div>
-                </div>
-                <div class="activity-detail hidden mt-4 pt-4 border-t border-slate-100">
-                    <div class="grid grid-cols-2 gap-4 text-sm">
-                        <div>
-                            <p class="text-slate-500 text-xs mb-1">Department</p>
-                            <p class="font-semibold">${activity.department || 'N/A'}</p>
-                        </div>
-                        <div>
-                            <p class="text-slate-500 text-xs mb-1">Priority</p>
-                            ${getPriorityBadge(activity.priority)}
-                        </div>
-                    </div>
-                    <div class="mt-4 flex gap-2">
-                        ${activity.status === 'PENDING' ? `
-                            <button onclick="hardApprove(event, ${activity.id}, '${activity.employeeName || 'Request'}')" 
-                                    class="approve-btn px-4 py-2 bg-emerald-100 text-emerald-700 rounded-lg text-xs font-bold hover:bg-emerald-200 transition-colors flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-[16px]">check_circle</span>
-                                <span class="btn-text">Approve</span>
-                            </button>
-                            <button onclick="openRejectModal(${activity.id}, '${activity.employeeName || 'Request'}')" 
-                                    class="px-4 py-2 bg-rose-100 text-rose-700 rounded-lg text-xs font-bold hover:bg-rose-200 transition-colors flex items-center gap-1.5">
-                                <span class="material-symbols-outlined text-[16px]">cancel</span>
-                                Reject
-                            </button>
-                        ` : ''}
-                        <button onclick="viewFullDetail(event, ${activity.id})" class="px-4 py-2 bg-slate-100 text-slate-700 rounded-lg text-xs font-bold hover:bg-slate-200 transition-colors">
-                            View Full Detail →
-                        </button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-        window.hydrateAppIcons?.(listContainer);
-    }
-
-    function toggleActivityDetail(index) {
-        const item = document.querySelector(`.activity-item[data-index="${index}"]`);
-        if (!item) return;
-        const detail = item.querySelector('.activity-detail');
-        const icon   = item.querySelector('.expand-icon');
-        const hidden = detail.classList.contains('hidden');
-        detail.classList.toggle('hidden', !hidden);
-        const expandIcon = hidden ? 'expand_less' : 'expand_more';
-        if (window.setAppIcon) {
-            window.setAppIcon(icon, expandIcon);
-        } else {
-            icon.textContent = expandIcon;
-        }
-    }
-
-    function getStatusBadge(status, label) {
-        const badges = {
-            PENDING:   'bg-amber-100 text-amber-700',
-            APPROVED:  'bg-emerald-100 text-emerald-700',
-            REJECTED:  'bg-rose-100 text-rose-700',
-            COMPLETED: 'bg-blue-100 text-blue-700'
-        };
-        const cls = badges[status] || 'bg-slate-100 text-slate-600';
-        return `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${cls}">${label || status}</span>`;
-    }
-
-    function getPriorityBadge(priority) {
-        if (!priority || priority === 'NORMAL') return '';
-        
-        const badges = {
-            CRITICAL: { class: 'priority-critical', icon: 'error', label: 'CRITICAL' },
-            URGENT:   { class: 'priority-urgent', icon: 'warning', label: 'URGENT' },
-            HIGH:     { class: 'priority-high', icon: 'flag', label: 'HIGH' },
-            NORMAL:   { class: 'priority-normal', icon: 'outlined_flag', label: 'NORMAL' }
-        };
-        
-        const badge = badges[priority] || badges.NORMAL;
-        return `<span class="px-2.5 py-1 text-xs font-bold rounded-full ${badge.class} flex items-center gap-1">
-            <span class="material-symbols-outlined text-[14px]">${badge.icon}</span>
-            ${badge.label}
-        </span>`;
-    }
-
-    function viewFullDetail(event, requestId) {
-        event.stopPropagation();
-        window.location.href = `/hrmanager/request-approval?requestId=${requestId}`;
-    }
-
-    let approveTargetId = null;
-    let approveTargetName = null;
-
-    function hardApprove(event, requestId, employeeName) {
-        event.stopPropagation();
-        
-        approveTargetId = requestId;
-        approveTargetName = employeeName;
-        
-        document.getElementById('approve-modal-subtitle').textContent = 
-            `Request from ${employeeName || 'Employee'}`;
-        document.getElementById('approve-modal').classList.add('open');
     }
     
-    function closeApproveModal() {
-        document.getElementById('approve-modal').classList.remove('open');
-        approveTargetId = null;
-        approveTargetName = null;
+    function clearActivityFilters() {
+        document.getElementById('activity-search-input').value = '';
+        document.getElementById('activity-dept-filter').value = '';
+        filterActivityTable();
     }
-    
-    function confirmApprove() {
-        if (!approveTargetId) {
-            showToast('Invalid request ID', 'error');
-            return;
-        }
-        
-        // Save ID before closing modal
-        const requestIdToApprove = approveTargetId;
-        
-        const token = document.querySelector('meta[name="_csrf"]').getAttribute('content');
-        const header = document.querySelector('meta[name="_csrf_header"]').getAttribute('content');
-        
-        // Close modal and show loading toast
-        closeApproveModal();
-        showToast('Approving request...', 'info');
-        
-        fetch('/hrmanager/dashboard/activity/approve', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-                [header]: token
-            },
-            body: 'requestId=' + requestIdToApprove
-        })
-        .then(res => res.json())
-        .then(data => {
-            if (data.success) {
-                showToast(data.message || 'Request approved successfully', 'success');
-                // Reload activities
-                loadActivities(currentTab, currentFilter);
-                loadQuickStats();
-            } else {
-                showToast(data.message || 'Failed to approve request', 'error');
-            }
-        })
-        .catch(err => {
-            console.error('Error approving:', err);
-            showToast('Failed to approve request', 'error');
-        });
-    }
-
-    function formatDate(dateStr) {
-        if (!dateStr) return 'N/A';
-        const d = new Date(dateStr);
-        const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-        return `${months[d.getMonth()]} ${d.getDate()}, ${d.getFullYear()}`;
-    }
-
-    // Initialize on page load
-    document.addEventListener('DOMContentLoaded', () => {
-        loadQuickStats();
-        switchToTab('all'); // Default tab
-        
-        // Add click event listeners to all activity tabs
-        document.querySelectorAll('.activity-tab').forEach(btn => {
-            btn.addEventListener('click', function() {
                 const tab = this.dataset.tab;
-                if (tab) switchToTab(tab);
-            });
-        });
-        
-        // Add click event listeners to quick stat cards
-        document.querySelectorAll('[id^="quick-card-"]').forEach(card => {
-            card.addEventListener('click', function() {
-                const tab = this.id.replace('quick-card-', '');
-                if (tab) switchToTab(tab);
-            });
-        });
-    });
     
     // ══════════════════════════════════════════════════════════════════════════
     // APPROVE/REJECT ACTIONS (Legacy - kept for compatibility)

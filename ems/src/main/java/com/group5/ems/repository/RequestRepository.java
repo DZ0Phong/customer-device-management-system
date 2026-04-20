@@ -172,7 +172,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "JOIN FETCH e.user u " +
             "LEFT JOIN FETCH e.position p " +
             "LEFT JOIN FETCH e.department d " +
-            "WHERE r.status IN ('APPROVED', 'REJECTED') " +
+            "JOIN FETCH r.requestType rt " +
+            "WHERE r.status IN ('APPROVED', 'REJECTED') AND rt.category <> 'ATTENDANCE' " +
             "ORDER BY r.approvedAt DESC")
     Page<Request> findHistoryRequestsOrderByApprovedAt(Pageable pageable);
 

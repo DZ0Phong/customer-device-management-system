@@ -270,6 +270,7 @@ public class LeaveApprovalService {
         Page<Request> requestPage;
         
         switch (tab.toLowerCase()) {
+            case "current":
             case "pending":
                 // HR Manager only sees non-ATTENDANCE requests (step = WAITING_HRM, category <> ATTENDANCE)
                 requestPage = requestRepository.findHrmPendingWorkflowRequestsWithPagination(pageable);
@@ -400,6 +401,7 @@ public class LeaveApprovalService {
         Page<Request> requestPage;
         
         switch (tab.toLowerCase()) {
+            case "current":
             case "pending":
                 // HR Manager only sees non-ATTENDANCE requests (step = WAITING_HRM, category <> ATTENDANCE)
                 requestPage = requestRepository.findHrmPendingWorkflowRequestsWithPagination(pageable);

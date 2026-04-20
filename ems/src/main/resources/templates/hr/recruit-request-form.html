@@ -36,10 +36,10 @@
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
 <div class="flex h-screen overflow-hidden">
 
-    <!-- ══════ SIDEBAR ══════ -->
+    <!-- Sidebar -->
     <div th:replace="~{fragments/hr-sidebar :: sidebar('employees')}"></div>
 
-    <!-- Ã¢â€â‚══════════════â€â‚══════════════â€â‚¬ Main Ã¢â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚══════════════â€â‚¬ -->
+    <!-- Main -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
         <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
             <div class="flex items-center gap-3">
@@ -59,7 +59,7 @@
             </div>
         </header>
 
-        <!-- Ã¢â€â‚══════════════â€â‚¬ Toast Messages Ã¢â€â‚══════════════â€â‚¬ -->
+        <!-- Toast Messages -->
         <div th:if="${errorMessage}" id="toast-error"
              class="fixed top-4 right-4 z-50 bg-rose-600 text-white px-6 py-3 rounded-xl shadow-lg flex items-center gap-2 animate-slide-in">
             <span class="material-symbols-outlined text-lg">error</span>
@@ -72,7 +72,7 @@
         <div class="flex-1 overflow-y-auto p-8 dot-grid">
             <div class="max-w-4xl mx-auto">
 
-                <!-- Ã¢â€â‚══════════════â€â‚══════════════â€â‚¬ Form Card Ã¢â€â‚══════════════â€â‚══════════════â€â‚¬ -->
+                <!-- Form Card -->
                 <form th:action="@{/hr/employee/new}" th:object="${ticket}" method="post"
                       class="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden anim anim-1">
 
@@ -206,7 +206,7 @@
                                             class="w-full text-sm border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-4 py-2.5 bg-slate-50 text-slate-700 font-medium transition-colors hover:border-slate-300">
                                         <option value="">Select Manager (optional)…</option>
                                         <option th:each="mgr : ${managers}" th:value="${mgr.id}"
-                                                th:text="${mgr.user != null ? mgr.user.fullName + ' — ' + mgr.employeeCode : mgr.employeeCode}">Manager</option>
+                                                th:text="${mgr.user != null ? mgr.user.fullName + ' - ' + mgr.employeeCode : mgr.employeeCode}">Manager</option>
                                     </select>
                                 </div>
                             </div>
@@ -314,7 +314,7 @@
                     </div>
                 </form>
 
-                <!-- Ã¢â€â‚══════════════â€â‚══════════════â€â‚¬ Info Cards Ã¢â€â‚══════════════â€â‚══════════════â€â‚¬ -->
+                <!-- Info Cards -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6 anim anim-2">
                     <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-5 flex items-start gap-4">
                         <div class="w-10 h-10 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">

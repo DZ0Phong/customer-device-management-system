@@ -427,69 +427,84 @@
 
                         <!-- Tab Bar -->
                         <div class="bg-white border-b border-slate-100 px-6 flex gap-6">
-                            <button onclick="switchTab('current')" class="tab-btn active py-3 text-sm font-bold flex items-center gap-2" id="tab-current">
+                            <button onclick="switchTab('current')" class="tab-btn py-3 text-sm font-bold flex items-center gap-2" id="tab-current" th:classappend="${activeTab == 'current' or activeTab == 'pending' or activeTab == null} ? 'active' : ''">
                                 <span class="material-symbols-outlined text-[18px]">pending_actions</span>
                                 Current Requests
                                 <span class="text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md" th:text="${stats?.pendingCount ?: 0}">0</span>
                             </button>
-                            <button onclick="switchTab('history')" class="tab-btn py-3 text-sm font-bold flex items-center gap-2" id="tab-history">
+                            <button onclick="switchTab('history')" class="tab-btn py-3 text-sm font-bold flex items-center gap-2" id="tab-history" th:classappend="${activeTab == 'history'} ? 'active' : ''">
                                 <span class="material-symbols-outlined text-[18px]">history</span>
                                 Leave History
                                 <span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md">100</span>
                             </button>
                         </div>
 
-                        <!-- Requires Approval Section -->
-                        <div class="px-6 py-4 bg-amber-50/30 border-b border-amber-100">
+                        <!-- Requires Approval Section (only for current tab) -->
+                        <div id="requires-approval-section" class="px-6 py-4 bg-amber-50/30 border-b border-amber-100" th:classappend="${activeTab == 'history'} ? 'hidden' : ''">
                             <div class="flex items-center gap-2">
                                 <span class="material-symbols-outlined text-amber-500 text-[20px]">pending_actions</span>
                                 <h3 class="text-sm font-black text-slate-800">Requires Approval</h3>
                                 <span class="text-[10px] font-bold bg-amber-100 text-amber-600 px-2 py-0.5 rounded-md ml-auto" th:text="${stats?.pendingCount ?: 0}">0</span>
                             </div>
                         </div>
-
-
-                        <!-- Filter Bar (Simplified) -->
-                        <div class="px-6 py-4 border-b border-slate-100 flex items-center gap-3">
-                            <!-- Search -->
-                            <div class="flex-1 max-w-xs">
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">SEARCH</label>
-                                <div class="relative">
-                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
-                                    <input id="search-input" type="text" placeholder="Name or code..." class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm" />
-                                </div>
-                            </div>
-
-                            <!-- Department -->
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">DEPARTMENT</label>
-                                <select id="dept-filter" class="px-4 py-2 border border-slate-200 rounded-xl text-sm cursor-pointer">
-                                    <option value="">All Depts</option>
-                                </select>
-                            </div>
-
-                            <!-- Leave Type -->
-                            <div>
-                                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">LEAVE TYPE</label>
-                                <select id="type-filter" class="px-4 py-2 border border-slate-200 rounded-xl text-sm cursor-pointer">
-                                    <option value="">All Types</option>
-                                </select>
-                            </div>
-
-                            <!-- Buttons -->
-                            <div class="flex items-end gap-2">
-                                <button class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold">
-                                    <span class="material-symbols-outlined text-[16px]">filter_list</span>
-                                    Filter
-                                </button>
-                                <button class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm">Clear</button>
+                        
+                        <!-- History Section (only for history tab) -->
+                        <div id="history-section" class="px-6 py-4 bg-slate-50/30 border-b border-slate-100" th:classappend="${activeTab != 'history'} ? 'hidden' : ''">
+                            <div class="flex items-center gap-2">
+                                <span class="material-symbols-outlined text-slate-500 text-[20px]">history</span>
+                                <h3 class="text-sm font-black text-slate-800">Request History</h3>
+                                <span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-2 py-0.5 rounded-md ml-auto" th:text="${pagination?.totalElements ?: 0}">0</span>
                             </div>
                         </div>
 
 
-                        <!-- ── Bulk Action Bar (hidden until selection) ─── -->
+                        <!-- Filter Bar (Simplified) -->
+                        <div class="px-6 py-4 border-b border-slate-100">
+                            <div class="grid grid-cols-[1fr_auto_auto] gap-4 items-end">
+                                <!-- Search -->
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">SEARCH</label>
+                                    <div class="relative">
+                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-[18px]">search</span>
+                                        <input id="search-input" type="text" placeholder="Name or code..." 
+                                            oninput="filterTable()"
+                                            class="w-full pl-10 pr-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary" />
+                                    </div>
+                                </div>
+
+                                <!-- Department -->
+                                <div>
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 block">DEPARTMENT</label>
+                                    <select id="dept-filter" onchange="filterTable()"
+                                        class="px-4 py-2 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-primary/30 focus:border-primary cursor-pointer">
+                                        <option value="">All Depts</option>
+                                        <option value="engineering">Engineering</option>
+                                        <option value="marketing">Marketing</option>
+                                        <option value="operations">Operations</option>
+                                        <option value="hr">HR</option>
+                                        <option value="finance">Finance</option>
+                                    </select>
+                                </div>
+
+                                <!-- Buttons -->
+                                <div class="flex gap-2">
+                                    <button onclick="applyFilters()" 
+                                        class="px-4 py-2 bg-primary text-white rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors flex items-center gap-1.5">
+                                        <span class="material-symbols-outlined text-[16px]">filter_list</span>
+                                        Filter
+                                    </button>
+                                    <button onclick="clearFilters()" 
+                                        class="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-sm font-medium hover:bg-slate-50 transition-colors">
+                                        Clear
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+
+                        <!-- ── Bulk Action Bar (hidden until selection, only for current tab) ─── -->
                         <div id="bulk-bar"
-                            class="bulk-bar items-center gap-3 px-6 py-3 bg-primary-light border-b border-primary/20">
+                            class="bulk-bar items-center gap-3 px-6 py-3 bg-primary-light border-b border-primary/20" th:classappend="${activeTab == 'history'} ? 'hidden' : ''">
                             <div class="flex items-center gap-2">
                                 <span
                                     class="w-6 h-6 rounded-full bg-primary text-white text-xs font-bold flex items-center justify-center"
@@ -519,7 +534,7 @@
                             <table class="w-full text-left border-collapse" id="leave-table">
                                 <thead>
                                     <tr class="bg-slate-50">
-                                        <th class="px-6 py-3 w-10">
+                                        <th class="px-6 py-3 w-10" th:classappend="${activeTab == 'history'} ? 'hidden' : ''">
                                             <input type="checkbox" id="select-all" onchange="toggleSelectAll(this)"
                                                 class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" />
                                         </th>
@@ -563,7 +578,7 @@
                                                 th:data-priority="${req.priority != null ? #strings.toLowerCase(req.priority) : 'normal'}"
                                                 th:data-status="${req.status != null ? #strings.toLowerCase(req.status) : 'pending'}"
                                                 th:data-id="${req.id}">
-                                                <td class="px-6 py-4" onclick="event.stopPropagation()">
+                                                <td class="px-6 py-4" onclick="event.stopPropagation()" th:classappend="${activeTab == 'history'} ? 'hidden' : ''">
                                                     <input type="checkbox"
                                                         th:onchange="|onRowCheck(this,[[${req.id}]])|"
                                                         class="row-check w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" />
@@ -724,18 +739,10 @@
 
                                 </tbody>
                             </table>
-
-                            <!-- Empty state for filtered results -->
-                            <div id="empty-state" class="hidden py-16 text-center">
-                                <span
-                                    class="material-symbols-outlined text-slate-300 text-5xl block mb-3">search_off</span>
-                                <p class="text-sm font-semibold text-slate-500">No results found</p>
-                                <p class="text-xs text-slate-400 mt-1">Try adjusting your filters or search query</p>
-                            </div>
                         </div>
 
                         <!-- Pagination -->
-                        <div th:if="${pagination != null}"
+                        <div th:if="${pagination != null and leaveRequests != null and !#lists.isEmpty(leaveRequests)}"
                             class="px-6 py-4 border-t border-slate-100 flex items-center justify-between">
                             <span class="text-xs text-slate-400">
                                 Showing <span th:text="${pagination.startItem}">1</span>–<span
@@ -744,7 +751,7 @@
                             </span>
                             <div class="flex items-center gap-1.5">
                                 <a th:if="${pagination.hasPrevious}"
-                                    th:href="@{/hrmanager/leave-approval(tab=${activeTab}, page=${pagination.currentPage - 1})}"
+                                    th:href="@{/hrmanager/request-approval(tab=${activeTab}, page=${pagination.currentPage - 1})}"
                                     class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
                                     <span class="material-symbols-outlined text-[18px]">chevron_left</span>
                                 </a>
@@ -754,13 +761,13 @@
                                 </button>
                                 <th:block th:each="pageNum : ${#numbers.sequence(1, pagination.totalPages)}">
                                     <a th:classappend="${pageNum == pagination.currentPage ? 'bg-primary text-white shadow-md shadow-primary/25' : 'border border-slate-200 bg-white text-slate-500 hover:bg-primary/5'}"
-                                        th:href="@{/hrmanager/leave-approval(tab=${activeTab}, page=${pageNum})}"
+                                        th:href="@{/hrmanager/request-approval(tab=${activeTab}, page=${pageNum})}"
                                         class="w-8 h-8 flex items-center justify-center rounded-xl text-xs font-bold transition-colors">
                                         <span th:text="${pageNum}">1</span>
                                     </a>
                                 </th:block>
                                 <a th:if="${pagination.hasNext}"
-                                    th:href="@{/hrmanager/leave-approval(tab=${activeTab}, page=${pagination.currentPage + 1})}"
+                                    th:href="@{/hrmanager/request-approval(tab=${activeTab}, page=${pagination.currentPage + 1})}"
                                     class="w-8 h-8 flex items-center justify-center rounded-xl border border-slate-200 bg-white hover:bg-slate-50 transition-colors text-slate-500">
                                     <span class="material-symbols-outlined text-[18px]">chevron_right</span>
                                 </a>
@@ -1297,7 +1304,6 @@
             form.method = 'POST';
             form.action = '/hrmanager/request-approval/approve';
             appendHidden(form, 'requestId', id);
-            appendHidden(form, 'approverId', 1);
             appendCsrf(form);
             document.body.appendChild(form);
             form.submit();
@@ -1392,7 +1398,6 @@
             form.method = 'POST';
             form.action = '/hrmanager/request-approval/reject';
             appendHidden(form, 'requestId', rejectTargetId);
-            appendHidden(form, 'approverId', 1);
             appendHidden(form, 'rejectedReason', reason);
             appendCsrf(form);
             document.body.appendChild(form);
@@ -1481,6 +1486,19 @@
             window.history.replaceState({}, '', url);
         }
         /*]]>*/
+    </script>
+    
+    <!-- Tab switching functionality -->
+    <script>
+        function switchTab(tab) {
+            const tabs = document.querySelectorAll('.tab-btn');
+            tabs.forEach(t => t.classList.remove('active'));
+            document.getElementById('tab-' + tab).classList.add('active');
+            
+            const url = new URL(window.location.href);
+            url.searchParams.set('tab', tab);
+            window.location.href = url.toString();
+        }
     </script>
 </body>
 
