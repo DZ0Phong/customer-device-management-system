@@ -66,6 +66,7 @@ public class HrRecruitmentService {
     private static final String TPL_APPLICATION_HIRED = "APPLICATION_HIRED";
     private static final String TPL_APPLICATION_REJECT = "APPLICATION_REJECTED";
     private static final String TPL_NEW_EMPLOYEE_REQ = "NEW_EMPLOYEE_REQUEST";
+    private static final String TPL_INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED";
 
     private final JobPostRepository jobPostRepository;
     private final ApplicationRepository applicationRepository;
@@ -298,9 +299,6 @@ public class HrRecruitmentService {
         interviewAssignmentRepository.saveAll(toSave);
         logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, applicationId);
         sendInterviewAssignedEmails(app, interviewerIds);
-
-        // ── Gửi email thông báo cho từng interviewer được assign ──────────────
-        sendInterviewAssignedEmails(app, interviewerIds);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
@@ -436,7 +434,7 @@ public class HrRecruitmentService {
             Long interviewerId,
             LocalDateTime scheduledAt,
             String location) {
-        applicationRepository.findById(applicationId)
+        Application app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
 
         Interview iv = interviewRepository
@@ -449,7 +447,9 @@ public class HrRecruitmentService {
         iv.setLocation(location);
         iv.setStatus("SCHEDULED");
         interviewRepository.save(iv);
+        Interview saved = interviewRepository.save(iv);
         logService.log(AuditAction.CREATE, AuditEntityType.CANDIDATE, applicationId);
+        sendInterviewScheduledEmail(app, saved);
     }
 
     public List<InterviewDTO> getMyInterviews(Long interviewerUserId) {
@@ -596,6 +596,34 @@ public class HrRecruitmentService {
                 emailService.sendFromTemplate(user.getEmail(), TPL_INTERVIEW_ASSIGNED, vars);
             });
         }
+    }
+
+    /**
+     * Gửi email INTERVIEW_SCHEDULED đến email của candidate.
+     * Variables: {{candidateName}}, {{jobTitle}}, {{companyName}},
+     * {{scheduledAt}}, {{location}}
+     */
+    private void sendInterviewScheduledEmail(Application app, Interview iv) {
+        if (app.getCandidate() == null)
+            return;
+        String email = app.getCandidate().getEmail();
+        if (email == null || email.isBlank())
+            return;
+
+        String scheduledAt = iv.getScheduledAt() != null
+                ? iv.getScheduledAt().format(DATETIME_FMT)
+                : "TBD";
+        String location = iv.getLocation() != null && !iv.getLocation().isBlank()
+                ? iv.getLocation()
+                : "To be confirmed";
+
+        Map<String, String> vars = Map.of(
+                "candidateName", resolveCandidateName(app),
+                "jobTitle", resolveJobTitle(app),
+                "companyName", "ERM Pro",
+                "scheduledAt", scheduledAt,
+                "location", location);
+        emailService.sendFromTemplate(email, TPL_INTERVIEW_SCHEDULED, vars);
     }
 
     /**

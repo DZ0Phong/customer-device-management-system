@@ -94,4 +94,6 @@ public class HrEmailService {
             log.warn("Could not save email log for [{}] → {}: {}", templateCode, recipientEmail, ex.getMessage());
         }
     }
+
+    
 }
