@@ -20,7 +20,6 @@ public record HrPerformanceDTO(
     String reviewPeriod,
     BigDecimal performanceScore,
     BigDecimal potentialScore,
-    String talentMatrix,
     String strengths,
     String areasToImprove,
     LocalDateTime createdAt

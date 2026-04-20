@@ -491,7 +491,7 @@ public class EmployeeController {
             model.addAttribute("summary", PerformanceSummaryDTO.builder()
                     .currentRating(java.math.BigDecimal.ZERO)
                     .previousRating(java.math.BigDecimal.ZERO)
-                    .talentMatrix("N/A").totalReviews(0)
+                    .totalReviews(0)
                     .kpisMet(0).kpisTotal(0).skillsCount(0).build());
             model.addAttribute("reviews", List.of());
         }

@@ -100,11 +100,27 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
     List<Object[]> getAvgScores();
 
     @Query("""
-        SELECT pr.talentMatrix, COUNT(pr) FROM PerformanceReview pr 
-        WHERE pr.status IN ('COMPLETED', 'PUBLISHED') AND pr.talentMatrix IS NOT NULL 
-        GROUP BY pr.talentMatrix
+        SELECT 
+            CASE 
+                WHEN pr.performanceScore >= 4.5 THEN 'A'
+                WHEN pr.performanceScore >= 3.5 THEN 'B'
+                WHEN pr.performanceScore >= 2.5 THEN 'C'
+                WHEN pr.performanceScore >= 1.5 THEN 'D'
+                ELSE 'F'
+            END, 
+            COUNT(pr) 
+        FROM PerformanceReview pr 
+        WHERE pr.status IN ('COMPLETED', 'PUBLISHED') 
+        GROUP BY 
+            CASE 
+                WHEN pr.performanceScore >= 4.5 THEN 'A'
+                WHEN pr.performanceScore >= 3.5 THEN 'B'
+                WHEN pr.performanceScore >= 2.5 THEN 'C'
+                WHEN pr.performanceScore >= 1.5 THEN 'D'
+                ELSE 'F'
+            END
     """)
-    List<Object[]> countByTalentMatrixGrouped();
+    List<Object[]> countByPerformanceGradeGrouped();
 
     @Query("""
         SELECT u.fullName, d.name, pr.performanceScore FROM PerformanceReview pr 

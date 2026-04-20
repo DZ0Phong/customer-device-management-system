@@ -395,12 +395,19 @@ public class HrReportService {
 
         long totalReviews = performanceReviewRepository.countByStatus("COMPLETED");
 
-        // Talent matrix distribution
-        List<Object[]> matrixRows = performanceReviewRepository.countByTalentMatrixGrouped();
-        Map<String, Long> talentMatrixDistribution = new LinkedHashMap<>();
-        for (Object[] row : matrixRows) {
+        // Performance grade distribution
+        List<Object[]> gradeRows = performanceReviewRepository.countByPerformanceGradeGrouped();
+        Map<String, Long> performanceGradeDistribution = new LinkedHashMap<>();
+        // Initialize with default order
+        performanceGradeDistribution.put("A", 0L);
+        performanceGradeDistribution.put("B", 0L);
+        performanceGradeDistribution.put("C", 0L);
+        performanceGradeDistribution.put("D", 0L);
+        performanceGradeDistribution.put("F", 0L);
+
+        for (Object[] row : gradeRows) {
             if (row[0] != null) {
-                talentMatrixDistribution.put((String) row[0], (Long) row[1]);
+                performanceGradeDistribution.put((String) row[0], (Long) row[1]);
             }
         }
 
@@ -427,7 +434,7 @@ public class HrReportService {
                 .avgPerformanceScore(avgPerf != null ? Math.round(avgPerf * 100.0) / 100.0 : null)
                 .avgPotentialScore(avgPot != null ? Math.round(avgPot * 100.0) / 100.0 : null)
                 .totalReviews(totalReviews)
-                .talentMatrixDistribution(talentMatrixDistribution)
+                .performanceGradeDistribution(performanceGradeDistribution)
                 .scoreLabels(scoreLabels)
                 .scoreCounts(scoreCounts)
                 .topPerformers(topPerformers)

@@ -26,7 +26,6 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.jpa.domain.Specification;
 import jakarta.persistence.criteria.*;
 import java.util.ArrayList;
-import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -242,7 +241,6 @@ public class HrEmployeeService {
                         .reviewPeriod(pr.getReviewPeriod())
                         .performanceScore(pr.getPerformanceScore())
                         .potentialScore(pr.getPotentialScore())
-                        .talentMatrix(pr.getTalentMatrix())
                         .status(pr.getStatus())
                         .reviewerName(pr.getReviewer() != null && pr.getReviewer().getUser() != null ? pr.getReviewer().getUser().getFullName() : "System")
                         .createdAt(pr.getCreatedAt())

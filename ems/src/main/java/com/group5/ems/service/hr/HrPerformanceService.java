@@ -110,7 +110,6 @@ public class HrPerformanceService {
                 .reviewPeriod(r.getReviewPeriod())
                 .performanceScore(r.getPerformanceScore())
                 .potentialScore(r.getPotentialScore())
-                .talentMatrix(r.getTalentMatrix())
                 .strengths(r.getStrengths())
                 .areasToImprove(r.getAreasToImprove())
                 .createdAt(r.getCreatedAt())

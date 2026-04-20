@@ -72,17 +72,6 @@
                     </div>
                 </div>
 
-                <!-- Talent Matrix -->
-                <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col justify-between">
-                    <div class="flex items-center justify-between mb-4">
-                        <p class="text-sm font-medium text-slate-500">Talent Matrix</p>
-                        <div class="w-10 h-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center">
-                            <span class="material-symbols-outlined">grade</span>
-                        </div>
-                    </div>
-                    <h3 class="text-2xl font-black text-primary" th:text="${summary.talentMatrix ?: 'N/A'}">N/A</h3>
-                    <p class="text-xs text-slate-400 mt-2" th:text="'Total reviews: ' + ${summary.totalReviews}">Total reviews: 0</p>
-                </div>
 
                 <!-- KPI Progress -->
                 <div class="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col">
@@ -130,7 +119,6 @@
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Review Period</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Reviewer</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider text-center">Rating</th>
-                            <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Talent Matrix</th>
                             <th class="px-6 py-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
                         </tr>
                         </thead>
@@ -149,10 +137,6 @@
                             <td class="px-6 py-4 text-center">
                                 <span class="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-bold bg-primary text-white"
                                       th:text="${r.performanceScore}">-</span>
-                            </td>
-                            <td class="px-6 py-4">
-                                <span class="text-sm text-slate-600 dark:text-slate-300"
-                                      th:text="${r.talentMatrix ?: '—'}">—</span>
                             </td>
                             <td class="px-6 py-4">
                                 <span class="inline-flex items-center gap-1.5 text-xs font-bold px-2 py-1 rounded-md"
