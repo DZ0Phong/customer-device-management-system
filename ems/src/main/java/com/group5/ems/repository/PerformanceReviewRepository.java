@@ -29,7 +29,7 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
            LEFT JOIN FETCH e.department d 
            LEFT JOIN FETCH pr.reviewer r 
            LEFT JOIN FETCH r.user ru 
-           WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))) 
+           WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) 
            AND (:status IS NULL OR pr.status = :status) 
            AND (:departmentId IS NULL OR e.department.id = :departmentId) 
            AND (:reviewerId IS NULL OR pr.reviewerId = :reviewerId) 
@@ -42,7 +42,7 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
            countQuery = """
            SELECT count(pr) FROM PerformanceReview pr 
            JOIN pr.employee e JOIN e.user u 
-           WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%'))) 
+           WHERE (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) 
            AND (:status IS NULL OR pr.status = :status) 
            AND (:departmentId IS NULL OR e.department.id = :departmentId) 
            AND (:reviewerId IS NULL OR pr.reviewerId = :reviewerId) 
