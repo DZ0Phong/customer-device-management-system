@@ -36,6 +36,9 @@ public class HrManagerController {
     private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
     private final com.group5.ems.repository.DepartmentRepository departmentRepository;
 
+    private final com.group5.ems.repository.UserRepository userRepository;
+    private final com.group5.ems.repository.EmployeeRepository employeeRepository;
+
     // ── Dashboard ─────────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
     public String dashboard(Model model,
@@ -377,10 +380,15 @@ public class HrManagerController {
     // ── Request Approval ──────────────────────────────────────────────────────
     @GetMapping("/request-approval")
     public String requestApproval(Model model,
-                                @RequestParam(defaultValue = "pending") String tab,
+                                @RequestParam(defaultValue = "current") String tab,
                                 @RequestParam(defaultValue = "all") String category,
                                 @RequestParam(defaultValue = "1") int page,
                                 @RequestParam(required = false) Long requestId) {
+        // Map "pending" to "current" for backward compatibility
+        if ("pending".equals(tab)) {
+            tab = "current";
+        }
+        
         model.addAttribute("stats",         leaveApprovalService.getStats());
         model.addAttribute("leaveRequests", leaveApprovalService.getLeaveRequests(tab, page));
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
@@ -504,9 +512,9 @@ public class HrManagerController {
     // ── Request Approval Actions ──────────────────────────────────────────────
     @PostMapping("/request-approval/approve")
     public String approveRequest(@RequestParam Long requestId,
-                                      @RequestParam Long approverId,
                                       RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.approveLeaveRequest(requestId, approverId);
             redirectAttributes.addFlashAttribute("flashMessage", "Request approved successfully!");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -514,15 +522,15 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to approve: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/request-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
     }
 
     @PostMapping("/request-approval/reject")
     public String rejectRequest(@RequestParam Long requestId,
-                                     @RequestParam Long approverId,
                                      @RequestParam String rejectedReason,
                                      RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.rejectLeaveRequest(requestId, approverId, rejectedReason);
             redirectAttributes.addFlashAttribute("flashMessage", "Request rejected.");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -530,7 +538,7 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to reject: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/request-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
     }
     
     // ── Bulk Actions ──────────────────────────────────────────────────────────
@@ -605,8 +613,17 @@ public class HrManagerController {
 
     // ── Helper ────────────────────────────────────────────────────────────────
     private Long getCurrentUserId() {
-        // TODO: thay bằng SecurityContext sau khi có Authentication
-        return 1L;
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .map(user -> user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
     
     // ========================================================================
