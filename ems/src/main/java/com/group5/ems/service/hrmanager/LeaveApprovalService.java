@@ -175,10 +175,10 @@ public class LeaveApprovalService {
     }
 
     /**
-     * Count pending leave requests
+     * Count pending leave requests (waiting for HR Manager approval)
      */
     public long countPendingLeaveRequests() {
-        return requestRepository.countByStatus("PENDING");
+        return requestRepository.countHrmPendingLeaveRequests();
     }
 
     /**
@@ -268,7 +268,8 @@ public class LeaveApprovalService {
         
         switch (tab.toLowerCase()) {
             case "pending":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("PENDING", pageable);
+                // HR Manager only sees requests that have been approved by HR (step = WAITING_HRM)
+                requestPage = requestRepository.findHrmPendingLeaveRequestsWithPagination(pageable);
                 break;
             case "approved":
                 requestPage = requestRepository.findApprovedRequestsOrderByApprovedAt(pageable);
@@ -397,7 +398,8 @@ public class LeaveApprovalService {
         
         switch (tab.toLowerCase()) {
             case "pending":
-                requestPage = requestRepository.findRequestsByStatusWithoutLeaveTypeFilter("PENDING", pageable);
+                // HR Manager only sees requests that have been approved by HR (step = WAITING_HRM)
+                requestPage = requestRepository.findHrmPendingLeaveRequestsWithPagination(pageable);
                 break;
             case "approved":
                 requestPage = requestRepository.findApprovedRequestsOrderByApprovedAt(pageable);
