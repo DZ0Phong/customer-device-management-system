@@ -35,6 +35,10 @@ public class HrManagerController {
     private final CalendarService calendarService;
     private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
     private final com.group5.ems.repository.DepartmentRepository departmentRepository;
+    private final com.group5.ems.repository.PositionRepository positionRepository;
+
+    private final com.group5.ems.repository.UserRepository userRepository;
+    private final com.group5.ems.repository.EmployeeRepository employeeRepository;
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
@@ -45,9 +49,14 @@ public class HrManagerController {
         model.addAttribute("hiringData",         dashboardService.getHiringData());
         model.addAttribute("attritionData",      dashboardService.getAttritionData());
         model.addAttribute("upcomingEvents",     dashboardService.getUpcomingEvents());
-        model.addAttribute("recentActivities",   dashboardService.getRecentActivities(activityFilter));
+        
+        // Get pending non-attendance requests for HRM (same as request_approval)
+        model.addAttribute("recentActivities",   leaveApprovalService.getLeaveRequests("current", 1));
+        model.addAttribute("stats",              leaveApprovalService.getStats());
+        
         model.addAttribute("activityCategories", dashboardService.getActivityCategories());
         model.addAttribute("activityFilter",     activityFilter);
+        model.addAttribute("positions",          positionRepository.findAll());
         model.addAttribute("activePage",         "dashboard");
         return "hrmanager/dashboard";
     }
@@ -377,15 +386,21 @@ public class HrManagerController {
     // ── Request Approval ──────────────────────────────────────────────────────
     @GetMapping("/request-approval")
     public String requestApproval(Model model,
-                                @RequestParam(defaultValue = "pending") String tab,
+                                @RequestParam(defaultValue = "current") String tab,
                                 @RequestParam(defaultValue = "all") String category,
                                 @RequestParam(defaultValue = "1") int page,
                                 @RequestParam(required = false) Long requestId) {
+        // Map "pending" to "current" for backward compatibility
+        if ("pending".equals(tab)) {
+            tab = "current";
+        }
+        
         model.addAttribute("stats",         leaveApprovalService.getStats());
         model.addAttribute("leaveRequests", leaveApprovalService.getLeaveRequests(tab, page));
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
         model.addAttribute("activeTab",     tab);
         model.addAttribute("activeCategory", category);
+        model.addAttribute("positions",     positionRepository.findAll());
         model.addAttribute("activePage",    "request");
         model.addAttribute("requestId",     requestId); // For auto-expand
         return "hrmanager/request_approval";
@@ -420,6 +435,7 @@ public class HrManagerController {
         model.addAttribute("diversityData",   analyticsService.getDiversityData());
         model.addAttribute("trainingCourses", analyticsService.getTrainingCourses());
         model.addAttribute("policyReviews",   analyticsService.getPolicyReviews());
+        model.addAttribute("positions",       positionRepository.findAll());
         model.addAttribute("activePage",      "analytics");
         return "hrmanager/hr_analytics";
     }
@@ -435,6 +451,7 @@ public class HrManagerController {
 
         model.addAttribute("events",       calendarService.getEventsByMonth(currentMonth, currentYear));
         model.addAttribute("departments",  departmentRepository.findAll());
+        model.addAttribute("positions",    positionRepository.findAll());
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("currentYear",  currentYear);
         model.addAttribute("activePage",   "calendar");
@@ -504,9 +521,9 @@ public class HrManagerController {
     // ── Request Approval Actions ──────────────────────────────────────────────
     @PostMapping("/request-approval/approve")
     public String approveRequest(@RequestParam Long requestId,
-                                      @RequestParam Long approverId,
                                       RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.approveLeaveRequest(requestId, approverId);
             redirectAttributes.addFlashAttribute("flashMessage", "Request approved successfully!");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -514,15 +531,15 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to approve: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/request-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
     }
 
     @PostMapping("/request-approval/reject")
     public String rejectRequest(@RequestParam Long requestId,
-                                     @RequestParam Long approverId,
                                      @RequestParam String rejectedReason,
                                      RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.rejectLeaveRequest(requestId, approverId, rejectedReason);
             redirectAttributes.addFlashAttribute("flashMessage", "Request rejected.");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -530,7 +547,7 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to reject: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/request-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
     }
     
     // ── Bulk Actions ──────────────────────────────────────────────────────────
@@ -546,11 +563,12 @@ public class HrManagerController {
             Long approverId = getCurrentUserId();
             
             Map<String, Object> result = leaveApprovalService.bulkApprove(requestIds, approverId);
-            result.put("success", true);
+            // Don't overwrite 'success' field from service - it contains the count
             return result;
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
+            error.put("success", 0);
+            error.put("failed", 0);
             error.put("message", "Bulk approve failed: " + e.getMessage());
             return error;
         }
@@ -569,11 +587,12 @@ public class HrManagerController {
             String reason = (String) payload.getOrDefault("reason", "Bulk rejection");
             
             Map<String, Object> result = leaveApprovalService.bulkReject(requestIds, approverId, reason);
-            result.put("success", true);
+            // Don't overwrite 'success' field from service - it contains the count
             return result;
         } catch (Exception e) {
             Map<String, Object> error = new HashMap<>();
-            error.put("success", false);
+            error.put("success", 0);
+            error.put("failed", 0);
             error.put("message", "Bulk reject failed: " + e.getMessage());
             return error;
         }
@@ -603,8 +622,17 @@ public class HrManagerController {
 
     // ── Helper ────────────────────────────────────────────────────────────────
     private Long getCurrentUserId() {
-        // TODO: thay bằng SecurityContext sau khi có Authentication
-        return 1L;
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .map(user -> user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
     
     // ========================================================================

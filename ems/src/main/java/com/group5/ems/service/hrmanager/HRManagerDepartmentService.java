@@ -22,6 +22,7 @@ public class HRManagerDepartmentService {
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
     private final StaffingRequestRepository staffingRequestRepository;
+    private final PositionRepository positionRepository;
 
     private static final String DEFAULT_AVATAR =
             "https://lh3.googleusercontent.com/aida-public/AB6AXuAx3bm_6ROku45Qad2UC6L8WqGYQTSxbQfGbrIsZyy-UW0G-0eeaUe05OzGGUPVXtUgSAXYY1km4lsQ8OMlKocQqnLvoWylgqv8HhjdOhc-kA7_Y9WGXOHncHiVIom2GDXi5UFfTRWNw-kIM5Tj5rLVJx3alhzAv1liLktNE8Zt65-kYJuInGPkWm85aD_STgeoCKnakLN1ZpxNfG-GLOhHh26_zxMgT8NQ21STEfw2DrFNb7ygWY6IQKmzRFuP-NmzVNfiEHO9zvA";
@@ -80,6 +81,7 @@ public class HRManagerDepartmentService {
         data.put("staffingRequests", requestList);
         data.put("availableEmployees", availableEmployees);
         data.put("departments", departmentOptions);
+        data.put("positions", positionRepository.findAll());
         data.put("currentUser", mapUserToView(currentUser));
         data.put("pendingCount", pendingRequests.size());
 
@@ -123,7 +125,7 @@ public class HRManagerDepartmentService {
     }
 
     @Transactional
-    public boolean assignEmployeeToDepartment(Long requestId, Long employeeId) {
+    public boolean assignEmployeeToDepartment(Long requestId, Long employeeId, Long positionId) {
         try {
             StaffingRequest request = staffingRequestRepository.findById(requestId)
                     .orElseThrow(() -> new RuntimeException("Request not found"));
@@ -135,8 +137,9 @@ public class HRManagerDepartmentService {
             Employee employee = employeeRepository.findById(employeeId)
                     .orElseThrow(() -> new RuntimeException("Employee not found"));
 
-            // Assign employee to department
+            // Assign employee to department and position
             employee.setDepartmentId(request.getDepartmentId());
+            employee.setPositionId(positionId);
             employeeRepository.save(employee);
 
             // Update request status
