@@ -212,7 +212,7 @@ public interface PerformanceReviewRepository extends JpaRepository<PerformanceRe
     @Query("""
         SELECT u.fullName, d.name, pr.performanceScore FROM PerformanceReview pr
         JOIN pr.employee e JOIN e.user u LEFT JOIN e.department d
-        WHERE pr.status = 'COMPLETED'
+        WHERE pr.status IN ('COMPLETED','PUBLISHED')
         AND (:reviewPeriod IS NULL OR pr.reviewPeriod = :reviewPeriod)
         ORDER BY pr.performanceScore DESC
     """)
