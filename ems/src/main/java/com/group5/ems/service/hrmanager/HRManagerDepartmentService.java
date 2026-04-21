@@ -54,9 +54,9 @@ public class HRManagerDepartmentService {
         Map<String, Object> data = new HashMap<>();
         User currentUser = getCurrentUser();
 
-        // Get all pending staffing requests
-        List<StaffingRequest> pendingRequests = staffingRequestRepository.findAllPendingRequests();
-        List<Map<String, Object>> requestList = pendingRequests.stream()
+        // Get all pending and approved staffing requests
+        List<StaffingRequest> staffingRequests = staffingRequestRepository.findAllPendingRequests();
+        List<Map<String, Object>> requestList = staffingRequests.stream()
                 .map(this::mapStaffingRequestToView)
                 .collect(Collectors.toList());
 
@@ -78,12 +78,17 @@ public class HRManagerDepartmentService {
                 })
                 .collect(Collectors.toList());
 
+        // Count pending requests only
+        long pendingCount = staffingRequests.stream()
+                .filter(req -> "PENDING".equals(req.getStatus()))
+                .count();
+
         data.put("staffingRequests", requestList);
         data.put("availableEmployees", availableEmployees);
         data.put("departments", departmentOptions);
         data.put("positions", positionRepository.findAll());
         data.put("currentUser", mapUserToView(currentUser));
-        data.put("pendingCount", pendingRequests.size());
+        data.put("pendingCount", pendingCount);
 
         return data;
     }
@@ -130,7 +135,7 @@ public class HRManagerDepartmentService {
             StaffingRequest request = staffingRequestRepository.findById(requestId)
                     .orElseThrow(() -> new RuntimeException("Request not found"));
 
-            if (!"PENDING".equals(request.getStatus())) {
+            if (!"PENDING".equals(request.getStatus()) && !"APPROVED".equals(request.getStatus())) {
                 return false;
             }
 
@@ -180,7 +185,7 @@ public class HRManagerDepartmentService {
             StaffingRequest request = staffingRequestRepository.findById(requestId)
                     .orElseThrow(() -> new RuntimeException("Request not found"));
 
-            if (!"PENDING".equals(request.getStatus())) {
+            if (!"PENDING".equals(request.getStatus()) && !"APPROVED".equals(request.getStatus())) {
                 return false;
             }
 
