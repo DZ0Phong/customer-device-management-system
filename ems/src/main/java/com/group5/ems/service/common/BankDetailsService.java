@@ -1,14 +1,14 @@
-package com.group5.ems.service.hr;
+package com.group5.ems.service.common;
 
 import com.group5.ems.dto.request.BankDetailsFormDTO;
 import com.group5.ems.dto.response.BankDetailsResponseDTO;
+import com.group5.ems.dto.vietqr.VietQrBankDTO;
 import com.group5.ems.entity.Employee;
 import com.group5.ems.entity.EmployeeBankDetail;
 import com.group5.ems.enums.AuditAction;
 import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.repository.EmployeeBankDetailRepository;
 import com.group5.ems.repository.EmployeeRepository;
-import com.group5.ems.service.common.LogService;
 import com.group5.ems.service.external.VietQrApiClient;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -17,9 +17,11 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Locale;
+
 @Service
 @RequiredArgsConstructor
-public class HrBankDetailsService {
+public class BankDetailsService {
 
     private final EmployeeBankDetailRepository bankDetailRepository;
     private final EmployeeRepository employeeRepository;
@@ -42,7 +44,7 @@ public class HrBankDetailsService {
         // Find bank shortName from cached list
         String bankShortName = vietQrApiClient.getSupportedBanks().stream()
                 .filter(b -> b.bin().equals(dto.getBankCode()))
-                .map(com.group5.ems.dto.vietqr.VietQrBankDTO::shortName)
+                .map(VietQrBankDTO::shortName)
                 .findFirst()
                 .orElse(dto.getBankCode());
 
@@ -50,8 +52,8 @@ public class HrBankDetailsService {
         detail.setEmployee(employee);
         detail.setBankName(bankShortName);
         detail.setBranchName(null);
-        detail.setAccountName(dto.getAccountName());
-        detail.setAccountNumber(dto.getAccountNumber());
+        detail.setAccountName(normalizeAccountName(dto.getAccountName()));
+        detail.setAccountNumber(normalizeAccountNumber(dto.getAccountNumber()));
         detail.setIsPrimary(dto.getIsPrimary());
         
         EmployeeBankDetail saved = bankDetailRepository.save(detail);
@@ -90,5 +92,13 @@ public class HrBankDetailsService {
     private String maskAccountNumber(String accountNumber) {
         if (accountNumber == null || accountNumber.length() < 4) return "****";
         return "******" + accountNumber.substring(accountNumber.length() - 4);
+    }
+
+    private String normalizeAccountName(String accountName) {
+        return accountName == null ? null : accountName.trim().toUpperCase(Locale.ROOT);
+    }
+
+    private String normalizeAccountNumber(String accountNumber) {
+        return accountNumber == null ? null : accountNumber.trim();
     }
 }

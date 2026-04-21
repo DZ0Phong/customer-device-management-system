@@ -53,6 +53,19 @@
 
         .row-config { background: #fffbeb !important; }
         .row-config:hover { background: #fef3c7 !important; }
+
+        /* Image upload */
+        .img-drop-zone {
+            border: 2px dashed #cbd5e1; border-radius: 12px;
+            transition: border-color .2s, background .2s; cursor: pointer;
+        }
+        .img-drop-zone:hover, .img-drop-zone.drag-over {
+            border-color: #1414b8; background: #e8e8fb55;
+        }
+        .img-thumb {
+            width: 48px; height: 48px; object-fit: cover;
+            border-radius: 8px; border: 1px solid #e2e8f0; flex-shrink: 0;
+        }
     </style>
 </head>
 
@@ -165,26 +178,17 @@
                         <p class="text-xs text-slate-400 mt-0.5" th:text="${#lists.size(companyInfoList)} + ' entries'">0 entries</p>
                     </div>
                     <div class="flex items-center gap-3">
-                        <!-- Filter tabs -->
                         <div class="flex items-center gap-1 bg-slate-50 border border-slate-100 rounded-xl p-1">
                             <button onclick="filterType('all')" id="tab-all"
-                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg bg-white shadow-sm text-slate-700 transition-all">
-                                All
-                            </button>
+                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg bg-white shadow-sm text-slate-700 transition-all">All</button>
                             <button onclick="filterType('config')" id="tab-config"
-                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg text-slate-400 hover:text-amber-600 transition-all">
-                                ⚙ Config
-                            </button>
+                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg text-slate-400 hover:text-amber-600 transition-all">⚙ Config</button>
                             <button onclick="filterType('news')" id="tab-news"
-                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg text-slate-400 hover:text-blue-600 transition-all">
-                                📰 News
-                            </button>
+                                    class="tab-btn px-3 py-1 text-[11px] font-bold rounded-lg text-slate-400 hover:text-blue-600 transition-all">📰 News</button>
                         </div>
-                        <!-- Search -->
                         <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-xl px-3 py-1.5">
                             <span class="material-symbols-outlined text-slate-300 text-base">search</span>
-                            <input type="text" id="search-input"
-                                   placeholder="Search by key or title..."
+                            <input type="text" id="search-input" placeholder="Search by key or title..."
                                    oninput="filterTable()"
                                    class="bg-transparent text-xs text-slate-600 outline-none w-44 placeholder-slate-300"/>
                         </div>
@@ -197,6 +201,7 @@
                         <tr class="bg-slate-50/70">
                             <th class="px-6 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Info Key</th>
                             <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Title</th>
+                            <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Image</th>
                             <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Content</th>
                             <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Status</th>
                             <th class="px-4 py-3 text-left text-[10px] font-bold text-slate-400 uppercase tracking-wider">Updated</th>
@@ -206,14 +211,13 @@
                         <tbody class="divide-y divide-slate-50">
 
                         <tr th:if="${companyInfoList == null or #lists.isEmpty(companyInfoList)}">
-                            <td colspan="6" class="px-6 py-16 text-center">
+                            <td colspan="7" class="px-6 py-16 text-center">
                                 <span class="material-symbols-outlined text-slate-200 text-5xl block mb-3">apartment</span>
                                 <p class="text-sm font-semibold text-slate-400">No content yet</p>
                                 <p class="text-xs text-slate-300 mt-1">Click <strong>Add Entry</strong> to get started</p>
                             </td>
                         </tr>
 
-                        <!-- Data rows -->
                         <tr th:each="info : ${companyInfoList}"
                             th:data-key="${info.infoKey}"
                             th:data-title="${info.title}"
@@ -227,18 +231,26 @@
                                     <code class="text-xs font-mono bg-slate-100 text-slate-700 px-2 py-0.5 rounded-md whitespace-nowrap w-fit"
                                           th:text="${info.infoKey}">key</code>
                                     <span th:if="${#lists.contains({'hero_title','hero_subtitle','stats_employees','stats_offices','stats_founded','stats_rating','cta_title','cta_subtitle'}, info.infoKey)}"
-                                          class="badge-config w-fit">
-                                        ⚙ CONFIG
-                                    </span>
+                                          class="badge-config w-fit">⚙ CONFIG</span>
                                     <span th:unless="${#lists.contains({'hero_title','hero_subtitle','stats_employees','stats_offices','stats_founded','stats_rating','cta_title','cta_subtitle'}, info.infoKey)}"
-                                          class="badge-news w-fit">
-                                        📰 NEWS
-                                    </span>
+                                          class="badge-news w-fit">📰 NEWS</span>
                                 </div>
                             </td>
 
                             <td class="px-4 py-3.5 max-w-[200px]">
                                 <p class="text-sm font-semibold text-slate-800 truncate" th:text="${info.title}">Title</p>
+                            </td>
+
+                            <!-- ★ Image thumbnail — gọi endpoint /image/{id} -->
+                            <td class="px-4 py-3.5">
+                                <img th:if="${info.hasImage()}"
+                                     th:src="${'/admin/company-info/image/' + info.id + '?v=' + (info.updatedAt != null ? info.updatedAt.toString() : '0')}"
+                                     th:alt="${info.title}"
+                                     class="img-thumb"/>
+                                <div th:unless="${info.hasImage()}"
+                                     class="w-10 h-10 rounded-lg bg-slate-100 flex items-center justify-center">
+                                    <span class="material-symbols-outlined text-slate-300 text-[18px]">image</span>
+                                </div>
                             </td>
 
                             <td class="px-4 py-3.5 max-w-xs">
@@ -256,9 +268,7 @@
                                     <span class="w-1.5 h-1.5 rounded-full bg-slate-400 inline-block"></span> Hidden
                                 </span>
                                 <span th:if="${#lists.contains({'hero_title','hero_subtitle','stats_employees','stats_offices','stats_founded','stats_rating','cta_title','cta_subtitle'}, info.infoKey)}"
-                                      class="block text-[9px] text-amber-500 font-medium mt-1">
-                                    public not required
-                                </span>
+                                      class="block text-[9px] text-amber-500 font-medium mt-1">public not required</span>
                             </td>
 
                             <td class="px-4 py-3.5 text-[11px] text-slate-400 whitespace-nowrap"
@@ -266,12 +276,14 @@
 
                             <td class="px-4 py-3.5">
                                 <div class="flex items-center gap-1">
+                                    <!-- data-has-image truyền sang JS để biết entry có ảnh không -->
                                     <button type="button"
                                             th:data-id="${info.id}"
                                             th:data-key="${info.infoKey}"
                                             th:data-title="${info.title}"
                                             th:data-content="${info.content}"
                                             th:data-public="${info.isPublic}"
+                                            th:data-has-image="${info.hasImage()}"
                                             onclick="openEditModalFromBtn(this)"
                                             class="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary-light transition-colors"
                                             title="Edit">
@@ -330,11 +342,11 @@
                     </div>
                     <div class="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl p-3">
                         <code class="text-xs font-mono text-amber-700 font-bold shrink-0 mt-0.5 min-w-[130px]">cta_title</code>
-                        <p class="text-[11px] text-slate-500">Heading for the CTA banner at the bottom of the Home page</p>
+                        <p class="text-[11px] text-slate-500">Heading for the CTA banner at the bottom</p>
                     </div>
                     <div class="flex items-start gap-2.5 bg-amber-50 border border-amber-100 rounded-xl p-3">
                         <code class="text-xs font-mono text-amber-700 font-bold shrink-0 mt-0.5 min-w-[130px]">cta_subtitle</code>
-                        <p class="text-[11px] text-slate-500">Description for the CTA banner at the bottom of the Home page</p>
+                        <p class="text-[11px] text-slate-500">Description for the CTA banner at the bottom</p>
                     </div>
                 </div>
             </div>
@@ -358,9 +370,10 @@
             </button>
         </div>
 
-        <form id="modal-form" method="post" class="flex-1 overflow-y-auto flex flex-col">
+        <form id="modal-form" method="post" enctype="multipart/form-data" class="flex-1 overflow-y-auto flex flex-col">
             <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
             <input type="hidden" name="id" id="field-id"/>
+            <input type="hidden" name="removeImage" id="field-remove-image" value="false"/>
 
             <div class="px-6 py-5 space-y-4 flex-1">
 
@@ -377,9 +390,7 @@
                            class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-mono focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all placeholder-slate-300"/>
                     <div class="flex items-center justify-between mt-1">
                         <p class="text-[10px] text-slate-400">Cannot be changed after creation.</p>
-                        <div id="key-type-preview" class="hidden">
-                            <span id="key-type-badge"></span>
-                        </div>
+                        <div id="key-type-preview" class="hidden"><span id="key-type-badge"></span></div>
                     </div>
                 </div>
 
@@ -398,10 +409,67 @@
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5">
                         Content <span class="text-rose-500">*</span>
                     </label>
-                    <textarea name="content" id="field-content" required rows="6"
+                    <textarea name="content" id="field-content" required rows="5"
                               placeholder="Enter content..."
                               class="w-full border border-slate-200 rounded-xl px-3 py-2.5 text-sm resize-none focus:outline-none focus:border-primary focus:ring-2 focus:ring-primary/10 transition-all leading-relaxed placeholder-slate-300"></textarea>
                     <p class="text-[10px] text-slate-400 mt-1"><span id="char-count">0</span> characters</p>
+                </div>
+
+                <!-- Image upload -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">
+                        Image <span class="text-slate-300 font-normal">(optional · lưu vào database)</span>
+                    </label>
+
+                    <!-- Ảnh hiện tại (edit mode) — load từ /image/{id} -->
+                    <div id="current-img-wrap" class="hidden mb-2 flex items-center gap-3 bg-slate-50 rounded-xl px-3 py-2.5 border border-slate-100">
+                        <img id="current-img-thumb" src="" alt="current"
+                             class="img-thumb" onerror="this.style.display='none'"/>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-slate-600">Current image</p>
+                            <p class="text-[10px] text-slate-400">Stored in database</p>
+                        </div>
+                        <button type="button" onclick="document.getElementById('field-image').click()"
+                                class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-primary hover:bg-primary-light transition-colors shrink-0"
+                                title="Replace image">
+                            <span class="material-symbols-outlined text-[15px]">upload</span>
+                        </button>
+                        <button type="button" onclick="removeCurrentImage()"
+                                class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0"
+                                title="Remove image">
+                            <span class="material-symbols-outlined text-[15px]">close</span>
+                        </button>
+                    </div>
+
+                    <!-- Drop zone -->
+                    <div id="img-drop-zone"
+                         class="img-drop-zone flex flex-col items-center justify-center gap-2 py-5 px-4 text-center"
+                         onclick="document.getElementById('field-image').click()"
+                         ondragover="event.preventDefault(); this.classList.add('drag-over')"
+                         ondragleave="this.classList.remove('drag-over')"
+                         ondrop="handleDrop(event)">
+                        <span class="material-symbols-outlined fill-icon text-slate-300 text-[32px]">add_photo_alternate</span>
+                        <p class="text-xs font-semibold text-slate-400">Click or drag &amp; drop to upload</p>
+                        <p class="text-[10px] text-slate-300">PNG, JPG, WEBP · max 5 MB · saved to DB</p>
+                    </div>
+
+                    <!-- New image preview -->
+                    <div id="new-img-preview" class="hidden mt-2 flex items-center gap-3 bg-emerald-50 rounded-xl px-3 py-2.5 border border-emerald-100">
+                        <img id="new-img-thumb" src="" alt="" class="img-thumb"/>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-xs font-semibold text-slate-700 truncate" id="new-img-name">—</p>
+                            <p class="text-[10px] text-emerald-600">Will be saved to database on submit</p>
+                        </div>
+                        <button type="button" onclick="clearNewImage()"
+                                class="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-500 hover:bg-rose-50 transition-colors shrink-0">
+                            <span class="material-symbols-outlined text-[15px]">close</span>
+                        </button>
+                    </div>
+
+                    <input type="file" name="image" id="field-image"
+                           accept="image/png,image/jpeg,image/webp,image/gif"
+                           style="position:absolute;width:1px;height:1px;opacity:0;pointer-events:none;overflow:hidden;"
+                           onchange="handleFileSelect(this)"/>
                 </div>
 
                 <!-- Is Public toggle -->
@@ -490,9 +558,9 @@
     // ── Toast ──────────────────────────────────────────────────────────
     function showToast(msg, type) {
         var cfg = {
-            success: { bg: 'bg-emerald-600', icon: 'check_circle' },
-            error:   { bg: 'bg-rose-600',    icon: 'error' },
-            info:    { bg: 'bg-primary',      icon: 'info' }
+            success: { bg:'bg-emerald-600', icon:'check_circle' },
+            error:   { bg:'bg-rose-600',    icon:'error' },
+            info:    { bg:'bg-primary',      icon:'info' }
         };
         var c = cfg[type] || cfg.info;
         var el = document.createElement('div');
@@ -501,8 +569,7 @@
         document.getElementById('toast-container').appendChild(el);
         if (window.hydrateAppIcons) window.hydrateAppIcons(el);
         setTimeout(function () {
-            el.style.transition = 'opacity .3s';
-            el.style.opacity = '0';
+            el.style.transition = 'opacity .3s'; el.style.opacity = '0';
             setTimeout(function () { el.remove(); }, 300);
         }, 3500);
     }
@@ -512,22 +579,20 @@
 
     // ── Filter tabs + Search ────────────────────────────────────────────
     var currentTypeFilter = 'all';
-
     function filterType(type) {
         currentTypeFilter = type;
         document.querySelectorAll('.tab-btn').forEach(btn => {
-            btn.classList.remove('bg-white', 'shadow-sm', 'text-slate-700', 'text-amber-600', 'text-blue-600');
+            btn.classList.remove('bg-white','shadow-sm','text-slate-700','text-amber-600','text-blue-600');
             btn.classList.add('text-slate-400');
         });
         var activeTab = document.getElementById('tab-' + type);
         activeTab.classList.remove('text-slate-400');
-        activeTab.classList.add('bg-white', 'shadow-sm', 'text-slate-700');
+        activeTab.classList.add('bg-white','shadow-sm','text-slate-700');
         filterTable();
     }
-
     function filterTable() {
         var q = (document.getElementById('search-input').value || '').toLowerCase().trim();
-        document.querySelectorAll('.info-row').forEach(function (row) {
+        document.querySelectorAll('.info-row').forEach(function(row) {
             var key   = (row.getAttribute('data-key')   || '').toLowerCase();
             var title = (row.getAttribute('data-title') || '').toLowerCase();
             var type  = row.getAttribute('data-type') || 'news';
@@ -538,11 +603,11 @@
     }
 
     // ── Char count ──────────────────────────────────────────────────────
-    document.getElementById('field-content').addEventListener('input', function () {
+    document.getElementById('field-content').addEventListener('input', function() {
         document.getElementById('char-count').textContent = this.value.length;
     });
 
-    // ── Key type preview on input ──────────────────────────────────────
+    // ── Key type preview ──────────────────────────────────────────────
     function previewKeyType(val) {
         var preview = document.getElementById('key-type-preview');
         var badge   = document.getElementById('key-type-badge');
@@ -557,64 +622,120 @@
         }
     }
 
-    // ── Create Modal ────────────────────────────────────────────────────
+    // ── Image helpers ──────────────────────────────────────────────────
+    function handleFileSelect(input) {
+        var file = input.files[0];
+        if (!file) return;
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Image must be under 5 MB', 'error');
+            input.value = '';
+            return;
+        }
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('new-img-thumb').src = e.target.result;
+            document.getElementById('new-img-name').textContent = file.name;
+            document.getElementById('new-img-preview').classList.remove('hidden');
+            document.getElementById('img-drop-zone').classList.add('hidden');
+            document.getElementById('current-img-wrap').classList.add('hidden');
+            document.getElementById('field-remove-image').value = 'false';
+        };
+        reader.readAsDataURL(file);
+    }
+    function handleDrop(event) {
+        event.preventDefault();
+        document.getElementById('img-drop-zone').classList.remove('drag-over');
+        var file = event.dataTransfer.files[0];
+        if (!file || !file.type.startsWith('image/')) return;
+        var dt = new DataTransfer(); dt.items.add(file);
+        var input = document.getElementById('field-image');
+        input.files = dt.files;
+        handleFileSelect(input);
+    }
+    function clearNewImage() {
+        document.getElementById('field-image').value = '';
+        document.getElementById('new-img-preview').classList.add('hidden');
+        document.getElementById('img-drop-zone').classList.remove('hidden');
+    }
+    function removeCurrentImage() {
+        document.getElementById('field-remove-image').value = 'true';
+        document.getElementById('current-img-wrap').classList.add('hidden');
+        document.getElementById('img-drop-zone').classList.remove('hidden');
+        showToast('Image will be removed on Save', 'info');
+    }
+
+    // ── Create Modal ──────────────────────────────────────────────────
     function openCreateModal() {
         document.getElementById('modal-title').textContent  = 'Add New Entry';
-        if (window.setAppIcon) {
-            window.setAppIcon(document.getElementById('modal-icon'), 'add');
-        } else {
-            document.getElementById('modal-icon').textContent = 'add';
-        }
+        if (window.setAppIcon) { window.setAppIcon(document.getElementById('modal-icon'), 'add'); }
+        else { document.getElementById('modal-icon').textContent = 'add'; }
         document.getElementById('submit-label').textContent = 'Create';
         document.getElementById('modal-form').action        = '/admin/company-info/create';
         document.getElementById('field-id').value           = '';
         var keyEl = document.getElementById('field-key');
-        keyEl.value    = '';
-        keyEl.readOnly = false;
-        keyEl.classList.remove('bg-slate-50', 'cursor-not-allowed', 'opacity-60');
-        document.getElementById('field-title').value        = '';
-        document.getElementById('field-content').value      = '';
-        document.getElementById('field-public').checked     = true;
-        document.getElementById('char-count').textContent   = '0';
+        keyEl.value = ''; keyEl.readOnly = false;
+        keyEl.classList.remove('bg-slate-50','cursor-not-allowed','opacity-60');
+        document.getElementById('field-title').value    = '';
+        document.getElementById('field-content').value  = '';
+        document.getElementById('field-public').checked = true;
+        document.getElementById('char-count').textContent = '0';
         document.getElementById('key-type-preview').classList.add('hidden');
+        // reset image
+        document.getElementById('field-image').value = '';
+        document.getElementById('current-img-wrap').classList.add('hidden');
+        document.getElementById('new-img-preview').classList.add('hidden');
+        document.getElementById('img-drop-zone').classList.remove('hidden');
+        document.getElementById('field-remove-image').value = 'false';
         document.getElementById('modal-overlay').classList.remove('hidden');
-        setTimeout(function () { keyEl.focus(); }, 80);
+        setTimeout(function() { keyEl.focus(); }, 80);
     }
 
-    // ── Edit Modal ──────────────────────────────────────────────────────
-    function openEditModal(id, key, title, content, isPublic) {
+    // ── Edit Modal ────────────────────────────────────────────────────
+    function openEditModal(id, key, title, content, isPublic, hasImage) {
         document.getElementById('modal-title').textContent  = 'Edit Entry';
-        if (window.setAppIcon) {
-            window.setAppIcon(document.getElementById('modal-icon'), 'edit');
-        } else {
-            document.getElementById('modal-icon').textContent = 'edit';
-        }
+        if (window.setAppIcon) { window.setAppIcon(document.getElementById('modal-icon'), 'edit'); }
+        else { document.getElementById('modal-icon').textContent = 'edit'; }
         document.getElementById('submit-label').textContent = 'Save Changes';
         document.getElementById('modal-form').action        = '/admin/company-info/update';
         document.getElementById('field-id').value           = id;
         var keyEl = document.getElementById('field-key');
-        keyEl.value    = key;
-        keyEl.readOnly = true;
-        keyEl.classList.add('bg-slate-50', 'cursor-not-allowed', 'opacity-60');
-        document.getElementById('field-title').value        = title;
-        document.getElementById('field-content').value      = content;
-        document.getElementById('field-public').checked     = isPublic;
-        document.getElementById('char-count').textContent   = String(content).length;
+        keyEl.value = key; keyEl.readOnly = true;
+        keyEl.classList.add('bg-slate-50','cursor-not-allowed','opacity-60');
+        document.getElementById('field-title').value    = title;
+        document.getElementById('field-content').value  = content;
+        document.getElementById('field-public').checked = isPublic;
+        document.getElementById('char-count').textContent = String(content).length;
         previewKeyType(key);
+        // reset image state
+        document.getElementById('field-image').value = '';
+        document.getElementById('new-img-preview').classList.add('hidden');
+        document.getElementById('field-remove-image').value = 'false';
+        if (hasImage) {
+            // Load thumbnail từ endpoint blob
+            document.getElementById('current-img-thumb').src =
+                '/admin/company-info/image/' + id + '?t=' + Date.now();
+            document.getElementById('current-img-wrap').classList.remove('hidden');
+            document.getElementById('img-drop-zone').classList.add('hidden');
+        } else {
+            document.getElementById('current-img-wrap').classList.add('hidden');
+            document.getElementById('img-drop-zone').classList.remove('hidden');
+        }
         document.getElementById('modal-overlay').classList.remove('hidden');
-        setTimeout(function () { document.getElementById('field-title').focus(); }, 80);
+        setTimeout(function() { document.getElementById('field-title').focus(); }, 80);
     }
 
     function openEditModalFromBtn(btn) {
         const d = btn.dataset;
-        openEditModal(d.id, d.key, d.title || '', d.content || '', d.public === 'true');
+        openEditModal(
+            d.id, d.key, d.title || '', d.content || '',
+            d.public === 'true',
+            d.hasImage === 'true'
+        );
     }
 
-    function closeModal() {
-        document.getElementById('modal-overlay').classList.add('hidden');
-    }
+    function closeModal() { document.getElementById('modal-overlay').classList.add('hidden'); }
 
-    document.getElementById('modal-overlay').addEventListener('click', function (e) {
+    document.getElementById('modal-overlay').addEventListener('click', function(e) {
         if (e.target === this) closeModal();
     });
 
@@ -623,28 +744,18 @@
         document.getElementById('delete-key-label').textContent = key;
         document.getElementById('delete-form').action = '/admin/company-info/delete/' + id;
         var warning = document.getElementById('delete-config-warning');
-        if (SPECIAL_KEYS.includes(key)) {
-            warning.classList.remove('hidden');
-        } else {
-            warning.classList.add('hidden');
-        }
+        if (SPECIAL_KEYS.includes(key)) { warning.classList.remove('hidden'); }
+        else { warning.classList.add('hidden'); }
         document.getElementById('delete-overlay').classList.remove('hidden');
     }
+    function openDeleteModalFromBtn(btn) { openDeleteModal(btn.dataset.id, btn.dataset.key); }
+    function closeDeleteModal() { document.getElementById('delete-overlay').classList.add('hidden'); }
 
-    function openDeleteModalFromBtn(btn) {
-        openDeleteModal(btn.dataset.id, btn.dataset.key);
-    }
-
-    function closeDeleteModal() {
-        document.getElementById('delete-overlay').classList.add('hidden');
-    }
-
-    document.getElementById('delete-overlay').addEventListener('click', function (e) {
+    document.getElementById('delete-overlay').addEventListener('click', function(e) {
         if (e.target === this) closeDeleteModal();
     });
 
-    // ── ESC ───────────────────────────────────────────────────────────
-    document.addEventListener('keydown', function (e) {
+    document.addEventListener('keydown', function(e) {
         if (e.key === 'Escape') { closeModal(); closeDeleteModal(); }
     });
 </script>

@@ -1,6 +1,7 @@
 package com.group5.ems.dto.response.hrmanager;
 
 import com.group5.ems.entity.Request;
+import com.group5.ems.util.WorkingDayUtils;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -8,7 +9,6 @@ import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
 
 @Data
 @Builder
@@ -18,6 +18,7 @@ public class LeaveRequestResponseDTO {
     // Basic request info
     private Long id;
     private Long employeeId;
+    private String title;              // Request title
     private String leaveType;
     private LocalDate leaveFrom;
     private LocalDate leaveTo;
@@ -63,20 +64,27 @@ public class LeaveRequestResponseDTO {
     // Constructor from Request entity
     public LeaveRequestResponseDTO(Request request) {
         this.id = request.getId();
+        this.title = request.getTitle();
         this.status = request.getStatus();
-        this.leaveType = request.getLeaveType();
+        this.leaveType = formatLeaveType(request.getLeaveType());
         this.leaveFrom = request.getLeaveFrom();
         this.leaveTo = request.getLeaveTo();
         this.content = request.getContent();
         this.rejectedReason = request.getRejectedReason();
         this.reason = request.getContent() != null ? request.getContent() : request.getTitle();
         this.createdAt = request.getCreatedAt();
+        this.approvedAt = request.getApprovedAt();
+        
+        // Priority info
+        this.priority = request.getPriority() != null ? request.getPriority() : "NORMAL";
+        this.priorityScore = request.getPriorityScore() != null ? request.getPriorityScore() : 0;
 
         // Employee info
         if (request.getEmployee() != null && request.getEmployee().getUser() != null) {
             String fullName = request.getEmployee().getUser().getFullName();
             this.employeeName = fullName != null ? fullName : "Unknown Employee";
             this.employeeInitials = getInitials(fullName);
+            this.employeeId = request.getEmployee().getId();
             
             if (request.getEmployee().getPosition() != null) {
                 this.employeePosition = request.getEmployee().getPosition().getName();
@@ -102,7 +110,7 @@ public class LeaveRequestResponseDTO {
             this.dateRange = request.getLeaveFrom().format(formatter) + " - " + request.getLeaveTo().format(formatter);
             this.dateRangeYear = String.valueOf(request.getLeaveFrom().getYear());
             
-            long days = ChronoUnit.DAYS.between(request.getLeaveFrom(), request.getLeaveTo()) + 1;
+            long days = WorkingDayUtils.countWorkingDays(request.getLeaveFrom(), request.getLeaveTo());
             this.durationLabel = days + (days == 1 ? " Day" : " Days");
         } else {
             this.dateRange = "No dates";
@@ -119,7 +127,7 @@ public class LeaveRequestResponseDTO {
     // Utility methods
     public long getDaysCount() {
         if (leaveFrom == null || leaveTo == null) return 0;
-        return ChronoUnit.DAYS.between(leaveFrom, leaveTo) + 1;
+        return WorkingDayUtils.countWorkingDays(leaveFrom, leaveTo);
     }
 
     private String getInitials(String fullName) {
@@ -132,5 +140,22 @@ public class LeaveRequestResponseDTO {
         } else {
             return (parts[0].substring(0, 1) + parts[parts.length - 1].substring(0, 1)).toUpperCase();
         }
+    }
+
+    private String formatLeaveType(String leaveType) {
+        if (leaveType == null || leaveType.isBlank()) {
+            return "Leave";
+        }
+        String normalized = leaveType.trim().toUpperCase();
+        return switch (normalized) {
+            case "ANNUAL_LEAVE", "LEAVE_ANNUAL" -> "Annual Leave";
+            case "SICK_LEAVE", "LEAVE_SICK" -> "Sick Leave";
+            case "UNPAID_LEAVE", "PERSONAL_LEAVE", "LEAVE_UNPAID" -> "Unpaid Leave";
+            case "MATERNITY_LEAVE", "LEAVE_MATERNITY" -> "Maternity Leave";
+            case "PATERNITY_LEAVE", "LEAVE_PATERNITY" -> "Paternity Leave";
+            case "BEREAVEMENT_LEAVE", "LEAVE_BEREAVEMENT" -> "Bereavement Leave";
+            case "STUDY_LEAVE", "LEAVE_STUDY" -> "Study Leave";
+            default -> leaveType.replace("_", " ");
+        };
     }
 }

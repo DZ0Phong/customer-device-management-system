@@ -24,36 +24,75 @@ public class CalendarService {
     private final EventRepository eventRepository;
     
     public List<EventDTO> getUpcomingEvents() {
-        List<EventDTO> events = new ArrayList<>();
-        
-        // Sample upcoming events - you can replace this with actual database queries
         LocalDate now = LocalDate.now();
+        LocalDate futureLimit = now.plusDays(30); // Get events for next 30 days
         
-        events.add(new EventDTO(
-            "New Employee Orientation",
-            now.plusDays(2),
-            "09:00",
-            "11:00",
-            "blue"
-        ));
+        // Get events from database
+        List<Event> upcomingEvents = eventRepository.findByStartTimeBetween(
+            now, java.time.LocalTime.MIN,
+            futureLimit, java.time.LocalTime.MAX
+        );
         
-        events.add(new EventDTO(
-            "Q3 Performance Reviews",
-            now.plusDays(4),
-            "00:00",
-            "23:59",
-            "purple"
-        ));
+        // Convert to DTOs
+        List<EventDTO> events = upcomingEvents.stream()
+            .limit(5) // Limit to 5 upcoming events
+            .map(event -> {
+                String color = determineEventColor(event);
+                return new EventDTO(
+                    event.getTitle(),
+                    event.getStartDate(),
+                    event.getStartTime() != null ? event.getStartTime().toString() : "00:00",
+                    event.getEndTime() != null ? event.getEndTime().toString() : "23:59",
+                    color
+                );
+            })
+            .collect(Collectors.toList());
         
-        events.add(new EventDTO(
-            "Benefits Enrollment Ends",
-            now.plusDays(5),
-            "00:00",
-            "17:00",
-            "emerald"
-        ));
+        // If no events found, return sample events as fallback
+        if (events.isEmpty()) {
+            events.add(new EventDTO(
+                "New Employee Orientation",
+                now.plusDays(2),
+                "09:00",
+                "11:00",
+                "blue"
+            ));
+            
+            events.add(new EventDTO(
+                "Q3 Performance Reviews",
+                now.plusDays(4),
+                "00:00",
+                "23:59",
+                "purple"
+            ));
+            
+            events.add(new EventDTO(
+                "Benefits Enrollment Ends",
+                now.plusDays(5),
+                "00:00",
+                "17:00",
+                "emerald"
+            ));
+        }
         
         return events;
+    }
+    
+    private String determineEventColor(Event event) {
+        // Determine color based on event type or title
+        String title = event.getTitle().toLowerCase();
+        if (title.contains("orientation") || title.contains("training")) {
+            return "blue";
+        } else if (title.contains("review") || title.contains("performance")) {
+            return "purple";
+        } else if (title.contains("benefit") || title.contains("enrollment")) {
+            return "emerald";
+        } else if (title.contains("meeting")) {
+            return "amber";
+        } else if (title.contains("deadline") || title.contains("due")) {
+            return "rose";
+        }
+        return "blue"; // default color
     }
     
     public List<EventResponseDTO> getEventsByMonth(int month, int year) {
@@ -83,6 +122,8 @@ public class CalendarService {
         event.setColor(dto.getColor());
         event.setIsAllDay(dto.getIsAllDay());
         event.setDepartmentId(dto.getDepartmentId());
+        event.setAssignedDepartments(dto.getAssignedDepartments());
+        event.setIsCompanyWide(dto.getIsCompanyWide() != null ? dto.getIsCompanyWide() : false);
         event.setCreatedBy(createdBy);
         event.setCreatedAt(LocalDateTime.now());
         event.setUpdatedAt(LocalDateTime.now());
@@ -105,6 +146,8 @@ public class CalendarService {
         event.setColor(dto.getColor());
         event.setIsAllDay(dto.getIsAllDay());
         event.setDepartmentId(dto.getDepartmentId());
+        event.setAssignedDepartments(dto.getAssignedDepartments());
+        event.setIsCompanyWide(dto.getIsCompanyWide() != null ? dto.getIsCompanyWide() : false);
         event.setUpdatedAt(LocalDateTime.now());
         
         eventRepository.save(event);
@@ -130,7 +173,98 @@ public class CalendarService {
         dto.setType(event.getType());
         dto.setColor(event.getColor());
         dto.setIsAllDay(event.getIsAllDay());
+        dto.setAssignedDepartments(event.getAssignedDepartments());
+        dto.setIsCompanyWide(event.getIsCompanyWide());
         return dto;
+    }
+    
+    // ══════════════════════════════════════════════════════════════════════════
+    // MULTI-DEPARTMENT & PERMISSIONS METHODS
+    // ══════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Get events by month with department filtering
+     * @param month Month (1-12)
+     * @param year Year
+     * @param departmentId Department ID (null for HR Manager = see all)
+     * @param isHrManager True if user is HR Manager
+     */
+    public List<EventResponseDTO> getEventsByMonthForUser(int month, int year, Long departmentId, boolean isHrManager) {
+        LocalDate startOfMonth = LocalDate.of(year, month, 1);
+        LocalDate endOfMonth = startOfMonth.plusMonths(1).minusDays(1);
+        
+        List<Event> events;
+        
+        if (isHrManager) {
+            // HR Manager sees ALL events
+            events = eventRepository.findByStartTimeBetween(
+                startOfMonth, java.time.LocalTime.MIN,
+                endOfMonth, java.time.LocalTime.MAX
+            );
+        } else if (departmentId != null) {
+            // Department Manager/Employee sees: company-wide + their department events
+            events = eventRepository.findVisibleToDepartmentByDateRange(
+                departmentId, startOfMonth, endOfMonth
+            );
+        } else {
+            // Fallback: no events
+            events = new ArrayList<>();
+        }
+        
+        return events.stream()
+                .map(this::mapToEventResponseDTO)
+                .collect(Collectors.toList());
+    }
+    
+    /**
+     * Check if user can edit/delete an event
+     * @param event Event to check
+     * @param userId User ID
+     * @param userDepartmentId User's department ID
+     * @param isHrManager True if user is HR Manager
+     */
+    public boolean canUserModifyEvent(Event event, Long userId, Long userDepartmentId, boolean isHrManager) {
+        // HR Manager can modify all events
+        if (isHrManager) {
+            return true;
+        }
+        
+        // Department Manager can only modify events of their department
+        if (userDepartmentId != null && event.getDepartmentId() != null) {
+            return event.getDepartmentId().equals(userDepartmentId);
+        }
+        
+        // Creator can modify their own events (if same department)
+        if (event.getCreatedBy() != null && event.getCreatedBy().equals(userId)) {
+            return true;
+        }
+        
+        return false;
+    }
+    
+    /**
+     * Validate department assignment based on user role
+     * @param assignedDepartments JSON string of department IDs
+     * @param userDepartmentId User's department ID
+     * @param isHrManager True if user is HR Manager
+     */
+    public boolean canAssignToDepartments(String assignedDepartments, Long userDepartmentId, boolean isHrManager) {
+        // HR Manager can assign to any department
+        if (isHrManager) {
+            return true;
+        }
+        
+        // Department Manager can only assign to their own department
+        if (assignedDepartments == null || assignedDepartments.isEmpty()) {
+            return true; // No assignment = OK
+        }
+        
+        // Check if assigned departments only contains user's department
+        if (userDepartmentId != null) {
+            return assignedDepartments.contains("\"" + userDepartmentId + "\"");
+        }
+        
+        return false;
     }
     
     public static class EventDTO {

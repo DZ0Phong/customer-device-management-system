@@ -1,16 +1,42 @@
 package com.group5.ems.repository;
 
 import com.group5.ems.entity.Event;
+import com.group5.ems.dto.response.hr.HrEventDTO;
+import com.group5.ems.dto.response.hr.HrEventResponseDTO;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.time.LocalDate;
+import java.time.LocalTime;
 import java.util.List;
 
 public interface EventRepository extends JpaRepository<Event, Long> {
 
-    // Lấy events theo tháng và năm
+    // HR Dashboard: Upcoming events as DTO
+    @Query("""
+        SELECT new com.group5.ems.dto.response.hr.HrEventDTO(
+            e.title, e.startDate, e.startTime, e.endTime, e.color
+        )
+        FROM Event e 
+        WHERE e.startDate >= :today 
+        ORDER BY e.startDate ASC, e.startTime ASC
+    """)
+    List<HrEventDTO> findUpcomingEventsDto(@Param("today") LocalDate today);
+
+    // HR Calendar: Events by month as DTO
+    @Query("""
+        SELECT new com.group5.ems.dto.response.hr.HrEventResponseDTO(
+            e.id, e.title, e.description, e.startDate, e.endDate, 
+            e.startTime, e.endTime, e.type, e.color, e.isAllDay, e.departmentId
+        )
+        FROM Event e 
+        WHERE (e.startDate BETWEEN :start AND :end)
+        ORDER BY e.startDate ASC, e.startTime ASC
+    """)
+    List<HrEventResponseDTO> findByDateRangeDto(@Param("start") LocalDate start, @Param("end") LocalDate end);
+
+    // Lấy events theo tháng và năm (Original for HR Manager)
     @Query("SELECT e FROM Event e WHERE MONTH(e.startDate) = :month AND YEAR(e.startDate) = :year ORDER BY e.startDate ASC")
     List<Event> findByMonthAndYear(@Param("month") int month, @Param("year") int year);
 
@@ -25,13 +51,13 @@ public interface EventRepository extends JpaRepository<Event, Long> {
     // Lấy events theo type
     List<Event> findByTypeOrderByStartDateAsc(String type);
 
-    // Lấy policy reviews (type = REVIEW)
-    @Query("SELECT e FROM Event e WHERE e.type = 'REVIEW' ORDER BY " +
+    // Lấy policy reviews (type = REVIEW hoặc title/description chứa 'training')
+    @Query("SELECT e FROM Event e WHERE e.type = 'REVIEW' OR LOWER(e.title) LIKE LOWER(CONCAT('%', :keyword, '%')) OR LOWER(e.description) LIKE LOWER(CONCAT('%', :keyword, '%')) ORDER BY " +
             "CASE WHEN e.status = 'IN_REVIEW' THEN 1 " +
             "     WHEN e.status = 'DRAFTING' THEN 2 " +
             "     WHEN e.status = 'FINALIZED' THEN 3 " +
             "     ELSE 4 END, e.startDate ASC")
-    List<Event> findPolicyReviews();
+    List<Event> findPolicyReviews(@Param("keyword") String keyword);
 
     // Lấy events theo department
     List<Event> findByDepartmentIdOrderByStartDateAsc(Long departmentId);
@@ -45,4 +71,56 @@ public interface EventRepository extends JpaRepository<Event, Long> {
                                        @Param("startTime") java.time.LocalTime startTime,
                                        @Param("endDate") java.time.LocalDate endDate,
                                        @Param("endTime") java.time.LocalTime endTime);
+
+    // Lấy training events đang active (chưa kết thúc hoặc vừa kết thúc gần đây)
+    @Query("SELECT e FROM Event e WHERE e.type = 'TRAINING' " +
+           "AND (e.endDate IS NULL OR e.endDate >= :cutoffDate) " +
+           "ORDER BY e.startDate DESC")
+    List<Event> findActiveTrainingEvents(@Param("cutoffDate") LocalDate cutoffDate);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // MULTI-DEPARTMENT & COMPANY-WIDE QUERIES
+    // ══════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Get events visible to a specific department (for Department Manager/Employee)
+     * Includes: company-wide events + events assigned to their department
+     */
+    @Query("SELECT e FROM Event e WHERE " +
+           "e.isCompanyWide = true OR " +
+           "e.departmentId = :deptId OR " +
+           "e.assignedDepartments LIKE CONCAT('%\"', :deptId, '\"%') " +
+           "ORDER BY e.startDate ASC, e.startTime ASC")
+    List<Event> findVisibleToDepartment(@Param("deptId") Long departmentId);
+
+    /**
+     * Get events visible to a department within a date range
+     */
+    @Query("SELECT e FROM Event e WHERE " +
+           "(e.isCompanyWide = true OR " +
+           "e.departmentId = :deptId OR " +
+           "e.assignedDepartments LIKE CONCAT('%\"', :deptId, '\"%')) AND " +
+           "e.startDate BETWEEN :start AND :end " +
+           "ORDER BY e.startDate ASC, e.startTime ASC")
+    List<Event> findVisibleToDepartmentByDateRange(
+        @Param("deptId") Long departmentId,
+        @Param("start") LocalDate start,
+        @Param("end") LocalDate end
+    );
+
+    /**
+     * Get company-wide events only
+     */
+    @Query("SELECT e FROM Event e WHERE e.isCompanyWide = true " +
+           "ORDER BY e.startDate ASC, e.startTime ASC")
+    List<Event> findCompanyWideEvents();
+
+    /**
+     * Get events by multiple department IDs (for HR Manager filtering)
+     */
+    @Query("SELECT e FROM Event e WHERE " +
+           "e.departmentId IN :deptIds OR " +
+           "e.assignedDepartments LIKE CONCAT('%\"', :deptId, '\"%') " +
+           "ORDER BY e.startDate ASC, e.startTime ASC")
+    List<Event> findByDepartmentIds(@Param("deptIds") List<Long> departmentIds, @Param("deptId") Long deptId);
 }

@@ -32,7 +32,19 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
         List<Request> findByEmployeeIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long employeeId);
 
 
-        List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
+    List<Request> findByEmployeeDepartmentIdAndLeaveTypeIsNotNullOrderByCreatedAtDesc(Long departmentId);
+
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "JOIN FETCH r.requestType rt " +
+            "LEFT JOIN FETCH r.approvedByUser abu " +
+            "WHERE e.departmentId = :departmentId " +
+            "AND rt.code = :requestTypeCode " +
+            "ORDER BY COALESCE(r.approvedAt, r.updatedAt, r.createdAt) DESC")
+    List<Request> findDepartmentWorkflowRequestsByTypeCode(
+            @Param("departmentId") Long departmentId,
+            @Param("requestTypeCode") String requestTypeCode);
 
         @Query("SELECT r FROM Request r " +
                         "JOIN FETCH r.employee e " +
@@ -48,22 +60,42 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
     @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
             "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "LEFT JOIN FETCH d.manager dm LEFT JOIN FETCH dm.user dmu " +
+            "LEFT JOIN FETCH e.position p " +
             "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category = 'ATTENDANCE' " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "ORDER BY r.createdAt DESC")
-    List<Request> findPendingLeaveRequests();
+    List<Request> findPendingLeaveRequests(
+            @Param("departmentId") Long departmentId,
+            @Param("leaveType") String leaveType,
+            @Param("search") String search);
 
     @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
             "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "LEFT JOIN FETCH d.manager dm LEFT JOIN FETCH dm.user dmu " +
+            "LEFT JOIN FETCH e.position p " +
             "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HRM' AND rt.category = 'ATTENDANCE' " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) " +
+            "     OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%'))) " +
             "ORDER BY r.createdAt DESC")
-    List<Request> findHrmPendingLeaveRequests();
+    List<Request> findHrmPendingLeaveRequests(
+            @Param("departmentId") Long departmentId,
+            @Param("leaveType") String leaveType,
+            @Param("search") String search);
 
-    @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
-            "LEFT JOIN e.department d JOIN r.requestType rt " +
-            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+    @Query(value = "SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "LEFT JOIN FETCH d.manager dm LEFT JOIN FETCH dm.user dmu " +
+            "LEFT JOIN FETCH e.position p " +
+            "WHERE r.status NOT IN ('PENDING', 'CANCELLED') AND rt.category = 'ATTENDANCE' " +
             "ORDER BY r.updatedAt DESC, r.createdAt DESC",
             countQuery = "SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
-                    "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE'")
+                    "WHERE r.status NOT IN ('PENDING', 'CANCELLED') AND rt.category = 'ATTENDANCE'")
     Page<Request> findLeaveHistory(Pageable pageable);
 
         // ── Pageable queries for HR workflow requests ──
@@ -140,7 +172,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "JOIN FETCH e.user u " +
             "LEFT JOIN FETCH e.position p " +
             "LEFT JOIN FETCH e.department d " +
-            "WHERE r.status IN ('APPROVED', 'REJECTED') " +
+            "JOIN FETCH r.requestType rt " +
+            "WHERE r.status IN ('APPROVED', 'REJECTED') AND rt.category <> 'ATTENDANCE' " +
             "ORDER BY r.approvedAt DESC")
     Page<Request> findHistoryRequestsOrderByApprovedAt(Pageable pageable);
 
@@ -151,6 +184,20 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "LEFT JOIN FETCH e.department d " +
             "ORDER BY r.createdAt DESC")
     Page<Request> findAllRequestsWithoutLeaveTypeFilter(Pageable pageable);
+
+    @Query("SELECT r FROM Request r " +
+            "JOIN FETCH r.employee e " +
+            "JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.position p " +
+            "LEFT JOIN FETCH e.department d " +
+            "JOIN FETCH r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HRM' AND rt.category <> 'ATTENDANCE' " +
+            "ORDER BY r.createdAt DESC")
+    Page<Request> findHrmPendingWorkflowRequestsWithPagination(Pageable pageable);
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+            "WHERE r.status = 'PENDING' AND r.step = 'WAITING_HRM' AND rt.category <> 'ATTENDANCE'")
+    long countHrmPendingWorkflowRequests();
 
         @Query("SELECT COUNT(r) FROM Request r WHERE r.status = :status " +
                         "AND r.approvedAt BETWEEN :startDate AND :endDate")
@@ -286,11 +333,38 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
            "WHERE r.status = :status AND r.step = 'WAITING_HR' AND rt.category = :category")
     long countByStatusAndStepWaitingHRAndRequestTypeCategory(@Param("status") String status, @Param("category") String category);
 
+    // New methods for excluding ATTENDANCE category
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt WHERE rt.category <> :excludeCategory")
+    long countByRequestTypeCategoryNot(@Param("excludeCategory") String excludeCategory);
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+           "WHERE r.status = :status AND rt.category <> :excludeCategory")
+    long countByStatusAndRequestTypeCategoryNot(@Param("status") String status, @Param("excludeCategory") String excludeCategory);
+
+    @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
+           "WHERE r.status IN :statuses AND rt.category <> :excludeCategory")
+    long countByStatusInAndRequestTypeCategoryNot(@Param("statuses") java.util.List<String> statuses, @Param("excludeCategory") String excludeCategory);
+
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "JOIN FETCH e.user u " +
+           "LEFT JOIN FETCH e.department d " +
+           "LEFT JOIN FETCH e.position p " +
+           "JOIN FETCH r.requestType rt " +
+           "WHERE rt.category <> :excludeCategory " +
+           "AND (r.status = 'PENDING' OR r.updatedAt >= :since) " +
+           "ORDER BY CASE WHEN r.status = 'PENDING' THEN 0 ELSE 1 END, r.createdAt DESC")
+    List<Request> findRecentRequestsByCategoryNot(
+            @Param("excludeCategory") String excludeCategory,
+            @Param("since") LocalDateTime since);
+
     // ── Filtered Leave History (server-side) ──
 
-    @Query(value = "SELECT r FROM Request r JOIN r.employee e JOIN e.user u " +
-            "LEFT JOIN e.department d JOIN r.requestType rt " +
-            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+    @Query(value = "SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
+            "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
+            "LEFT JOIN FETCH d.manager dm LEFT JOIN FETCH dm.user dmu " +
+            "LEFT JOIN FETCH e.position p " +
+            "WHERE r.status NOT IN ('PENDING', 'CANCELLED') AND rt.category = 'ATTENDANCE' " +
             "AND (:status IS NULL OR r.status = :status) " +
             "AND (:departmentId IS NULL OR d.id = :departmentId) " +
             "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
@@ -301,7 +375,7 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "ORDER BY r.updatedAt DESC, r.createdAt DESC",
             countQuery = "SELECT COUNT(r) FROM Request r JOIN r.employee e JOIN e.user u " +
             "LEFT JOIN e.department d JOIN r.requestType rt " +
-            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "WHERE r.status NOT IN ('PENDING', 'CANCELLED') AND rt.category = 'ATTENDANCE' " +
             "AND (:status IS NULL OR r.status = :status) " +
             "AND (:departmentId IS NULL OR d.id = :departmentId) " +
             "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
@@ -325,21 +399,28 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "WHERE rt.category = 'ATTENDANCE' " +
             "AND r.status IN ('APPROVED', 'PENDING') " +
             "AND r.leaveFrom IS NOT NULL AND r.leaveTo IS NOT NULL " +
-            "AND r.leaveFrom <= :endDate AND r.leaveTo >= :startDate")
+            "AND r.leaveFrom <= :endDate AND r.leaveTo >= :startDate " +
+            "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (:search IS NULL OR LOWER(u.fullName) LIKE LOWER(CONCAT('%', :search, '%')) OR LOWER(e.employeeCode) LIKE LOWER(CONCAT('%', :search, '%')))")
     List<Request> findCalendarEvents(
             @Param("startDate") java.time.LocalDate startDate,
-            @Param("endDate") java.time.LocalDate endDate);
+            @Param("endDate") java.time.LocalDate endDate,
+            @Param("departmentId") Long departmentId,
+            @Param("leaveType") String leaveType,
+            @Param("search") String search);
 
     // ── Leave Statistics ──
 
     @Query("SELECT COUNT(r) FROM Request r JOIN r.requestType rt " +
             "WHERE rt.category = 'ATTENDANCE' AND r.status = :status " +
-            "AND r.updatedAt >= :since")
-    long countLeaveByStatusSince(
+            "AND r.updatedAt >= :since AND r.updatedAt <= :until")
+    long countLeaveByStatusBetween(
             @Param("status") String status,
-            @Param("since") LocalDateTime since);
+            @Param("since") LocalDateTime since,
+            @Param("until") LocalDateTime until);
 
-    @Query(value = "SELECT rt.code, COUNT(r) as cnt FROM Request r JOIN r.requestType rt " +
+    @Query(value = "SELECT rt.name, COUNT(r) as cnt FROM Request r JOIN r.requestType rt " +
             "WHERE rt.category = 'ATTENDANCE' AND r.status <> 'PENDING' " +
             "GROUP BY rt.code ORDER BY cnt DESC")
     List<Object[]> findTopLeaveTypes();
@@ -347,8 +428,8 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
     @Query(value = "SELECT AVG(TIMESTAMPDIFF(HOUR, r.created_at, r.updated_at)) FROM requests r " +
             "JOIN request_types rt ON r.request_type_id = rt.id " +
             "WHERE rt.category = 'ATTENDANCE' AND r.status IN ('APPROVED', 'REJECTED') " +
-            "AND r.updated_at >= :since", nativeQuery = true)
-    Double avgProcessingHoursSince(@Param("since") LocalDateTime since);
+            "AND r.updated_at >= :since AND r.updated_at <= :until", nativeQuery = true)
+    Double avgProcessingHoursBetween(@Param("since") LocalDateTime since, @Param("until") LocalDateTime until);
 
     // ── Bulk operations ──
 
@@ -361,13 +442,19 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
 
     @Query("SELECT r FROM Request r JOIN FETCH r.employee e JOIN FETCH e.user u " +
             "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
-            "WHERE r.status <> 'PENDING' AND rt.category = 'ATTENDANCE' " +
+            "WHERE r.status NOT IN ('PENDING', 'CANCELLED') AND rt.category = 'ATTENDANCE' " +
             "AND (:status IS NULL OR r.status = :status) " +
             "AND (:departmentId IS NULL OR d.id = :departmentId) " +
+            "AND (:leaveType IS NULL OR rt.code = :leaveType) " +
+            "AND (cast(:startDate as timestamp) IS NULL OR r.updatedAt >= :startDate) " +
+            "AND (cast(:endDate as timestamp) IS NULL OR r.updatedAt <= :endDate) " +
             "ORDER BY r.updatedAt DESC")
     List<Request> findLeaveHistoryForExport(
             @Param("status") String status,
-            @Param("departmentId") Long departmentId);
+            @Param("departmentId") Long departmentId,
+            @Param("leaveType") String leaveType,
+            @Param("startDate") java.time.LocalDateTime startDate,
+            @Param("endDate") java.time.LocalDateTime endDate);
 
     // ══════════════════════════════════════════════════════════════════
     // HR Workflow Requests — Pending (non-ATTENDANCE handled here)
@@ -446,4 +533,22 @@ public interface RequestRepository extends JpaRepository<Request, Long> {
             "LEFT JOIN FETCH e.department d JOIN FETCH r.requestType rt " +
             "WHERE r.id IN :ids AND r.status = 'PENDING' AND r.step = 'WAITING_HR' AND rt.category <> 'ATTENDANCE'")
     List<Request> findPendingWorkflowRequestsByIds(@Param("ids") List<Long> ids);
+
+    // ══════════════════════════════════════════════════════════════════════════
+    // CRITICAL REQUESTS - For Email Notification
+    // ══════════════════════════════════════════════════════════════════════════
+    
+    /**
+     * Find all requests by status and priority
+     * Used for finding CRITICAL pending requests for email notifications
+     */
+    @Query("SELECT r FROM Request r " +
+           "JOIN FETCH r.employee e " +
+           "JOIN FETCH e.user u " +
+           "LEFT JOIN FETCH e.position p " +
+           "WHERE r.status = :status AND r.priority = :priority " +
+           "ORDER BY r.createdAt DESC")
+    List<Request> findByStatusAndPriorityOrderByCreatedAtDesc(
+            @Param("status") String status, 
+            @Param("priority") String priority);
 }

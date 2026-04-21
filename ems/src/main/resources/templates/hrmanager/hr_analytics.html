@@ -38,6 +38,12 @@
         ::-webkit-scrollbar { width: 5px; height: 5px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #1414b840; border-radius: 99px; }
+
+        /* Dot grid background */
+        .dot-grid {
+            background-image: radial-gradient(circle, #1414b820 1px, transparent 1px);
+            background-size: 24px 24px;
+        }
     </style>
 </head>
 
@@ -74,7 +80,7 @@
         </header>
 
         <!-- Content Area -->
-        <div class="flex-1 overflow-y-auto p-8">
+        <div class="flex-1 overflow-y-auto p-8 dot-grid">
             <!-- ── KPI Cards ───────────────────────────────────────────────────────── -->
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
 
@@ -151,13 +157,7 @@
                             <h3 class="font-bold text-lg">Departmental Distribution</h3>
                             <p class="text-sm text-slate-500">Current headcount by major department</p>
                         </div>
-                        <select id="locationFilter"
-                                onchange="updateDeptChart(this.value)"
-                                class="bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs rounded-lg px-2 py-1 focus:outline-none focus:ring-2 focus:ring-primary/30">
-                            <option value="all">All Locations</option>
-                            <option value="na">North America</option>
-                            <option value="emea">EMEA</option>
-                        </select>
+
                     </div>
                     <div style="height: 220px;">
                         <canvas id="deptChart"></canvas>
@@ -263,7 +263,7 @@
             <div class="bg-white dark:bg-slate-900 rounded-xl shadow-sm border border-slate-200 dark:border-slate-800 overflow-hidden">
                 <div class="p-6 border-b border-slate-200 dark:border-slate-800 flex justify-between items-center">
                     <h3 class="font-bold text-lg">Upcoming Policy Reviews</h3>
-                    <a th:href="@{/calendar}"
+                    <a th:href="@{/hrmanager/calendar}"
                        class="text-primary text-sm font-semibold hover:underline transition-colors">View Calendar</a>
                 </div>
                 <table class="w-full text-left text-sm">

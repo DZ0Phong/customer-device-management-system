@@ -10,17 +10,22 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import com.group5.ems.enums.AuditAction;
 import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.service.common.LogService;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.jpa.domain.Specification;
+import jakarta.persistence.criteria.*;
+import java.util.ArrayList;
 
 @Service
 @RequiredArgsConstructor
@@ -28,15 +33,42 @@ import org.springframework.transaction.annotation.Transactional;
 public class HrEmployeeService {
 
     private final EmployeeRepository employeeRepository;
+    private final com.group5.ems.repository.DepartmentRepository departmentRepository;
+    private final com.group5.ems.repository.PositionRepository positionRepository;
+    private final com.group5.ems.repository.PerformanceReviewRepository performanceReviewRepository;
+    private final com.group5.ems.repository.RewardDisciplineRepository rewardDisciplineRepository;
     private final LogService logService;
 
 
     public Page<HrEmployeeDTO> searchEmployees(String search, String department, String status, Pageable pageable) {
-        String searchParam = (search != null && !search.trim().isEmpty()) ? search.trim() : null;
-        String deptParam = (department != null && !department.trim().isEmpty() && !"All".equalsIgnoreCase(department.trim())) ? department.trim() : null;
-        String statusParam = (status != null && !status.trim().isEmpty() && !"All".equalsIgnoreCase(status.trim())) ? status.trim() : null;
+        Specification<Employee> spec = (root, query, cb) -> {
+            List<Predicate> predicates = new ArrayList<>();
+            
+            // Join User for name/email search
+            Join<Employee, com.group5.ems.entity.User> userJoin = root.join("user", JoinType.INNER);
 
-        Page<Employee> page = employeeRepository.searchEmployees(searchParam, deptParam, statusParam, pageable);
+            // Filtering
+            if (search != null && !search.trim().isEmpty()) {
+                String searchPattern = "%" + search.trim().toLowerCase() + "%";
+                predicates.add(cb.or(
+                    cb.like(cb.lower(userJoin.get("fullName")), searchPattern),
+                    cb.like(cb.lower(root.get("employeeCode")), searchPattern),
+                    cb.like(cb.lower(userJoin.get("email")), searchPattern)
+                ));
+            }
+
+            if (department != null && !department.trim().isEmpty() && !"All".equalsIgnoreCase(department.trim())) {
+                predicates.add(cb.equal(root.get("department").get("name"), department.trim()));
+            }
+
+            if (status != null && !status.trim().isEmpty() && !"All".equalsIgnoreCase(status.trim())) {
+                predicates.add(cb.equal(root.get("status"), status.trim()));
+            }
+
+            return cb.and(predicates.toArray(new Predicate[0]));
+        };
+
+        Page<Employee> page = employeeRepository.findAll(spec, pageable);
         List<HrEmployeeDTO> dtos = page.getContent().stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
@@ -75,7 +107,7 @@ public class HrEmployeeService {
         BigDecimal baseSalary = BigDecimal.ZERO;
         BigDecimal allowance = BigDecimal.ZERO;
         String salaryType = "N/A";
-        java.time.LocalDate salaryEffectiveFrom = null;
+        LocalDate salaryEffectiveFrom = null;
 
         List<Salary> salaries = employee.getSalaries();
         if (salaries != null && !salaries.isEmpty()) {
@@ -92,8 +124,8 @@ public class HrEmployeeService {
 
         // Get latest contract
         String contractType = "N/A";
-        java.time.LocalDate contractStart = null;
-        java.time.LocalDate contractEnd = null;
+        LocalDate contractStart = null;
+        LocalDate contractEnd = null;
         String contractStatus = "N/A";
 
         List<Contract> contracts = employee.getContracts();
@@ -109,9 +141,38 @@ public class HrEmployeeService {
             }
         }
 
+
+        // Fetch performance reviews
+        List<com.group5.ems.dto.response.HrEmployeePerformanceDTO> performanceReviews = performanceReviewRepository.findByEmployeeIdOrderByCreatedAtDesc(id).stream()
+                .filter(pr -> pr.getStatus() != null && pr.getStatus().equalsIgnoreCase("PUBLISHED"))
+                .map(pr -> com.group5.ems.dto.response.HrEmployeePerformanceDTO.builder()
+                        .id(pr.getId())
+                        .reviewPeriod(pr.getReviewPeriod())
+                        .performanceScore(pr.getPerformanceScore())
+                        .potentialScore(pr.getPotentialScore())
+                        .status(pr.getStatus())
+                        .reviewerName(pr.getReviewer() != null && pr.getReviewer().getUser() != null ? pr.getReviewer().getUser().getFullName() : "System")
+                        .createdAt(pr.getCreatedAt())
+                        .build())
+                .collect(Collectors.toList());
+
+        // Fetch reward and disciplines
+        List<com.group5.ems.dto.response.HrEmployeeDisciplineDTO> disciplines = rewardDisciplineRepository.findByEmployeeIdOrderByDecisionDateDesc(id).stream()
+                .map(d -> com.group5.ems.dto.response.HrEmployeeDisciplineDTO.builder()
+                        .id(d.getId())
+                        .recordType(d.getRecordType())
+                        .title(d.getTitle())
+                        .description(d.getDescription())
+                        .decisionDate(d.getDecisionDate())
+                        .amount(d.getAmount())
+                        .decidedBy(d.getDecidedByUser() != null ? d.getDecidedByUser().getFullName() : "N/A")
+                        .build())
+                .collect(Collectors.toList());
+
         HrEmployeeDetailDTO dto = HrEmployeeDetailDTO.builder()
                 .id(employee.getId())
                 .initials(initials.toUpperCase())
+                .avatarUrl(employee.getUser() != null ? employee.getUser().getAvatarUrl() : null)
                 .fullName(fullName)
                 .code(employee.getEmployeeCode())
                 .department(departmentName)
@@ -129,9 +190,42 @@ public class HrEmployeeService {
                 .contractStart(contractStart)
                 .contractEnd(contractEnd)
                 .contractStatus(contractStatus)
+                .performanceReviews(performanceReviews)
+                .disciplines(disciplines)
                 .build();
 
         return dto;
+    }
+
+    @Transactional
+    public void updateJobInfo(Long employeeId, Long departmentId, Long positionId) {
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
+
+        if (departmentId != null) {
+            com.group5.ems.entity.Department dept = departmentRepository.findById(departmentId)
+                    .orElseThrow(() -> new RuntimeException("Department not found"));
+            employee.setDepartmentId(dept.getId());
+        } else {
+            employee.setDepartmentId(null);
+        }
+
+        if (positionId != null) {
+            com.group5.ems.entity.Position pos = positionRepository.findById(positionId)
+                    .orElseThrow(() -> new RuntimeException("Position not found"));
+            
+            // Track promotion if position changes
+            if (!pos.getId().equals(employee.getPositionId())) {
+                employee.setPreviousPositionId(employee.getPositionId());
+                employee.setPromotionDate(LocalDate.now());
+                employee.setPositionId(pos.getId());
+            }
+        } else {
+            throw new RuntimeException("Position is required");
+        }
+
+        employeeRepository.save(employee);
+        logService.log(AuditAction.UPDATE, AuditEntityType.EMPLOYEE, employee.getId());
     }
 
 
@@ -166,6 +260,7 @@ public class HrEmployeeService {
                 .status(employee.getStatus())
                 .email(email)
                 .phone(phone)
+                .avatarUrl(employee.getUser() != null ? employee.getUser().getAvatarUrl() : null)
                 .build();
     }
 }

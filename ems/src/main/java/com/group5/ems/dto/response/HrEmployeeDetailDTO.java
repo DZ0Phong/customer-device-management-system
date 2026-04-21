@@ -10,6 +10,7 @@ public record HrEmployeeDetailDTO(
         // Info
         Long id,
         String initials,
+        String avatarUrl,
         String fullName,
         String code,
         String department,
@@ -32,6 +33,10 @@ public record HrEmployeeDetailDTO(
         String contractType,
         LocalDate contractStart,
         LocalDate contractEnd,
-        String contractStatus
+        String contractStatus,
+
+        // Reports & Records
+        java.util.List<HrEmployeePerformanceDTO> performanceReviews,
+        java.util.List<HrEmployeeDisciplineDTO> disciplines
 ) {
 }

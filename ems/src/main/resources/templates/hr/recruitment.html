@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -8,9 +8,10 @@
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap"
         rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
-        rel="stylesheet" />
-    <link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+<link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script th:src="@{/js/hr/hr-common.js}"></script>
     <script>
         tailwind.config = {
@@ -561,6 +562,87 @@
         }
 
         /* Assign modal layout */
+        /* My Interviews */
+        .iv-scheduled {
+            background: #dbeafe;
+            color: #1d4ed8;
+            border-color: #93c5fd;
+        }
+
+        .iv-completed {
+            background: #d1fae5;
+            color: #065f46;
+            border-color: #6ee7b7;
+        }
+
+        .iv-cancelled {
+            background: #fee2e2;
+            color: #b91c1c;
+            border-color: #fca5a5;
+        }
+
+        .iv-not-scheduled {
+            background: #fef3c7;
+            color: #92400e;
+            border-color: #fcd34d;
+        }
+
+        .iv-tab {
+            padding: 6px 16px;
+            border-radius: 10px;
+            font-size: 12px;
+            font-weight: 700;
+            cursor: pointer;
+            border: 1px solid #e2e8f0;
+            transition: all .15s;
+            background: white;
+            color: #64748b;
+        }
+
+        .iv-tab.active {
+            background: #1414b8;
+            color: white;
+            border-color: #1414b8;
+        }
+
+        .iv-tab:hover:not(.active) {
+            border-color: #1414b8;
+            color: #1414b8;
+        }
+
+        .iv-card {
+            background: white;
+            border-radius: 16px;
+            border: 1px solid #e8e8f0;
+            box-shadow: 0 1px 4px #0000000a;
+            transition: all .2s;
+        }
+
+        .iv-card:hover {
+            box-shadow: 0 8px 24px -8px #1414b825;
+            transform: translateY(-1px);
+        }
+
+        .fb-modal-box {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 560px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: modalIn .25s ease both;
+            box-shadow: 0 32px 80px -16px rgba(20, 20, 184, .2), 0 0 0 1px #1414b815;
+        }
+
+        .schedule-modal-box {
+            background: white;
+            border-radius: 20px;
+            width: 100%;
+            max-width: 480px;
+            animation: modalIn .25s ease both;
+            box-shadow: 0 32px 80px -16px rgba(20, 20, 184, .2), 0 0 0 1px #1414b815;
+        }
+
         .assign-modal-box {
             background: white;
             border-radius: 20px;
@@ -597,15 +679,17 @@
             color: #b91c1c;
         }
     </style>
+    <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}" />
+    <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
 </head>
 
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
     <div class="flex h-screen overflow-hidden">
 
-        <!-- ══════════════════ SIDEBAR ══════════════════ -->
+        <!-- â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â• -->
         <div th:replace="~{fragments/hr-sidebar :: sidebar('recruitment')}"></div>
 
-        <!-- ══════════════════ MAIN ══════════════════ -->
+        <!-- â•â•â•â•â•â•â•â• MAIN â•â•â•â•â•â•â•â• -->
         <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
             <!-- Header -->
@@ -635,7 +719,7 @@
                             <span th:text="${pendingJobRequests}">0</span> Pending Requests
                         </span>
                     </div>
-                    <!-- ✅ Fixed: uses openNewJobModalFresh() instead of openNewJobModal() -->
+                    <!-- âœ… Fixed: uses openNewJobModalFresh() instead of openNewJobModal() -->
                     <button onclick="openNewJobModalFresh()"
                         class="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded-xl text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30">
                         <span class="material-symbols-outlined text-[18px]">post_add</span>
@@ -662,12 +746,22 @@
                             th:text="${pendingJobRequests}">0</span>
                     </span>
                 </button>
+                <button id="mainTab-my-interviews" onclick="switchMainTab('my-interviews')"
+                    class="main-tab px-4 py-3 text-sm">
+                    <span class="flex items-center gap-1.5">
+                        <span class="material-symbols-outlined text-[16px]">event_note</span>
+                        My Interviews
+                        <span th:if="${myInterviewScheduled != null and myInterviewScheduled > 0}"
+                            class="bg-blue-500 text-white text-[9px] font-bold rounded-full px-1.5 py-0.5 leading-none"
+                            th:text="${myInterviewScheduled}">0</span>
+                    </span>
+                </button>
             </div>
 
             <div class="flex-1 overflow-y-auto p-8 dot-grid">
                 <div class="max-w-7xl mx-auto space-y-6">
 
-                    <!-- ══════════ TAB: PIPELINE ══════════ -->
+                    <!-- â•â•â•â•â•â•â•â•â•â• TAB: PIPELINE â•â•â•â•â•â•â•â•â•â• -->
                     <div id="section-pipeline">
 
                         <!-- Active Jobs -->
@@ -733,7 +827,7 @@
                                             th:data-job-benefits="${job.benefits ?: ''}"
                                             onclick="openJobDetail(this.dataset)"
                                             class="text-[11px] font-semibold text-primary hover:underline">
-                                            View Details →
+                                            View Details â†’
                                         </button>
                                     </div>
                                 </div>
@@ -904,13 +998,13 @@
                             <div id="paginationBar"
                                 class="p-4 border-t border-slate-100 flex items-center justify-between flex-wrap gap-3"
                                 style="display:none!important;">
-                                <p class="text-xs text-slate-400" id="pageInfo">Showing 0–0 of 0</p>
+                                <p class="text-xs text-slate-400" id="pageInfo">Showing 0â€“0 of 0</p>
                                 <div class="flex items-center gap-1" id="pageButtons"></div>
                             </div>
                         </div>
                     </div><!-- /section-pipeline -->
 
-                    <!-- ══════════ TAB: JOB POST REQUESTS ══════════ -->
+                    <!-- â•â•â•â•â•â•â•â•â•â• TAB: JOB POST REQUESTS â•â•â•â•â•â•â•â•â•â• -->
                     <div id="section-requests" class="hidden">
 
                         <!-- Stats bar -->
@@ -1010,7 +1104,7 @@
                                                 <p class="text-xs text-slate-500 flex items-center gap-1 flex-wrap">
                                                     <span class="material-symbols-outlined text-[13px]">business</span>
                                                     <span th:text="${req.departmentName ?: 'N/A'}">Department</span>
-                                                    <span class="text-slate-300">·</span>
+                                                    <span class="text-slate-300">Â·</span>
                                                     <span class="material-symbols-outlined text-[13px]">person</span>
                                                     <span
                                                         th:text="${req.requestedByName ?: 'Employee'}">Requester</span>
@@ -1031,50 +1125,6 @@
                                         <p class="text-xs text-slate-600 line-clamp-2 leading-relaxed"
                                             th:text="${req.content}">Content...</p>
                                     </div>
-
-                                    <!-- Approval step indicator -->
-                                    <div class="mb-4">
-                                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                            Approval Step</p>
-                                        <div class="flex items-center gap-1">
-                                            <!-- DM -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'bg-primary text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'check' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">DM</span>
-                                            </div>
-                                            <div class="flex-1 h-px bg-slate-200 mx-1"
-                                                th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HRM' or req.step == 'WAITING_HR' ? 'bg-primary' : 'bg-slate-200'}">
-                                            </div>
-                                            <!-- HRM -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'bg-primary text-white' :
-                                                   req.step == 'WAITING_HRM' ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'check' : req.step == 'WAITING_HRM' ? 'pending' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">HRM</span>
-                                            </div>
-                                            <div class="flex-1 h-px mx-1"
-                                                th:classappend="${req.step == 'DONE' or req.step == 'WAITING_HR' ? 'bg-primary' : 'bg-slate-200'}">
-                                            </div>
-                                            <!-- HR -->
-                                            <div class="flex items-center gap-1">
-                                                <div class="w-5 h-5 rounded-full flex items-center justify-center text-[9px] font-bold"
-                                                    th:classappend="${req.step == 'DONE' ? 'bg-primary text-white' :
-                                                   req.step == 'WAITING_HR' ? 'bg-amber-400 text-white' : 'bg-slate-200 text-slate-400'}">
-                                                    <span class="material-symbols-outlined text-[11px]"
-                                                        th:text="${req.step == 'DONE' ? 'check' : req.step == 'WAITING_HR' ? 'pending' : 'schedule'}">schedule</span>
-                                                </div>
-                                                <span class="text-[9px] text-slate-500 font-medium">HR</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
                                     <!-- Rejection reason -->
                                     <div th:if="${req.status == 'REJECTED' and req.rejectedReason != null and !req.rejectedReason.isEmpty()}"
                                         class="mb-3 bg-rose-50 rounded-xl p-3 border border-rose-100 flex items-start gap-2">
@@ -1126,14 +1176,219 @@
                         </div>
                     </div><!-- /section-requests -->
 
-                </div><!-- /max-w -->
-            </div><!-- /scroll area -->
+                    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+                         SECTION: My Interviews (server-rendered)
+                    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+                    <div id="section-my-interviews" class="hidden">
+
+                        <!-- Filter bar + search -->
+                        <div class="flex items-center gap-2 mb-5 anim anim-1 flex-wrap">
+                            <button onclick="filterIv('ALL')" id="ivTab-ALL" class="iv-tab active">All</button>
+                            <button onclick="filterIv('SCHEDULED')" id="ivTab-SCHEDULED"
+                                class="iv-tab">Scheduled</button>
+                            <button onclick="filterIv('NOT_SCHEDULED')" id="ivTab-NOT_SCHEDULED" class="iv-tab">Awaiting
+                                Schedule</button>
+                            <button onclick="filterIv('COMPLETED')" id="ivTab-COMPLETED"
+                                class="iv-tab">Completed</button>
+                            <button onclick="filterIv('CANCELLED')" id="ivTab-CANCELLED"
+                                class="iv-tab">Cancelled</button>
+                            <div
+                                class="ml-auto flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                <span class="material-symbols-outlined text-slate-400 text-[16px]">search</span>
+                                <input type="text" id="ivSearch" placeholder="Search candidate or job..."
+                                    oninput="applyIvFilter()"
+                                    class="border-none bg-transparent text-xs w-48 focus:ring-0 p-0 placeholder-slate-400">
+                            </div>
+                            <!-- Stats pills -->
+                            <div th:with="scheduled=${myInterviews != null ? #lists.size(myInterviews.?[status == 'SCHEDULED']) : 0}"
+                                class="flex items-center gap-2 px-3 py-1.5 bg-blue-50 border border-blue-100 rounded-xl">
+                                <span class="w-2 h-2 rounded-full bg-blue-400 animate-pulse"></span>
+                                <span class="text-xs font-semibold text-blue-700">
+                                    <span th:text="${scheduled}">0</span> Upcoming
+                                </span>
+                            </div>
+                            <div th:with="pending=${myInterviews != null ? #lists.size(myInterviews.?[status == 'NOT_SCHEDULED']) : 0}"
+                                class="flex items-center gap-2 px-3 py-1.5 bg-amber-50 border border-amber-100 rounded-xl">
+                                <span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                                <span class="text-xs font-semibold text-amber-700">
+                                    <span th:text="${pending}">0</span> Awaiting
+                                </span>
+                            </div>
+                            <div th:with="done=${myInterviews != null ? #lists.size(myInterviews.?[status == 'COMPLETED']) : 0}"
+                                class="flex items-center gap-2 px-3 py-1.5 bg-emerald-50 border border-emerald-100 rounded-xl">
+                                <span class="w-2 h-2 rounded-full bg-emerald-400"></span>
+                                <span class="text-xs font-semibold text-emerald-700">
+                                    <span th:text="${done}">0</span> Completed
+                                </span>
+                            </div>
+                        </div>
+
+                        <!-- Empty state -->
+                        <div th:if="${myInterviews == null or myInterviews.isEmpty()}"
+                            class="anim anim-2 bg-white rounded-2xl border border-dashed border-slate-200 p-20 text-center">
+                            <span class="material-symbols-outlined text-5xl text-slate-300 mb-4 block">event_busy</span>
+                            <p class="text-sm font-black text-slate-400">No interviews assigned</p>
+                            <p class="text-xs text-slate-300 mt-2">When HR assigns you to interview a candidate, they'll
+                                appear here.</p>
+                        </div>
+
+                        <!-- Interview cards grid -->
+                        <div th:if="${myInterviews != null and !myInterviews.isEmpty()}" id="ivGrid"
+                            class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 anim anim-2">
+
+                            <div th:each="iv : ${myInterviews}" th:data-status="${iv.status}"
+                                th:data-name="${iv.candidateName?.toLowerCase()}"
+                                th:data-job="${iv.jobTitle?.toLowerCase()}" class="iv-card-item iv-card p-5">
+
+                                <!-- Top accent bar -->
+                                <div class="h-1 -mt-5 -mx-5 mb-5 rounded-t-2xl" th:style="${iv.status == 'COMPLETED' ? 'background:linear-gradient(90deg,#10b981,#34d399)' :
+                                                iv.status == 'CANCELLED'  ? 'background:linear-gradient(90deg,#ef4444,#f87171)' :
+                                                iv.status == 'NOT_SCHEDULED' ? 'background:linear-gradient(90deg,#f59e0b,#fbbf24)' :
+                                                'background:linear-gradient(90deg,#1414b8,#6366f1)'}">
+                                </div>
+
+                                <!-- Header -->
+                                <div class="flex items-start justify-between mb-4">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-10 h-10 rounded-full flex items-center justify-center text-xs font-black shrink-0"
+                                            th:classappend="${iv.status == 'NOT_SCHEDULED' ? 'bg-amber-100 text-amber-700' : 'bg-primary/10 text-primary'}"
+                                            th:text="${iv.candidateInitials ?: '?'}">?</div>
+                                        <div>
+                                            <p class="text-sm font-black text-slate-800" th:text="${iv.candidateName}">
+                                                Name</p>
+                                            <p class="text-[10px] text-slate-400" th:text="${iv.candidateEmail}">email
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <!-- Status badge -->
+                                    <span th:if="${iv.status == 'SCHEDULED'}"
+                                        class="text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 iv-scheduled">SCHEDULED</span>
+                                    <span th:if="${iv.status == 'COMPLETED'}"
+                                        class="text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 iv-completed">COMPLETED</span>
+                                    <span th:if="${iv.status == 'CANCELLED'}"
+                                        class="text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 iv-cancelled">CANCELLED</span>
+                                    <span th:if="${iv.status == 'NOT_SCHEDULED'}"
+                                        class="text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0"
+                                        style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">AWAITING
+                                        SCHEDULE</span>
+                                </div>
+
+                                <!-- Job info -->
+                                <div class="mb-4 rounded-xl p-3 border"
+                                    th:classappend="${iv.status == 'NOT_SCHEDULED' ? 'bg-amber-50 border-amber-100' : 'bg-slate-50 border-slate-100'}">
+                                    <p class="text-xs font-bold text-slate-700" th:text="${iv.jobTitle}">Job</p>
+                                    <p class="text-[10px] text-slate-400 mt-0.5 flex items-center gap-1">
+                                        <span class="material-symbols-outlined text-[12px]">domain</span>
+                                        <span th:text="${iv.department ?: 'N/A'}">Dept</span>
+                                    </p>
+                                </div>
+
+                                <!-- Schedule details -->
+                                <div th:if="${iv.status != 'NOT_SCHEDULED'}" class="space-y-2 mb-4">
+                                    <div class="flex items-center gap-2 text-xs text-slate-600">
+                                        <span class="material-symbols-outlined text-primary text-[16px]">schedule</span>
+                                        <span
+                                            th:text="${iv.scheduledAt != null and !iv.scheduledAt.isEmpty() ? iv.scheduledAt : 'Not scheduled'}"
+                                            class="font-medium">—</span>
+                                    </div>
+                                    <div th:if="${iv.location != null and !iv.location.isEmpty()}"
+                                        class="flex items-center gap-2 text-xs text-slate-600">
+                                        <span
+                                            class="material-symbols-outlined text-primary text-[16px]">location_on</span>
+                                        <span th:text="${iv.location}" class="font-medium">—</span>
+                                    </div>
+                                </div>
+
+                                <!-- NOT_SCHEDULED: prompt banner -->
+                                <div th:if="${iv.status == 'NOT_SCHEDULED'}"
+                                    class="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-start gap-2">
+                                    <span
+                                        class="material-symbols-outlined text-amber-500 text-[16px] mt-0.5 shrink-0">info</span>
+                                    <p class="text-[11px] text-amber-700 leading-relaxed">
+                                        You have been assigned to interview this candidate, but no specific schedule has
+                                        been set yet. Please schedule it immediately so the candidate can prepare.
+                                    </p>
+                                </div>
+
+                                <!-- Feedback preview -->
+                                <div th:if="${iv.feedback != null and !iv.feedback.isEmpty()}"
+                                    class="mb-4 bg-indigo-50 rounded-xl p-3 border border-indigo-100">
+                                    <p class="text-[10px] font-bold text-indigo-400 uppercase tracking-wider mb-1">
+                                        Feedback</p>
+                                    <p class="text-xs text-indigo-700 line-clamp-2" th:text="${iv.feedback}">...</p>
+                                </div>
+
+                                <!-- Action buttons -->
+                                <div class="flex items-center gap-2 pt-3 border-t border-slate-100">
+
+                                    <!-- NOT_SCHEDULED: nÃºt Ä‘áº·t lá»‹ch -->
+                                    <th:block th:if="${iv.status == 'NOT_SCHEDULED'}">
+                                        <button th:data-app-id="${iv.applicationId}"
+                                            th:data-interviewer-id="${currentUserId}"
+                                            th:data-candidate="${iv.candidateName}" th:data-job="${iv.jobTitle}"
+                                            onclick="openScheduleModal(this.dataset)"
+                                            class="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl bg-amber-500 text-white hover:bg-amber-600 transition-all">
+                                            <span class="material-symbols-outlined text-[14px]">event_available</span>
+                                            Schedule interview
+                                        </button>
+                                    </th:block>
+
+                                    <!-- SCHEDULED: submit feedback + cancel -->
+                                    <th:block th:if="${iv.status == 'SCHEDULED'}">
+                                        <button th:data-iv-id="${iv.id}" th:data-iv-status="${iv.status}"
+                                            th:data-iv-feedback="${iv.feedback ?: ''}"
+                                            th:data-iv-candidate="${iv.candidateName}" th:data-iv-job="${iv.jobTitle}"
+                                            onclick="openFeedbackModal(this.dataset)"
+                                            class="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl bg-primary/10 text-primary hover:bg-primary hover:text-white transition-all">
+                                            <span class="material-symbols-outlined text-[14px]">rate_review</span>
+                                            Submit Feedback
+                                        </button>
+                                        <form th:action="@{'/hr/recruitment/interviews/' + ${iv.id} + '/cancel'}"
+                                            method="post" onsubmit="return confirm('Cancel this interview?')">
+                                            <input type="hidden" th:name="${_csrf.parameterName}"
+                                                th:value="${_csrf.token}" />
+                                            <input type="hidden" name="returnUrl"
+                                                value="/hr/recruitment?tab=my-interviews" />
+                                            <button type="submit"
+                                                class="flex items-center justify-center gap-1 text-[11px] font-bold px-3 py-2 rounded-xl bg-rose-50 text-rose-500 hover:bg-rose-500 hover:text-white transition-all">
+                                                <span class="material-symbols-outlined text-[14px]">event_busy</span>
+                                                Cancel
+                                            </button>
+                                        </form>
+                                    </th:block>
+
+                                    <!-- COMPLETED: edit feedback -->
+                                    <th:block th:if="${iv.status == 'COMPLETED'}">
+                                        <button th:data-iv-id="${iv.id}" th:data-iv-status="${iv.status}"
+                                            th:data-iv-feedback="${iv.feedback ?: ''}"
+                                            th:data-iv-candidate="${iv.candidateName}" th:data-iv-job="${iv.jobTitle}"
+                                            onclick="openFeedbackModal(this.dataset)"
+                                            class="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-bold px-3 py-2 rounded-xl bg-emerald-50 text-emerald-600 hover:bg-emerald-500 hover:text-white transition-all">
+                                            <span class="material-symbols-outlined text-[14px]">edit_note</span>
+                                            Edit Feedback
+                                        </button>
+                                    </th:block>
+
+                                    <!-- CANCELLED: label -->
+                                    <th:block th:if="${iv.status == 'CANCELLED'}">
+                                        <span
+                                            class="flex-1 flex items-center justify-center gap-1.5 text-[11px] font-semibold px-3 py-2 rounded-xl bg-slate-50 text-slate-400">
+                                            <span class="material-symbols-outlined text-[14px]">block</span>
+                                            Interview Cancelled
+                                        </span>
+                                    </th:block>
+                                </div>
+                            </div>
+                        </div>
+
+                    </div><!-- /section-my-interviews -->
+                </div><!-- /scroll area -->
         </main>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
- MODAL: New Job Post
-══════════════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     MODAL: New Job Post
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="newJobModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeNewJobModal()">
         </div>
@@ -1189,13 +1444,13 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Open Date</label>
-                        <input type="date" name="openDate"
-                            class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-slate-700">
+                        <input type="text" name="openDate"
+                            class="hr-datepicker w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Close Date</label>
-                        <input type="date" name="closeDate"
-                            class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-slate-700">
+                        <input type="text" name="closeDate"
+                            class="hr-datepicker w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Job Description</label>
@@ -1228,9 +1483,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
- MODAL: Job Detail
-══════════════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     MODAL: Job Detail
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="jobDetailOverlay" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeJobDetail()"></div>
         <div class="job-detail-box relative">
@@ -1291,29 +1546,7 @@
                     <div class="jd-section-content" id="jd-benefits"></div>
                 </div>
             </div>
-            <!-- Quick Actions row (inside body, before footer) -->
-            <div class="px-6 pb-4">
-                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
-                    <p class="text-xs font-bold text-slate-600 mb-3 flex items-center gap-2">
-                        <span class="material-symbols-outlined text-[15px] text-primary">bolt</span>Quick Actions
-                    </p>
-                    <div class="flex flex-wrap gap-2">
-                        <button onclick="openEditJobModal()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:border-primary hover:text-primary transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">edit</span>Edit Post
-                        </button>
-                        <button id="jd-toggle-status-btn" onclick="toggleJobStatus()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-slate-200 text-slate-600 hover:border-amber-500 hover:text-amber-600 transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">toggle_off</span>
-                            <span id="jd-toggle-label">Close Posting</span>
-                        </button>
-                        <button onclick="confirmDeleteJob()"
-                            class="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-white border border-rose-200 text-rose-500 hover:bg-rose-50 hover:border-rose-400 transition-colors">
-                            <span class="material-symbols-outlined text-[14px]">delete</span>Delete Post
-                        </button>
-                    </div>
-                </div>
-            </div>
+
             <div class="jd-footer">
                 <button onclick="closeJobDetail()"
                     class="px-5 py-2 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">Close</button>
@@ -1325,9 +1558,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
  MODAL: Candidate Detail
-══════════════════════════════════════════════════════════ -->
+â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
     <div id="candidateDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeCandidateDetail()">
         </div>
@@ -1374,22 +1607,22 @@
                         <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Applied For
                             </p>
-                            <p id="cdJob" class="text-sm font-bold text-slate-800">—</p>
-                            <p id="cdDept" class="text-xs text-slate-400 mt-0.5">—</p>
+                            <p id="cdJob" class="text-sm font-bold text-slate-800">â€”</p>
+                            <p id="cdDept" class="text-xs text-slate-400 mt-0.5">â€”</p>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Applied Date
                             </p>
-                            <p id="cdDate" class="text-sm font-bold text-slate-800">—</p>
+                            <p id="cdDate" class="text-sm font-bold text-slate-800">â€”</p>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Experience</p>
-                            <p id="cdExp" class="text-sm font-bold text-slate-800">—</p>
+                            <p id="cdExp" class="text-sm font-bold text-slate-800">â€”</p>
                         </div>
                         <div class="bg-slate-50 rounded-xl p-4 border border-slate-100">
                             <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1">Expected
                                 Salary</p>
-                            <p id="cdSalary" class="text-sm font-bold text-primary">—</p>
+                            <p id="cdSalary" class="text-sm font-bold text-primary">â€”</p>
                         </div>
                     </div>
                     <div class="bg-primary-light/60 rounded-xl p-4 border border-primary/10">
@@ -1494,9 +1727,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
- MODAL: Assign Interviewer
-══════════════════════════════════════════════════════════ -->
+    <!-- â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
+     MODAL: Assign Interviewer
+    â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
     <div id="assignModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeAssignModal()">
         </div>
@@ -1545,8 +1778,8 @@
                         <p class="text-xs font-semibold text-slate-800 truncate" th:text="${emp.fullName}">Name</p>
                         <p class="text-[10px] text-slate-400 truncate">
                             <span th:text="${emp.jobTitle ?: 'Employee'}">Title</span>
-                            <span th:if="${emp.departmentName != null and !emp.departmentName.isEmpty()}"
-                                class="text-slate-300"> · </span>
+                                <span th:if="${emp.departmentName != null and !emp.departmentName.isEmpty()}"
+                                    class="text-slate-300"> Â· </span>
                             <span th:if="${emp.departmentName != null and !emp.departmentName.isEmpty()}"
                                 th:text="${emp.departmentName}">Dept</span>
                         </p>
@@ -1591,9 +1824,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
  MODAL: Review Application
-══════════════════════════════════════════════════════════ -->
+â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
     <div id="reviewModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeReviewModal()">
         </div>
@@ -1617,15 +1850,15 @@
                 <div class="grid grid-cols-3 gap-3">
                     <div class="bg-slate-50 rounded-xl p-3 text-center">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Applied For</p>
-                        <p id="reviewJob" class="text-xs font-bold text-slate-700 mt-1 leading-tight">—</p>
+                    <p id="reviewJob" class="text-xs font-bold text-slate-700 mt-1 leading-tight">—</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-3 text-center">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Experience</p>
-                        <p id="reviewExp" class="text-xs font-bold text-slate-700 mt-1">—</p>
+                    <p id="reviewExp" class="text-xs font-bold text-slate-700 mt-1">—</p>
                     </div>
                     <div class="bg-slate-50 rounded-xl p-3 text-center">
                         <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Expected Salary</p>
-                        <p id="reviewSalary" class="text-xs font-bold text-slate-700 mt-1">—</p>
+                    <p id="reviewSalary" class="text-xs font-bold text-slate-700 mt-1">—</p>
                     </div>
                 </div>
                 <div>
@@ -1659,9 +1892,9 @@
         </div>
     </div>
 
-    <!-- ═══════════════════════════════════════════════════════════
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
  MODAL: Reject Job Request
-══════════════════════════════════════════════════════════ -->
+â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
     <div id="rejectReqModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeRejectReqModal()">
         </div>
@@ -1704,7 +1937,7 @@
         </div>
     </div>
 
-    <!-- ══════════════════ MODAL: Edit Job Post ══════════════════ -->
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â MODAL: Edit Job Post â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
     <div id="editJobModal" class="hidden fixed inset-0 z-[60] flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeEditJobModal()">
         </div>
@@ -1761,13 +1994,13 @@
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Open Date</label>
-                        <input type="date" id="editOpenDate" name="openDate"
-                            class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-slate-700">
+                        <input type="text" id="editOpenDate" name="openDate"
+                            class="hr-datepicker w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary">
                     </div>
                     <div>
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Close Date</label>
-                        <input type="date" id="editCloseDate" name="closeDate"
-                            class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-slate-700">
+                        <input type="text" id="editCloseDate" name="closeDate"
+                            class="hr-datepicker w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all text-primary">
                     </div>
                     <div class="col-span-2">
                         <label class="block text-xs font-bold text-slate-600 mb-1.5">Job Description</label>
@@ -1800,7 +2033,7 @@
         </div>
     </div>
 
-    <!-- ══════════════════ MODAL: Delete Confirm ══════════════════ -->
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â MODAL: Delete Confirm â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
     <div id="deleteJobModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
         <div class="modal-backdrop absolute inset-0 bg-slate-900/50 backdrop-blur-sm" onclick="closeDeleteModal()">
         </div>
@@ -1845,22 +2078,22 @@
     <script>
         const STAGES = ['APPLIED', 'SCREENING', 'INTERVIEWING', 'OFFER', 'HIRED'];
 
-        // ═══════════ MAIN TABS ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â MAIN TABS â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function switchMainTab(tab) {
-            ['pipeline', 'requests'].forEach(t => {
-                document.getElementById('section-' + t).classList.toggle('hidden', t !== tab);
-                document.getElementById('mainTab-' + t).classList.toggle('active', t === tab);
+            ['pipeline', 'requests', 'my-interviews'].forEach(t => {
+                document.getElementById('section-' + t)?.classList.toggle('hidden', t !== tab);
+                document.getElementById('mainTab-' + t)?.classList.toggle('active', t === tab);
             });
         }
 
-        // ═══════════ NEW JOB MODAL ═══════════
-        // ✅ Fixed: openNewJobModal no longer resets fromRequestId
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â NEW JOB MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+        // âœ… Fixed: openNewJobModal no longer resets fromRequestId
         function openNewJobModal() {
             document.getElementById('newJobModal').classList.remove('hidden');
             document.body.style.overflow = 'hidden';
         }
 
-        // ✅ Fresh open (from "New Job Post" button) — clears pre-filled data
+        // Fresh open (from "New Job Post" button) clears pre-filled data
         function openNewJobModalFresh() {
             document.getElementById('newJobFromRequestId').value = '';
             document.getElementById('newJobTitle').value = '';
@@ -1873,7 +2106,7 @@
             document.body.style.overflow = '';
         }
 
-        // ═══════════ JOB DETAIL MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â JOB DETAIL MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         // Store current job data for use by edit/delete
         let _currentJob = {};
 
@@ -1896,7 +2129,7 @@
             const salEl = document.getElementById('jd-salary');
             const fmt = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 });
             if (salMin > 0 || salMax > 0) {
-                if (salMin > 0 && salMax > 0) salEl.textContent = fmt.format(salMin) + ' – ' + fmt.format(salMax);
+                if (salMin > 0 && salMax > 0) salEl.textContent = fmt.format(salMin) + ' - ' + fmt.format(salMax);
                 else if (salMin > 0) salEl.textContent = 'From ' + fmt.format(salMin);
                 else salEl.textContent = 'Up to ' + fmt.format(salMax);
             } else { salEl.textContent = 'Negotiable'; }
@@ -1936,7 +2169,7 @@
         }
         function closeJobDetail() { document.getElementById('jobDetailOverlay').classList.add('hidden'); document.body.style.overflow = ''; }
 
-        // ═══════════ EDIT JOB MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â EDIT JOB MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function openEditJobModal() {
             const d = _currentJob;
             if (!d || !d.jobId) return showToast('No job selected.', false);
@@ -1949,13 +2182,26 @@
             document.getElementById('editSalaryMin').value = parseFloat(d.jobSalaryMin) > 0 ? d.jobSalaryMin : '';
             document.getElementById('editSalaryMax').value = parseFloat(d.jobSalaryMax) > 0 ? d.jobSalaryMax : '';
 
-            // Dates: convert "MMM dd, yyyy" → "yyyy-MM-dd" for date inputs
+            // Dates: convert "dd/MM/yyyy" â†’ "yyyy-MM-dd" for date inputs
             const parseDate = (str) => {
-                if (!str || str === '—') return '';
-                try { return new Date(str).toISOString().split('T')[0]; } catch { return ''; }
+            if (!str || str === '—' || str.trim() === '') return '';
+                try {
+                    const [d, m, y] = str.split('/');
+                    if (!d || !m || !y) return '';
+                    return `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`;
+                } catch { return ''; }
             };
-            document.getElementById('editOpenDate').value = parseDate(d.jobOpen);
-            document.getElementById('editCloseDate').value = parseDate(d.jobClose);
+            // Update Flatpickr instances if they exist
+            if (document.getElementById('editOpenDate')._flatpickr) {
+                document.getElementById('editOpenDate')._flatpickr.setDate(parseDate(d.jobOpen));
+            } else {
+                document.getElementById('editOpenDate').value = parseDate(d.jobOpen);
+            }
+            if (document.getElementById('editCloseDate')._flatpickr) {
+                document.getElementById('editCloseDate')._flatpickr.setDate(parseDate(d.jobClose));
+            } else {
+                document.getElementById('editCloseDate').value = parseDate(d.jobClose);
+            }
 
             // Status select
             const statusSel = document.getElementById('editJobStatus');
@@ -1970,7 +2216,7 @@
             document.body.style.overflow = '';
         }
 
-        // ═══════════ DELETE JOB ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â DELETE JOB â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function confirmDeleteJob() {
             const d = _currentJob;
             if (!d || !d.jobId) return showToast('No job selected.', false);
@@ -1985,7 +2231,7 @@
             document.body.style.overflow = '';
         }
 
-        // ═══════════ CANDIDATE DETAIL MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â CANDIDATE DETAIL MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         let _cd = {};
 
         function openCandidateDetail(data) {
@@ -2047,7 +2293,7 @@
                     <div class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-100">
                         <div class="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center text-[11px] font-bold shrink-0">${escHtml(buildInitials(iv.fullName))}</div>
                         <div class="flex-1 min-w-0">
-                            <p class="text-xs font-semibold text-slate-800 truncate">${escHtml(iv.fullName || '—')}</p>
+                    <p class="text-xs font-semibold text-slate-800 truncate">${escHtml(iv.fullName || '—')}</p>
                             ${iv.jobTitle ? `<p class="text-[10px] text-slate-400">${escHtml(iv.jobTitle)}</p>` : ''}
                         </div>
                         <span class="material-symbols-outlined text-emerald-400 text-[16px]">check_circle</span>
@@ -2056,7 +2302,7 @@
                 .catch(() => { el.innerHTML = '<p class="text-xs text-rose-400 italic">Failed to load.</p>'; });
         }
 
-        // ═══════════ CV VIEWER ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â CV VIEWER â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function loadCandidateCVs(candidateId) {
             const listEl = document.getElementById('cvList');
             listEl.innerHTML = '<div class="text-xs text-slate-400 italic">Loading...</div>';
@@ -2096,7 +2342,7 @@
             else viewer.innerHTML = `<div class="flex flex-col items-center justify-center h-full gap-3"><span class="material-symbols-outlined text-4xl text-slate-300">description</span><p class="text-xs text-slate-500 font-medium">${escHtml(fileName)}</p><a href="${url}" target="_blank" class="flex items-center gap-2 px-4 py-2 bg-primary text-white rounded-xl text-xs font-semibold"><span class="material-symbols-outlined text-[14px]">open_in_new</span>Open in new tab</a></div>`;
         }
 
-        // ═══════════ STAGE HISTORY ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â STAGE HISTORY â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function loadStageHistory(appId) {
             const el = document.getElementById('cdStageHistory');
             el.innerHTML = '<div class="flex items-center justify-center py-12"><div class="text-center"><span class="material-symbols-outlined text-3xl text-slate-300 block mb-2 spin">refresh</span><p class="text-xs text-slate-400">Loading...</p></div></div>';
@@ -2120,7 +2366,7 @@
                 .catch(() => { el.innerHTML = '<p class="text-xs text-rose-400 italic text-center py-8">Failed to load history.</p>'; });
         }
 
-        // ═══════════ ASSIGN INTERVIEWER MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â ASSIGN INTERVIEWER MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         let _selectedInterviewers = [];
         let _currentAssignAppId = '';
 
@@ -2166,12 +2412,17 @@
                 })
                 .catch(() => { currentEl.innerHTML = '<span class="text-xs text-rose-300 italic">Failed to load</span>'; });
         }
-
         function filterEmployees() {
-            const q = document.getElementById('assignSearch').value.toLowerCase();
+            const normalize = str => str.normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase();
+
+            const q = normalize(document.getElementById('assignSearch').value);
             let visible = 0;
             document.querySelectorAll('.employee-option').forEach(el => {
-                const match = (el.dataset.empName || '').toLowerCase().includes(q) || (el.dataset.empTitle || '').toLowerCase().includes(q) || (el.dataset.empDept || '').toLowerCase().includes(q);
+                const match = normalize(el.dataset.empName || '').includes(q) ||
+                    normalize(el.dataset.empTitle || '').includes(q) ||
+                    normalize(el.dataset.empDept || '').includes(q);
                 el.style.display = match ? '' : 'none';
                 if (match) visible++;
             });
@@ -2221,7 +2472,7 @@
             hiddenEl.innerHTML = _selectedInterviewers.map(e => `<input type="hidden" name="interviewerIds" value="${escHtml(e.id)}" />`).join('');
         }
 
-        // ═══════════ REVIEW MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â REVIEW MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function openReviewFromBtn(btn) {
             openReviewModal(btn.dataset.appId, btn.dataset.name, btn.dataset.email, btn.dataset.job, btn.dataset.stage, parseInt(btn.dataset.exp) || 0, btn.dataset.phone, parseFloat(btn.dataset.salary) || 0);
         }
@@ -2241,7 +2492,7 @@
         }
         function closeReviewModal() { document.getElementById('reviewModal').classList.add('hidden'); document.body.style.overflow = ''; }
 
-        // ═══════════ JOB POST REQUESTS FILTER ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â JOB POST REQUESTS FILTER â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function filterRequests(status) {
             document.querySelectorAll('.req-filter-tab').forEach(btn => {
                 const isActive = btn.id === 'reqTab-' + status;
@@ -2254,7 +2505,7 @@
             });
         }
 
-        // ═══════════ REJECT MODAL ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â REJECT MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function openRejectReqModal(data) {
             const reqId = data.reqId || data['req-id'] || '';
             const reqTitle = data.reqTitle || data['req-title'] || 'this request';
@@ -2267,8 +2518,8 @@
         }
         function closeRejectReqModal() { document.getElementById('rejectReqModal').classList.add('hidden'); document.body.style.overflow = ''; }
 
-        // ═══════════ APPROVE FLOW ═══════════
-        // ✅ Fixed: sets fromRequestId BEFORE calling openNewJobModal (which no longer resets it)
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â APPROVE FLOW â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+        // âœ… Fixed: sets fromRequestId BEFORE calling openNewJobModal (which no longer resets it)
         function openApproveFlow(data) {
             const reqId = data.reqId || data['req-id'] || '';
             const reqTitle = data.reqTitle || data['req-title'] || '';
@@ -2288,7 +2539,7 @@
             openNewJobModal();
         }
 
-        // ═══════════ PIPELINE BUILDER ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â PIPELINE BUILDER â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function buildPipelineIn(containerId, currentStage) {
             const container = document.getElementById(containerId);
             if (!container) return;
@@ -2310,14 +2561,20 @@
             }).join('');
         }
 
-        // ═══════════ PAGINATION ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â PAGINATION â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         const PAGE_SIZE = 10;
         let allRows = [], filteredRows = [], currentPage = 1, activeFilter = 'all';
 
+        const normalize = str => str.normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+
         function applyFilters() {
-            const q = (document.getElementById('searchInput').value || '').toLowerCase();
+            const q = normalize(document.getElementById('searchInput').value || '');
             filteredRows = allRows.filter(r => {
-                const n = r.dataset.name || '', j = r.dataset.job || '', s = r.dataset.stage || '';
+                const n = normalize(r.dataset.name || '');
+                const j = normalize(r.dataset.job || '');
+                const s = r.dataset.stage || '';
                 return (activeFilter === 'all' || s === activeFilter) && (n.includes(q) || j.includes(q));
             });
             currentPage = 1; renderPage();
@@ -2330,14 +2587,14 @@
             const sv = document.getElementById('searchInput').value;
             if (totalPages <= 1 && activeFilter === 'all' && !sv) { bar.style.display = 'none'; return; }
             bar.style.display = 'flex';
-            document.getElementById('pageInfo').textContent = total === 0 ? 'No results' : `Showing ${start + 1}–${end} of ${total}`;
+            document.getElementById('pageInfo').textContent = total === 0 ? 'No results' : `Showing ${start + 1}-${end} of ${total}`;
             const bc = document.getElementById('pageButtons'); bc.innerHTML = '';
-            const prev = mkBtn('‹', currentPage === 1); prev.onclick = () => { if (currentPage > 1) { currentPage--; renderPage(); } }; bc.appendChild(prev);
+            const prev = mkBtn('<', currentPage === 1); prev.onclick = () => { if (currentPage > 1) { currentPage--; renderPage(); } }; bc.appendChild(prev);
             pageRange(currentPage, totalPages).forEach(p => {
-                if (p === '...') { const e = document.createElement('span'); e.className = 'pagination-btn'; e.textContent = '…'; e.style.cursor = 'default'; bc.appendChild(e); }
+                if (p === '...') { const e = document.createElement('span'); e.className = 'pagination-btn'; e.textContent = '...'; e.style.cursor = 'default'; bc.appendChild(e); }
                 else { const b = mkBtn(p, false, p === currentPage); b.onclick = () => { currentPage = p; renderPage(); }; bc.appendChild(b); }
             });
-            const next = mkBtn('›', currentPage === totalPages); next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderPage(); } }; bc.appendChild(next);
+            const next = mkBtn('>', currentPage === totalPages); next.onclick = () => { if (currentPage < totalPages) { currentPage++; renderPage(); } }; bc.appendChild(next);
         }
         function mkBtn(l, d = false, a = false) { const b = document.createElement('button'); b.className = 'pagination-btn' + (a ? ' active' : ''); b.textContent = l; b.disabled = d; return b; }
         function pageRange(c, t) {
@@ -2356,11 +2613,11 @@
             applyFilters();
         }
 
-        // ═══════════ HELPERS ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â HELPERS â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         function showToast(msg, ok = true) {
             const t = document.getElementById('toast'), ic = t.querySelector('.material-symbols-outlined');
             document.getElementById('toastMsg').textContent = msg;
-            ic.textContent = ok ? 'check_circle' : 'error';
+            window.setAppIcon?.(ic, ok ? 'check_circle' : 'error');
             ic.className = 'material-symbols-outlined text-[18px] ' + (ok ? 'text-emerald-400' : 'text-rose-400');
             t.classList.remove('hidden');
             setTimeout(() => t.classList.add('hidden'), 3000);
@@ -2371,7 +2628,7 @@
             return n.trim().split(/\s+/).slice(0, 2).map(w => w[0]).join('').toUpperCase();
         }
 
-        // ═══════════ INIT ═══════════
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â INIT â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
         window.addEventListener('DOMContentLoaded', () => {
             allRows = Array.from(document.querySelectorAll('.app-row'));
             applyFilters();
@@ -2387,7 +2644,7 @@
 
             document.addEventListener('keydown', e => {
                 if (e.key === 'Escape') {
-                    ['candidateDetailModal', 'assignModal', 'reviewModal', 'jobDetailOverlay', 'newJobModal', 'rejectReqModal', 'editJobModal', 'deleteJobModal']
+                    ['candidateDetailModal', 'assignModal', 'reviewModal', 'jobDetailOverlay', 'newJobModal', 'rejectReqModal', 'editJobModal', 'deleteJobModal', 'feedbackModal', 'scheduleModal']
                         .forEach(id => document.getElementById(id)?.classList.add('hidden'));
                     document.body.style.overflow = '';
                 }
@@ -2395,11 +2652,272 @@
             const params = new URLSearchParams(window.location.search);
             if (params.get('action') === 'new-job') {
                 openNewJobModal();
-                // Clean up URL without reloading
+                window.history.replaceState({}, document.title, window.location.pathname);
+            }
+            // Restore tab from URL param (e.g. after cancel/feedback redirect)
+            const tabParam = params.get('tab');
+            if (tabParam && ['pipeline', 'requests', 'my-interviews'].includes(tabParam)) {
+                switchMainTab(tabParam);
                 window.history.replaceState({}, document.title, window.location.pathname);
             }
         });
-</script>
+
+        // My Interviews - Filter & Search
+        let currentIvFilter = 'ALL';
+
+        function filterIv(status) {
+            currentIvFilter = status;
+            document.querySelectorAll('.iv-tab').forEach(t => t.classList.remove('active'));
+            const tab = document.getElementById('ivTab-' + status);
+            if (tab) tab.classList.add('active');
+            applyIvFilter();
+        }
+
+        function applyIvFilter() {
+            const q = normalize(document.getElementById('ivSearch')?.value || '');
+            document.querySelectorAll('.iv-card-item').forEach(card => {
+                const matchStatus = currentIvFilter === 'ALL' || card.dataset.status === currentIvFilter;
+                const matchSearch = !q ||
+                    normalize(card.dataset.name || '').includes(q) ||
+                    normalize(card.dataset.job || '').includes(q);
+                card.style.display = (matchStatus && matchSearch) ? '' : 'none';
+            });
+        }
+
+        // â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â FEEDBACK MODAL â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+        function openFeedbackModal(ds) {
+            const ivId = ds.ivId;
+            const name = ds.ivCandidate;
+            const job = ds.ivJob;
+            const fb = ds.ivFeedback;
+            const status = ds.ivStatus;
+
+            document.getElementById('fbCandidateName').textContent = name || '—';
+            document.getElementById('fbJobTitle').textContent = job || '—';
+
+            const parts = (name || '').trim().split(/\s+/);
+            const initials = parts.slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
+            document.getElementById('fbInitials').textContent = initials;
+
+            document.getElementById('fbSubtitle').textContent =
+                status === 'COMPLETED' ? 'Edit your evaluation' : 'Submit your evaluation after the interview';
+
+            document.getElementById('fbText').value = fb || '';
+
+            // POST to /feedback-hr (interviewer's own feedback endpoint)
+            document.getElementById('feedbackForm').action =
+                `/hr/recruitment/interviews/${ivId}/feedback-hr`;
+
+            document.querySelectorAll('input[name="status"]').forEach(r => {
+                r.checked = (r.value === status && status !== 'SCHEDULED');
+            });
+
+            document.getElementById('feedbackModal').classList.remove('hidden');
+        }
+
+        function closeFeedbackModal() {
+            document.getElementById('feedbackModal').classList.add('hidden');
+        }
+
+        // Schedule Modal (My Interviews - Not Scheduled)
+        function openScheduleModal(ds) {
+            const appId = ds.appId;
+            const interviewerId = ds.interviewerId;
+            const candidate = ds.candidate || '—';
+            const job = ds.job || '—';
+
+            document.getElementById('smCandidateName').textContent = candidate;
+            document.getElementById('smJobTitle').textContent = job;
+
+            const parts = candidate.trim().split(/\s+/);
+            const initials = parts.slice(0, 2).map(p => p[0] || '').join('').toUpperCase() || '?';
+            document.getElementById('smInitials').textContent = initials;
+
+            document.getElementById('smAppId').value = appId;
+            document.getElementById('smInterviewerId').value = interviewerId;
+
+            // Máº·c Ä‘á»‹nh scheduledAt = ngÃ y mai 09:00
+            const tomorrow = new Date();
+            tomorrow.setDate(tomorrow.getDate() + 1);
+            tomorrow.setHours(9, 0, 0, 0);
+            const iso = tomorrow.toISOString().slice(0, 16);
+            const dtInput = document.getElementById('smScheduledAt');
+            if (dtInput && !dtInput.value) dtInput.value = iso;
+
+            document.getElementById('scheduleModal').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeScheduleModal() {
+            document.getElementById('scheduleModal').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+    </script>
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+         MODAL: Interview Feedback (My Interviews tab)
+    â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
+    <div id="feedbackModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeFeedbackModal()">
+        </div>
+        <div class="modal-panel fb-modal-box relative">
+            <div class="flex items-center justify-between p-6 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Interview Feedback</h3>
+                    <p id="fbSubtitle" class="text-xs text-slate-400 mt-0.5">Submit your evaluation</p>
+                </div>
+                <button onclick="closeFeedbackModal()"
+                    class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+            <form id="feedbackForm" method="post" class="p-6 space-y-5">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <!-- Candidate summary -->
+                <div class="bg-slate-50 rounded-xl p-4 border border-slate-100 flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-primary/10 text-primary flex items-center justify-center text-xs font-black">
+                        <span id="fbInitials">?</span>
+                    </div>
+                    <div>
+                        <p id="fbCandidateName" class="text-sm font-black text-slate-800">Candidate</p>
+                        <p id="fbJobTitle" class="text-[11px] text-slate-500">Position</p>
+                    </div>
+                </div>
+                <!-- Result -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-2">Interview Result <span
+                            class="text-rose-400">*</span></label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label
+                            class="result-option flex items-center gap-3 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-emerald-300 transition-colors has-[:checked]:border-emerald-500 has-[:checked]:bg-emerald-50">
+                            <input type="radio" name="status" value="COMPLETED" class="hidden" required>
+                            <div
+                                class="w-8 h-8 rounded-xl bg-emerald-100 text-emerald-600 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-[18px] fill-icon">thumb_up</span>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-700">Completed</p>
+                                <p class="text-[10px] text-slate-400">Interview done</p>
+                            </div>
+                        </label>
+                        <label
+                            class="result-option flex items-center gap-3 p-3 rounded-xl border-2 border-slate-200 cursor-pointer hover:border-rose-300 transition-colors has-[:checked]:border-rose-500 has-[:checked]:bg-rose-50">
+                            <input type="radio" name="status" value="CANCELLED" class="hidden">
+                            <div
+                                class="w-8 h-8 rounded-xl bg-rose-100 text-rose-500 flex items-center justify-center shrink-0">
+                                <span class="material-symbols-outlined text-[18px] fill-icon">event_busy</span>
+                            </div>
+                            <div>
+                                <p class="text-xs font-bold text-slate-700">Cancelled</p>
+                                <p class="text-[10px] text-slate-400">Did not happen</p>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+                <!-- Feedback text -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">
+                        Feedback / Notes
+                        <span class="text-slate-400 font-normal ml-1">(technical skills, communication, overall
+                            impression...)</span>
+                    </label>
+                    <textarea id="fbText" name="feedback" rows="6"
+                        placeholder="Candidate demonstrated strong problem-solving skills..."
+                        class="w-full text-sm border border-slate-200 rounded-xl px-4 py-3 focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300 leading-relaxed resize-y"></textarea>
+                    <p class="text-[10px] text-slate-400 mt-1">This feedback will be visible to the HR team.</p>
+                </div>
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeFeedbackModal()"
+                        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        Cancel
+                    </button>
+                    <button type="submit"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary hover:bg-primary/90 transition-colors shadow-sm shadow-primary/20">
+                        <span class="material-symbols-outlined text-[16px]">send</span>
+                        Submit Feedback
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â
+MODAL: Schedule Interview (My Interviews - Not Scheduled)
+    â•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Ââ•Â -->
+    <div id="scheduleModal" class="hidden fixed inset-0 z-[70] flex items-center justify-center p-4">
+        <div class="modal-backdrop absolute inset-0 bg-slate-900/40 backdrop-blur-sm" onclick="closeScheduleModal()">
+        </div>
+        <div class="schedule-modal-box relative">
+            <!-- Header -->
+            <div class="flex items-center justify-between p-6 border-b border-slate-100">
+                <div>
+                    <h3 class="text-base font-black text-slate-900">Interview Schedule</h3>
+                    <p class="text-xs text-slate-400 mt-0.5">Choose the time and location for the interview</p>
+                </div>
+                <button onclick="closeScheduleModal()"
+                    class="w-8 h-8 rounded-xl flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                    <span class="material-symbols-outlined text-[18px]">close</span>
+                </button>
+            </div>
+
+            <form id="scheduleForm" method="post" th:action="@{/hr/recruitment/interviews/schedule}"
+                class="p-6 space-y-5">
+                <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                <input type="hidden" id="smAppId" name="applicationId" />
+                <input type="hidden" id="smInterviewerId" name="interviewerId" />
+                <input type="hidden" name="returnUrl" value="/hr/recruitment?tab=my-interviews" />
+
+                <!-- Candidate summary -->
+                <div class="bg-amber-50 rounded-xl p-4 border border-amber-100 flex items-center gap-3">
+                    <div
+                        class="w-10 h-10 rounded-full bg-amber-200 text-amber-800 flex items-center justify-center text-xs font-black shrink-0">
+                        <span id="smInitials">?</span>
+                    </div>
+                    <div>
+                        <p id="smCandidateName" class="text-sm font-black text-slate-800">Candidate</p>
+                        <p id="smJobTitle" class="text-[11px] text-slate-500">Position</p>
+                    </div>
+                </div>
+
+                <!-- Date & time -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">
+                        Interview time <span class="text-rose-400">*</span>
+                    </label>
+                    <input id="smScheduledAt" type="datetime-local" name="scheduledAt" required
+                        class="w-full text-sm border border-slate-200 rounded-xl px-4 py-2.5
+                                  focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all" />
+                </div>
+
+                <!-- Location -->
+                <div>
+                    <label class="block text-xs font-bold text-slate-600 mb-1.5">Location</label>
+                    <div class="relative">
+                        <span
+                            class="absolute left-3 top-1/2 -translate-y-1/2 material-symbols-outlined text-slate-400 text-[16px]">location_on</span>
+                        <input type="text" name="location" placeholder="Vd: Meeting Room 1, Táº§ng 3, Zoom..."
+                            class="w-full text-sm border border-slate-200 rounded-xl pl-9 pr-4 py-2.5
+                                      focus:ring-2 focus:ring-primary/20 focus:border-primary outline-none transition-all placeholder-slate-300" />
+                    </div>
+                </div>
+
+                <!-- Actions -->
+                <div class="flex justify-end gap-3 pt-2">
+                    <button type="button" onclick="closeScheduleModal()"
+                        class="px-5 py-2.5 rounded-xl text-sm font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 transition-colors">
+                        Há»§y
+                    </button>
+                    <button type="submit"
+                        class="flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold text-white bg-amber-500 hover:bg-amber-600 transition-colors shadow-sm shadow-amber-200">
+                        <span class="material-symbols-outlined text-[16px]">event_available</span>
+                        Confirm schedule
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
 </body>
 
 </html>
+

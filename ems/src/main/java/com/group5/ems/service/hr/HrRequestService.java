@@ -1,9 +1,13 @@
 package com.group5.ems.service.hr;
 
+import com.group5.ems.dto.request.RecruitmentTicketDTO;
 import com.group5.ems.dto.response.HrRequestDTO;
-import com.group5.ems.dto.response.HrRequestStatsDTO;
+
 import com.group5.ems.constants.WorkflowConstants;
+import com.group5.ems.entity.BenefitType;
+import com.group5.ems.entity.Department;
 import com.group5.ems.entity.Employee;
+import com.group5.ems.entity.Position;
 import com.group5.ems.entity.Request;
 import com.group5.ems.entity.RequestApprovalHistory;
 import com.group5.ems.entity.RequestType;
@@ -13,7 +17,11 @@ import com.group5.ems.enums.AuditEntityType;
 import com.group5.ems.exception.InvalidRejectionReasonException;
 import com.group5.ems.exception.RequestNotFoundException;
 import com.group5.ems.exception.WorkflowException;
+import com.group5.ems.repository.BenefitTypeRepository;
+import com.group5.ems.repository.DepartmentRepository;
+import com.group5.ems.repository.EmployeeLeaveBalanceRepository;
 import com.group5.ems.repository.EmployeeRepository;
+import com.group5.ems.repository.PositionRepository;
 import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
 import com.group5.ems.repository.RequestTypeRepository;
@@ -26,13 +34,17 @@ import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -47,11 +59,15 @@ public class HrRequestService {
     private final RequestTypeRepository requestTypeRepository;
     private final EmployeeRepository employeeRepository;
     private final UserRepository userRepository;
+    private final DepartmentRepository departmentRepository;
+    private final PositionRepository positionRepository;
+    private final BenefitTypeRepository benefitTypeRepository;
     private final ApprovalWorkflowService workflowService;
+    private final EmployeeLeaveBalanceRepository leaveBalanceRepository;
     private final LogService logService;
 
     private static final int MIN_REJECTION_REASON_LENGTH = 10;
-    private static final DateTimeFormatter DTF_FULL = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+    private static final DateTimeFormatter DTF_FULL = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
     private static final List<String> LEAVE_CATEGORIES = List.of("ATTENDANCE");
 
     // ── Rejection reason categories ──
@@ -89,6 +105,12 @@ public class HrRequestService {
     public Page<HrRequestDTO> getRequestHistoryFiltered(
             String status, String categoryCode, String search,
             LocalDateTime dateFrom, LocalDateTime dateTo, Pageable pageable) {
+
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId == null) return Page.empty();
+
+        Employee currentEmployee = employeeRepository.findByUserId(currentUserId)
+                .orElseThrow(() -> new IllegalArgumentException("No employee record found for current user"));
 
         String safeStatus = (status != null && !status.isBlank()) ? status.trim() : null;
         String safeCategoryCode = (categoryCode != null && !categoryCode.isBlank()) ? categoryCode.trim() : null;
@@ -184,7 +206,7 @@ public class HrRequestService {
     // ══════════════════════════════════════════════════════════════════
 
     @Transactional
-    public void createRequest(Long requestTypeId, String title, String content) {
+    public void createRequest(Long requestTypeId, String title, String content, boolean urgent) {
         if (title == null || title.isBlank()) {
             throw new IllegalArgumentException("Request title cannot be empty");
         }
@@ -204,6 +226,8 @@ public class HrRequestService {
         request.setRequestTypeId(requestType.getId());
         request.setTitle(title.trim());
         request.setContent(content.trim());
+        request.setUrgent(urgent);
+        request.setPriority(urgent ? "URGENT" : "NORMAL");
         
         // Option B: Skip DM/HR -> DIRECT TO HRM
         request.setStatus(WorkflowConstants.STATUS_PENDING);
@@ -211,41 +235,98 @@ public class HrRequestService {
         
         Request saved = requestRepository.save(request);
 
-        saveHistory(saved.getId(), currentUserId, "SUBMITTED", "Created by HR - Escalated to HR Manager");
+        saveHistory(saved.getId(), currentUserId, "SUBMITTED", "Created by HR - Escalated to HR Manager" + (urgent ? " (URGENT)" : ""));
         logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, saved.getId());
     }
 
     // ══════════════════════════════════════════════════════════════════
-    // STATISTICS (Tab 4)
+    // SUBMIT RECRUITMENT / ONBOARDING TICKET
     // ══════════════════════════════════════════════════════════════════
 
-    public HrRequestStatsDTO getRequestStats() {
-        YearMonth currentMonth = YearMonth.now();
-        LocalDateTime monthStart = currentMonth.atDay(1).atStartOfDay();
+    @Transactional
+    public void submitRecruitmentTicket(RecruitmentTicketDTO dto) {
+        // 1. Fetch the REC_ACCOUNT request type
+        RequestType requestType = requestTypeRepository.findByCode("REC_ACCOUNT")
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "Request type 'REC_ACCOUNT' not found. Please seed it in the database."));
 
-        long totalPending = requestRepository.countPendingWorkflowRequests();
-        long approvedThisMonth = requestRepository.countWorkflowByStatusSince("APPROVED", monthStart);
-        long rejectedThisMonth = requestRepository.countWorkflowByStatusSince("REJECTED", monthStart);
-        Double avgHours = requestRepository.avgWorkflowProcessingHoursSince(monthStart);
+        // 2. Resolve current HR employee
+        Long currentUserId = getCurrentUserId();
+        if (currentUserId == null) {
+            throw new IllegalStateException("Cannot determine the current logged-in user.");
+        }
+        Employee hrEmployee = employeeRepository.findByUserId(currentUserId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                        "No employee record found for current user ID: " + currentUserId));
 
-        List<Object[]> topTypes = requestRepository.findTopWorkflowTypes();
-        String topRequestType = "N/A";
-        long topRequestTypeCount = 0;
-        if (topTypes != null && !topTypes.isEmpty()) {
-            Object[] top = topTypes.get(0);
-            topRequestType = top[0] != null ? top[0].toString() : "N/A";
-            topRequestTypeCount = top[1] != null ? ((Number) top[1]).longValue() : 0;
+        // 3. Resolve names from IDs for a human-readable ticket
+        String departmentName = departmentRepository.findById(dto.departmentId())
+                .map(Department::getName)
+                .orElse("Unknown (ID: " + dto.departmentId() + ")");
+
+        String positionName = positionRepository.findById(dto.positionId())
+                .map(Position::getName)
+                .orElse("Unknown (ID: " + dto.positionId() + ")");
+
+        String managerName = "N/A";
+        if (dto.reportingManagerId() != null) {
+            managerName = employeeRepository.findByIdWithDetails(dto.reportingManagerId())
+                    .map(e -> e.getUser() != null ? e.getUser().getFullName() : e.getEmployeeCode())
+                    .orElse("Unknown (ID: " + dto.reportingManagerId() + ")");
         }
 
-        return HrRequestStatsDTO.builder()
-                .totalPending(totalPending)
-                .approvedThisMonth(approvedThisMonth)
-                .rejectedThisMonth(rejectedThisMonth)
-                .avgProcessingHours(avgHours != null ? avgHours : 0.0)
-                .topRequestType(topRequestType)
-                .topRequestTypeCount(topRequestTypeCount)
-                .build();
+        // 4. Resolve selected benefit type names
+        String bonusNames = "None";
+        if (dto.bonusIds() != null && !dto.bonusIds().isEmpty()) {
+            List<BenefitType> selectedBenefits = benefitTypeRepository.findAllById(dto.bonusIds());
+            bonusNames = selectedBenefits.stream()
+                    .map(BenefitType::getName)
+                    .collect(Collectors.joining(", "));
+        }
+
+        // 5. Build the full name
+        String fullName = dto.firstName().trim() + " " + dto.lastName().trim();
+
+        // 6. Compose the formatted content string
+        StringBuilder content = new StringBuilder();
+        content.append("═══ ONBOARDING REQUEST ═══\n\n");
+        content.append("── Candidate Details ──\n");
+        content.append("Full Name: ").append(fullName).append("\n");
+        content.append("Email: ").append(dto.email()).append("\n");
+        content.append("Phone: ").append(dto.phone()).append("\n\n");
+        content.append("── Employment Info ──\n");
+        content.append("Department: ").append(departmentName).append("\n");
+        content.append("Position: ").append(positionName).append("\n");
+        content.append("Joining Date: ").append(dto.joiningDate()).append("\n");
+        content.append("Reporting Manager: ").append(managerName).append("\n\n");
+        content.append("── Compensation ──\n");
+        content.append("Base Salary: ").append(dto.baseSalary()).append("\n");
+        content.append("Pay Frequency: ").append(dto.payFrequency()).append("\n");
+        content.append("Benefits/Bonuses: ").append(bonusNames).append("\n\n");
+        if (dto.additionalNotes() != null && !dto.additionalNotes().isBlank()) {
+            content.append("── Additional Notes ──\n");
+            content.append(dto.additionalNotes().trim()).append("\n");
+        }
+
+        // 7. Create and save the Request entity
+        Request request = new Request();
+        request.setEmployeeId(hrEmployee.getId());
+        request.setRequestTypeId(requestType.getId());
+        request.setTitle("Onboarding Request: " + fullName);
+        request.setContent(content.toString());
+
+        // HR-created tickets skip DM/HR and go directly to HRM
+        request.setStatus(WorkflowConstants.STATUS_PENDING);
+        request.setStep(WorkflowConstants.STEP_WAITING_HRM);
+
+        Request saved = requestRepository.save(request);
+
+        saveHistory(saved.getId(), currentUserId, "SUBMITTED",
+                "Onboarding ticket created by HR - Escalated to HR Manager");
+        logService.log(AuditAction.CREATE, AuditEntityType.REQUEST, saved.getId());
     }
+
+
 
     // ══════════════════════════════════════════════════════════════════
     // LOOKUP DATA
@@ -256,6 +337,15 @@ public class HrRequestService {
      */
     public List<RequestType> getCreatableRequestTypes() {
         return requestTypeRepository.findByCategoryNotInOrderByCategoryAscNameAsc(LEAVE_CATEGORIES);
+    }
+
+    public Map<String, List<RequestType>> getGroupedRequestTypes() {
+        return getCreatableRequestTypes().stream()
+                .collect(Collectors.groupingBy(
+                        RequestType::getCategory,
+                        LinkedHashMap::new,
+                        Collectors.toList()
+                ));
     }
 
     public Map<String, String> getRejectionCategories() {
@@ -269,6 +359,7 @@ public class HrRequestService {
     private HrRequestDTO mapToDTO(Request request) {
         String empName = "Unknown";
         String initials = "?";
+        String avatarUrl = null;
         String deptName = "N/A";
         Long deptId = null;
         String empCode = "N/A";
@@ -280,6 +371,7 @@ public class HrRequestService {
             if (emp.getUser() != null) {
                 empName = emp.getUser().getFullName();
                 initials = buildInitials(empName);
+                avatarUrl = emp.getUser().getAvatarUrl();
             }
             if (emp.getDepartment() != null) {
                 deptName = emp.getDepartment().getName();
@@ -303,13 +395,68 @@ public class HrRequestService {
             approverName = request.getApprovedByUser().getFullName();
         }
 
+        String approverEmployeeCode = null;
+        if (request.getApprovedByUser() != null && request.getApprovedByUser().getEmployee() != null) {
+            approverEmployeeCode = request.getApprovedByUser().getEmployee().getEmployeeCode();
+        }
+
+        String statusClass = "border-slate-200 bg-slate-50 text-slate-500";
+        String statusDisplay = request.getStatus();
+
+        if (WorkflowConstants.STATUS_PENDING.equals(request.getStatus())) {
+            statusClass = "border-amber-200 bg-amber-50 text-amber-600";
+            statusDisplay = "Pending Review";
+        } else if (WorkflowConstants.STATUS_APPROVED.equals(request.getStatus())) {
+            statusClass = "border-emerald-200 bg-emerald-50 text-emerald-600";
+            statusDisplay = "Approved";
+        } else if (WorkflowConstants.STATUS_REJECTED.equals(request.getStatus())) {
+            statusClass = "border-rose-200 bg-rose-50 text-rose-600";
+            statusDisplay = "Rejected";
+        }
+
+        // Position
+        String empPosition = "Employee";
+        if (request.getEmployee() != null && request.getEmployee().getPosition() != null) {
+            empPosition = request.getEmployee().getPosition().getName();
+        }
+
+        // Leave specific metadata
+        BigDecimal balanceRemaining = null;
+        BigDecimal balanceTotal = null;
+        Integer balancePercentage = null;
+        Integer overlapCount = null;
+        boolean isLeaveRequest = request.getRequestType() != null && "ATTENDANCE".equals(request.getRequestType().getCategory());
+
+        if (isLeaveRequest) {
+            int currentYear = LocalDate.now().getYear();
+            var balanceOpt = leaveBalanceRepository.findByEmployeeIdAndYear(request.getEmployeeId(), currentYear);
+            if (balanceOpt.isPresent()) {
+                var balance = balanceOpt.get();
+                balanceRemaining = balance.getRemainingDays();
+                balanceTotal = balance.getTotalDays();
+                if (balanceTotal != null && balanceTotal.compareTo(BigDecimal.ZERO) > 0) {
+                    balancePercentage = balanceRemaining.multiply(new BigDecimal(100))
+                            .divide(balanceTotal, 0, java.math.RoundingMode.HALF_UP).intValue();
+                }
+            }
+
+            if (request.getLeaveFrom() != null && request.getLeaveTo() != null) {
+                var overlaps = requestRepository.findOverlappingLeaveRequests("APPROVED", request.getLeaveFrom(), request.getLeaveTo());
+                overlapCount = (int) overlaps.stream()
+                        .filter(r -> !r.getId().equals(request.getId()))
+                        .count();
+            }
+        }
+
         return HrRequestDTO.builder()
                 .id(request.getId())
                 .requestedBy(empName)
                 .initials(initials)
+                .avatarUrl(avatarUrl)
                 .department(deptName)
                 .departmentId(deptId)
                 .employeeCode(empCode)
+                .employeePosition(empPosition)
                 .category(category)
                 .categoryCode(categoryCode)
                 .title(request.getTitle())
@@ -317,9 +464,20 @@ public class HrRequestService {
                 .status(request.getStatus())
                 .rejectedReason(request.getRejectedReason())
                 .submittedAt(request.getCreatedAt())
+                .submittedAtDisplay(request.getCreatedAt() != null ? request.getCreatedAt().format(DTF_FULL) : "N/A")
                 .processedAt(processedAt)
                 .approverName(approverName)
+                .approverEmployeeCode(approverEmployeeCode)
+                .statusClass(statusClass)
+                .statusDisplay(statusDisplay)
+                .leaveBalanceRemaining(balanceRemaining)
+                .leaveBalanceTotal(balanceTotal)
+                .leaveBalancePercentage(balancePercentage)
+                .overlapCount(overlapCount)
+                .isLeaveRequest(isLeaveRequest)
+                .urgentFlag(request.isUrgent())
                 .build();
+
     }
 
     private String buildInitials(String fullName) {
@@ -359,7 +517,7 @@ public class HrRequestService {
 
     private Long getCurrentUserId() {
         Authentication auth = SecurityContextHolder.getContext().getAuthentication();
-        if (auth != null && auth.getPrincipal() instanceof org.springframework.security.core.userdetails.UserDetails userDetails) {
+        if (auth != null && auth.getPrincipal() instanceof UserDetails userDetails) {
             return userRepository.findByUsername(userDetails.getUsername())
                     .map(User::getId)
                     .orElse(null);

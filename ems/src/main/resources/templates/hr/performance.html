@@ -7,8 +7,12 @@
     <title>EMS Pro - Performance</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
     <link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr/dist/plugins/monthSelect/index.js"></script>
     <script th:src="@{/js/hr/hr-common.js}"></script>
     <script>
         /* global tailwind */
@@ -51,27 +55,100 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #cbd5e1; }
 
-        .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
-        .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(20, 20, 184, 0.1); }
-
-        .talent-matrix-chip {
-            padding: 2px 10px; border-radius: 6px; font-size: 10px; font-weight: 700; text-transform: uppercase;
-            display: inline-flex; align-items: center;
+        /* Modern Year Grid Picker Styling */
+        .year-only-picker {
+            width: 280px !important;
+            background: rgba(255, 255, 255, 0.95) !important;
+            backdrop-filter: blur(16px) !important;
+            border-radius: 24px !important;
+            border: 1px solid rgba(255, 255, 255, 0.3) !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.15) !important;
+            padding: 16px !important;
+        }
+        .year-only-picker .flatpickr-months,
+        .year-only-picker .flatpickr-innerContainer {
+            display: none !important;
+        }
+        .year-grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            padding: 8px;
+        }
+        .year-grid-item {
+            height: 52px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 14px;
+            font-size: 14px;
+            font-weight: 800;
+            color: #64748b;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            border: 1px solid transparent;
+        }
+        .year-grid-item:hover {
+            background: #f8fafc;
+            color: #4f46e5;
+            transform: scale(1.05);
+            border-color: #e2e8f0;
+        }
+        .year-grid-item.active {
+            background: #4f46e5;
+            color: white;
+            box-shadow: 0 8px 15px -3px rgba(79, 70, 229, 0.3);
+        }
+        .year-current-shortcut {
+            margin-top: 12px;
+            width: 100%;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 11px;
+            font-weight: 800;
+            color: #475569;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: none;
+        }
+        .year-current-shortcut:hover {
+            background: #4f46e5;
+            color: white;
         }
 
-        .tm-star { background: #fef3c7; color: #92400e; }
-        .tm-core { background: #dcfce7; color: #166534; }
-        .tm-risk { background: #fee2e2; color: #991b1b; }
-        .tm-growth { background: #e0e7ff; color: #3730a3; }
+            .card-hover { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+            .card-hover:hover { transform: translateY(-3px); box-shadow: 0 10px 20px -5px rgba(20, 20, 184, 0.1); }
 
-        .preset-tag { cursor: pointer; transition: all 0.2s; user-select: none; }
-        .preset-tag.active { background-color: #1414b8; color: white; border-color: #1414b8; }
+            @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+            @keyframes scaleIn { from { transform: scale(0.98); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+            
+            
+            .animate-slide-up { animation: slideUp 0.4s ease-out forwards; }
+            .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+            .animate-scale-in { animation: scaleIn 0.15s ease-out forwards; }
 
-        .dot-grid {
-            background-image: radial-gradient(#e2e8f0 1px, transparent 1px);
-            background-size: 24px 24px;
-        }
-    </style>
+            .hr-year-picker-container .flatpickr-monthSelect-months { display: none !important; }
+            .hr-year-picker-container .flatpickr-monthSelect-month { display: none !important; }
+            .hr-year-picker-container .flatpickr-calendar.hasMonths { width: 220px !important; }
+            .hr-year-picker-container .flatpickr-innerContainer { display: none !important; }
+
+            /* Dual Range Slider Styles */
+            .dual-range-container { position: relative; width: 100%; height: 24px; display: flex; align-items: center; cursor: pointer; }
+            .track-rail { position: absolute; width: 100%; height: 4px; background: #e2e8f0; border-radius: 99px; }
+            .track-progress { position: absolute; height: 4px; border-radius: 99px; }
+            .slider-node { position: absolute; width: 100%; appearance: none; background: transparent; pointer-events: none; z-index: 10; margin: 0; }
+            .slider-node::-webkit-slider-thumb { appearance: none; width: 16px; height: 16px; background: white; border: 2.5px solid currentColor; border-radius: 50%; cursor: pointer; pointer-events: auto; box-shadow: 0 2px 4px rgba(0,0,0,0.1); transition: all 0.2s; }
+            .slider-node::-webkit-slider-thumb:hover { transform: scale(1.15); box-shadow: 0 3px 6px rgba(0,0,0,0.15); }
+        </style>
+    <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}" />
+    <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
 </head>
 
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
@@ -92,328 +169,419 @@
                 </div>
             </header>
 
-            <div class="flex-1 overflow-y-auto p-8 dot-grid custom-scrollbar">
-                <div class="max-w-7xl mx-auto space-y-6">
-                    <!-- Stats Cards -->
-                    <!-- Stats Cards Removed -->
-
-                    <!-- Filter Bar Redesigned (Tiered & Advanced) -->
-                    <div class="bg-white rounded-[24px] border border-slate-100 shadow-sm p-4 overflow-visible">
-                        <form th:action="@{/hr/performance}" method="get" id="filterForm" class="space-y-4">
-                            <!-- Row 1: Primary Search -->
-                            <div class="flex flex-wrap items-end gap-3">
-                                <div class="w-72 space-y-1">
-                                    <label for="searchInput" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Search Employee</label>
-                                    <div class="relative">
-                                        <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
-                                        <input type="text" id="searchInput" name="search" th:value="${search}" placeholder="Name or code..."
-                                               class="w-full bg-slate-50 border-transparent rounded-xl pl-9 pr-3 py-2 text-xs focus:ring-primary/20 focus:border-primary focus:bg-white transition-all">
-                                    </div>
-                                </div>
-
-                                <!-- Searchable Dept Moved to Main Row -->
-                                <div class="w-64 space-y-1">
-                                    <label for="deptSearchInput" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
-                                    <div class="relative custom-select-parent" data-name="departmentId">
-                                        <input type="text" id="deptSearchInput" placeholder="Search Dept..." th:value="${departmentId != null ? departments.?[id == __${departmentId}__].^[true]?.name : ''}"
-                                               class="w-full bg-slate-50 border-transparent rounded-xl py-2 px-3 text-xs focus:ring-primary/20 focus:border-primary custom-select-input">
-                                        <input type="hidden" name="departmentId" th:value="${departmentId}" id="departmentId">
-                                        <div class="absolute z-50 w-full mt-1 bg-white border border-slate-100 rounded-xl shadow-xl hidden max-h-48 overflow-y-auto custom-scrollbar custom-select-options">
-                                            <div class="p-2 hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-600" data-value="">All Departments</div>
-                                            <div th:each="dept : ${departments}" th:data-value="${dept.id}" th:text="${dept.name}"
-                                                 class="p-2 hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-600"></div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div class="flex items-center gap-2 pb-0.5">
-                                    <button type="submit" class="bg-primary text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-[18px]">filter_alt</span> Apply
-                                    </button>
-                                    <button type="button" onclick="toggleAdvancedFilters()" id="advToggleBtn"
-                                            class="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5">
-                                        <span class="material-symbols-outlined text-[18px]">tune</span> Advanced
-                                    </button>
-                                    <a th:href="@{/hr/performance}" class="px-4 py-2 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-all gap-1.5" title="Reset Filters">
-                                        <span class="material-symbols-outlined text-[18px]">clear_all</span>
-                                        <span class="text-xs font-bold">Clear</span>
-                                    </a>
+        <div class="flex-1 overflow-y-auto p-8 dot-grid custom-scrollbar">
+            <div class="max-w-7xl mx-auto space-y-6">
+                
+                <!-- Filter Bar -->
+                <div class="bg-white rounded-[24px] border border-slate-100 shadow-sm p-4 overflow-visible">
+                    <form th:action="@{/hr/performance}" method="get" id="filterForm" class="space-y-4">
+                        <!-- Row 1: Primary Search -->
+                        <div class="flex flex-wrap items-end gap-3">
+                            <div class="w-72 space-y-1">
+                                <label for="searchInput" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Search Employee</label>
+                                <div class="relative">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">search</span>
+                                    <input type="text" id="searchInput" name="search" th:value="${search}" placeholder="Name or code..."
+                                           class="w-full bg-slate-50 border-transparent rounded-xl pl-9 pr-3 py-2 text-xs focus:ring-primary/20 focus:border-primary focus:bg-white transition-all">
                                 </div>
                             </div>
 
-                            <!-- Row 2: Advanced Filters (Toggleable) -->
-                            <div id="advancedFilters" class="hidden pt-4 border-t border-slate-50 grid grid-cols-12 gap-6 animate-fade-in overflow-visible">
-
-                                <!-- Period Selection -->
-                                <div class="col-span-6 space-y-1.5">
-                                    <label for="reviewYear" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Review Period</label>
-                                    <div class="flex gap-2">
-                                        <select id="reviewYear" name="reviewYear" aria-label="Review Year" class="w-1/2 bg-slate-50 border-transparent rounded-xl py-2 text-xs focus:ring-primary/20 focus:border-primary">
-                                            <option value="">Year</option>
-                                            <option th:each="year : ${#numbers.sequence(2024, 2027)}" th:value="${year}" th:text="${year}" th:selected="${reviewYear == #strings.toString(year)}"></option>
-                                        </select>
-                                        <select id="reviewPeriodType" name="reviewPeriodType" aria-label="Review Cycle" class="w-1/2 bg-slate-50 border-transparent rounded-xl py-2 text-xs focus:ring-primary/20 focus:border-primary">
-                                            <option value="Annual" th:selected="${reviewPeriodType == 'Annual'}">Annual</option>
-                                            <option value="H1" th:selected="${reviewPeriodType == 'H1'}">H1 (First)</option>
-                                            <option value="H2" th:selected="${reviewPeriodType == 'H2'}">H2 (Second)</option>
-                                        </select>
-                                    </div>
-                                </div>
-
-                                <!-- Score Sliders (Dual Rows) -->
-                                <div class="col-span-6 space-y-3">
-                                    <div class="space-y-1">
-                                        <label for="minScore" class="text-[9px] font-black text-slate-400 uppercase tracking-[.1em] flex justify-between">Performance Score <span class="text-primary font-bold" id="perfRangeLabel">1.0 - 5.0</span></label>
-                                        <div class="flex items-center gap-2">
-                                            <input type="range" id="minScore" name="minScore" th:value="${minScore ?: 1.0}" min="1" max="5" step="0.1"
-                                                   class="flex-1 h-1.5 bg-slate-100 rounded-full appearance-none accent-primary cursor-pointer" oninput="updateRangeLabel(this, 'minScore', 'maxScore', 'perfRangeLabel')">
-                                            <input type="range" id="maxScore" name="maxScore" th:value="${maxScore ?: 5.0}" min="1" max="5" step="0.1"
-                                                   class="flex-1 h-1.5 bg-slate-100 rounded-full appearance-none accent-primary cursor-pointer" oninput="updateRangeLabel(this, 'minScore', 'maxScore', 'perfRangeLabel')">
-                                        </div>
-                                    </div>
-                                    <div class="space-y-1">
-                                        <label for="minPotential" class="text-[9px] font-black text-slate-400 uppercase tracking-[.1em] flex justify-between">Potential Score <span class="text-blue-500 font-bold" id="potRangeLabel">1.0 - 5.0</span></label>
-                                        <div class="flex items-center gap-2">
-                                            <input type="range" id="minPotential" name="minPotential" th:value="${minPotential ?: 1.0}" min="1" max="5" step="0.1" 
-                                                   aria-label="Min Potential" class="flex-1 h-1.5 bg-slate-100 rounded-full appearance-none accent-blue-500 cursor-pointer" oninput="updateRangeLabel(this, 'minPotential', 'maxPotential', 'potRangeLabel')">
-                                            <input type="range" id="maxPotential" name="maxPotential" th:value="${maxPotential ?: 5.0}" min="1" max="5" step="0.1" 
-                                                   aria-label="Max Potential" class="flex-1 h-1.5 bg-slate-100 rounded-full appearance-none accent-blue-500 cursor-pointer" oninput="updateRangeLabel(this, 'minPotential', 'maxPotential', 'potRangeLabel')">
-                                        </div>
+                            <div class="w-64 space-y-1">
+                                <label for="deptSearchInput" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Department</label>
+                                <div class="relative custom-select-parent" data-name="departmentId">
+                                    <input type="text" id="deptSearchInput" placeholder="Search Dept..." th:value="${departmentId != null ? (departments.?[id == __${departmentId}__].size() > 0 ? departments.?[id == __${departmentId}__].^[true]?.name : '') : ''}"
+                                           class="w-full bg-slate-50 border-transparent rounded-xl py-2 px-3 text-xs focus:ring-primary/20 focus:border-primary custom-select-input">
+                                    <input type="hidden" name="departmentId" th:value="${departmentId}" id="departmentId">
+                                    <div class="absolute z-50 w-full mt-1 bg-white border border-slate-100 rounded-xl shadow-xl hidden max-h-48 overflow-y-auto custom-scrollbar custom-select-options">
+                                        <div class="p-2 hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-600" data-value="">All Departments</div>
+                                        <div th:each="dept : ${departments}" th:data-value="${dept.id}" th:text="${dept.name}"
+                                             class="p-2 hover:bg-slate-50 cursor-pointer text-xs font-medium text-slate-600"></div>
                                     </div>
                                 </div>
                             </div>
-                        </form>
-                    </div>
 
-                    <!-- Cards Grid -->
-                    <div th:if="${not #lists.isEmpty(appraisals)}" class="grid grid-cols-4 gap-6 animate-slide-up">
-                        <div th:each="appr : ${appraisals}" class="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col card-hover relative group">
-
-
-                            <div class="p-6 flex items-start justify-between">
-                                <div class="flex items-center gap-4">
-                                    <div class="w-12 h-12 rounded-[20px] bg-primary/5 flex items-center justify-center text-primary font-black text-sm border border-primary/10 shadow-sm">
-                                        <span th:text="${#strings.substring(appr.employeeName, 0, 1)}">J</span>
-                                    </div>
-                                    <div class="min-w-0">
-                                        <h4 class="text-xs font-black text-slate-900 truncate" th:text="${appr.employeeName}">Jane Doe</h4>
-                                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5" th:text="${appr.employeeCode}">EMP-001</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="px-6 pb-6 space-y-5 flex-1">
-                                <div class="flex items-center justify-between p-4 bg-slate-50 rounded-[24px] border border-slate-100/50">
-                                    <div>
-                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Window</p>
-                                        <p class="text-xs font-black text-slate-800 mt-1" th:text="${#strings.replace(appr.reviewPeriod, 'YEAR_', '')}">2026</p>
-                                    </div>
-                                    <div class="text-right">
-                                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Evaluation</p>
-                                        <div class="flex items-center gap-2 mt-1 justify-end">
-                                            <span class="text-sm font-black text-slate-900" th:text="${appr.performanceScore}">4.50</span>
-                                            <span th:class="'inline-flex items-center justify-center w-5 h-5 rounded-lg text-white font-black text-[10px] ' +
-                                                (appr.score == 'A' ? 'bg-emerald-500' : (appr.score == 'B' ? 'bg-blue-500' : (appr.score == 'C' ? 'bg-amber-500' : 'bg-rose-500')))"
-                                                th:text="${appr.score}">A</span>
-                                        </div>
-                                    </div>
-                                </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <div class="bg-white/50 p-3 rounded-2xl border border-dashed border-slate-200">
-                                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Dept</p>
-                                        <p class="text-[11px] font-bold text-slate-600 truncate mt-1" th:text="${appr.department}">IT</p>
-                                    </div>
-                                    <div class="bg-white/50 p-3 rounded-2xl border border-dashed border-slate-200 text-right">
-                                        <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Reviewer</p>
-                                        <p class="text-[11px] font-bold text-slate-600 truncate mt-1" th:text="${appr.reviewerName}">John Smith</p>
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="px-6 py-5 bg-slate-50 border-t border-slate-100">
-                                <button th:onclick="'viewReviewDetail(' + ${appr.id} + ')'"
-                                        class="w-full flex items-center justify-center gap-2 text-primary bg-white border border-primary/20 hover:bg-primary hover:text-white transition-all py-3 rounded-2xl text-[12px] font-black uppercase tracking-widest shadow-sm">
-                                    <span class="material-symbols-outlined text-[20px]">visibility</span> View Report
+                            <div class="flex items-center gap-2 pb-0.5">
+                                <button type="submit" class="bg-primary text-white px-5 py-2 rounded-xl text-xs font-bold hover:bg-primary/90 transition-all shadow-sm flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[18px]">filter_alt</span> Apply
                                 </button>
+                                <button type="button" onclick="toggleAdvancedFilters()" id="advToggleBtn"
+                                        class="px-4 py-2 border border-slate-200 text-slate-500 rounded-xl text-xs font-bold hover:bg-slate-50 transition-all flex items-center gap-1.5">
+                                    <span class="material-symbols-outlined text-[18px]">tune</span> Advanced
+                                </button>
+                                <a th:href="@{/hr/performance}" class="px-4 py-2 flex items-center justify-center bg-white border border-slate-200 text-slate-400 rounded-xl hover:bg-rose-50 hover:border-rose-200 hover:text-rose-500 transition-all gap-1.5" title="Reset Filters">
+                                    <span class="material-symbols-outlined text-[18px]">clear_all</span>
+                                    <span class="text-xs font-bold">Clear</span>
+                                </a>
                             </div>
                         </div>
-                    </div>
 
-                    <div th:if="${totalPages > 1}" class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex items-center justify-between">
-                        <p class="text-xs text-slate-400 ml-4">Showing page <span class="font-black text-slate-900" th:text="${currentPage + 1}">1</span> of <span class="font-black text-slate-900" th:text="${totalPages}">1</span></p>
-                        <div class="flex items-center gap-1.5 mr-2">
-                             <a th:if="${currentPage > 0}" th:href="@{/hr/performance(page=${currentPage - 1}, search=${search}, status=${status}, departmentId=${departmentId}, reviewerId=${reviewerId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all"><span class="material-symbols-outlined">chevron_left</span></a>
-                             <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                                <span th:if="${i == currentPage}" class="w-10 h-10 flex items-center justify-center text-xs font-black text-white bg-primary rounded-2xl shadow-lg shadow-primary/20" th:text="${i + 1}">1</span>
-                                <a th:if="${i != currentPage}" th:href="@{/hr/performance(page=${i}, search=${search}, status=${status}, departmentId=${departmentId}, reviewerId=${reviewerId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-xs font-bold text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded-2xl transition-all" th:text="${i + 1}">2</a>
-                             </th:block>
-                             <a th:if="${currentPage < totalPages - 1}" th:href="@{/hr/performance(page=${currentPage + 1}, search=${search}, status=${status}, departmentId=${departmentId}, reviewerId=${reviewerId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all"><span class="material-symbols-outlined">chevron_right</span></a>
+                        <!-- Row 2: Advanced Filters -->
+                        <div id="advancedFilters" class="hidden pt-4 border-t border-slate-50 grid grid-cols-12 gap-8 animate-fade-in overflow-visible">
+                            <!-- Review Period -->
+                            <div class="col-span-4 space-y-2">
+                                <label for="reviewYear" class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Review Period</label>
+                                <div class="relative group hr-year-picker-container">
+                                    <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm group-focus-within:text-primary transition-colors">calendar_month</span>
+                                    <input type="text" id="reviewYear" name="reviewYear" th:value="${reviewYear}" 
+                                           placeholder="Select Year..." readonly
+                                           class="w-full bg-slate-50 border-transparent rounded-xl pl-9 pr-3 py-2.5 text-xs font-bold text-slate-700 focus:ring-primary/20 focus:border-primary focus:bg-white transition-all cursor-pointer">
+                                </div>
+                            </div>
+
+                            <!-- Performance Score -->
+                            <div class="col-span-4 space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">Performance <span class="text-indigo-600 font-bold" id="perfRangeLabel">1.0 - 5.0</span></label>
+                                <div class="h-[42px] bg-indigo-50/30 rounded-xl px-4 flex items-center border border-transparent hover:border-indigo-100 transition-all">
+                                    <div class="dual-range-container">
+                                        <div class="track-rail bg-indigo-100/50"></div>
+                                        <div id="perfRangeProgress" class="track-progress bg-indigo-600"></div>
+                                        <input type="range" id="minScore" name="minScore" th:value="${minScore ?: 1.0}" min="1" max="5" step="0.1"
+                                               class="slider-node text-indigo-600" oninput="updateRangeLabel(this, 'minScore', 'maxScore', 'perfRangeLabel')">
+                                        <input type="range" id="maxScore" name="maxScore" th:value="${maxScore ?: 5.0}" min="1" max="5" step="0.1"
+                                               class="slider-node text-indigo-600" oninput="updateRangeLabel(this, 'minScore', 'maxScore', 'perfRangeLabel')">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Potential Score -->
+                            <div class="col-span-4 space-y-2">
+                                <label class="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 flex justify-between">Potential <span class="text-amber-600 font-bold" id="potRangeLabel">1.0 - 5.0</span></label>
+                                <div class="h-[42px] bg-amber-50/30 rounded-xl px-4 flex items-center border border-transparent hover:border-amber-100 transition-all">
+                                    <div class="dual-range-container">
+                                        <div class="track-rail bg-amber-100/50"></div>
+                                        <div id="potRangeProgress" class="track-progress bg-amber-500"></div>
+                                        <input type="range" id="minPotential" name="minPotential" th:value="${minPotential ?: 1.0}" min="1" max="5" step="0.1" 
+                                               class="slider-node text-amber-600" oninput="updateRangeLabel(this, 'minPotential', 'maxPotential', 'potRangeLabel')">
+                                        <input type="range" id="maxPotential" name="maxPotential" th:value="${maxPotential ?: 5.0}" min="1" max="5" step="0.1" 
+                                               class="slider-node text-amber-600" oninput="updateRangeLabel(this, 'minPotential', 'maxPotential', 'potRangeLabel')">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- Cards Grid -->
+                <div th:if="${not #lists.isEmpty(appraisals)}" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 animate-slide-up">
+                    <div th:each="appr : ${appraisals}" 
+                         th:onclick="'viewReviewDetail(' + ${appr.id} + ')'"
+                         class="bg-white rounded-[32px] border border-slate-100 shadow-sm overflow-hidden flex flex-col card-hover relative group cursor-pointer">
+                        <div class="p-6 flex items-start justify-between">
+                            <div class="flex items-center gap-4">
+                                <div class="w-12 h-12 rounded-[20px] overflow-hidden flex items-center justify-center border border-primary/10 shadow-sm bg-primary/5 group-hover:scale-110 transition-transform duration-300">
+                                    <img th:if="${appr.avatarUrl != null and !appr.avatarUrl.isEmpty()}" 
+                                         th:src="${appr.avatarUrl}" 
+                                         class="w-full h-full object-cover" 
+                                         th:alt="${appr.employeeName}">
+                                    <span th:unless="${appr.avatarUrl != null and !appr.avatarUrl.isEmpty()}"
+                                          class="text-primary font-black text-sm"
+                                          th:text="${#strings.substring(appr.employeeName, 0, 1)}">J</span>
+                                </div>
+                                <div class="min-w-0">
+                                    <h4 class="text-xs font-black text-slate-900 truncate" th:text="${appr.employeeName}">Jane Doe</h4>
+                                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-0.5" th:text="${appr.employeeCode}">EMP-001</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="px-6 pb-6 space-y-5 flex-1">
+                            <div class="flex items-center justify-between p-4 bg-slate-50 rounded-[24px] border border-slate-100/50">
+                                <div>
+                                    <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none">Window</p>
+                                    <p class="text-xs font-black text-slate-800 mt-1" th:text="${#strings.replace(appr.reviewPeriod, 'YEAR_', '')}">2026</p>
+                                </div>
+                                <div class="flex flex-col gap-2">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Perf:</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm font-black text-slate-800" th:text="${#numbers.formatDecimal(appr.performanceScore, 1, 2)}">4.50</span>
+                                            <span class="w-5 h-5 flex items-center justify-center bg-indigo-600 text-white rounded-md text-[9px] font-black"
+                                                  th:text="${appr.performanceGrade}">A</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Pot:</span>
+                                        <div class="flex items-center gap-1.5">
+                                            <span class="text-sm font-black text-slate-800" th:text="${#numbers.formatDecimal(appr.potentialScore, 1, 2)}">3.50</span>
+                                            <span class="w-5 h-5 flex items-center justify-center bg-amber-600 text-white rounded-md text-[9px] font-black"
+                                                  th:text="${appr.potentialGrade}">B</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="grid grid-cols-2 gap-4">
+                                <div class="bg-white/50 p-3 rounded-2xl border border-dashed border-slate-200">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Dept</p>
+                                    <p class="text-[11px] font-bold text-slate-600 break-words mt-1" th:text="${appr.department}">IT</p>
+                                </div>
+                                <div class="bg-white/50 p-3 rounded-2xl border border-dashed border-slate-200 text-right">
+                                    <p class="text-[8px] font-black text-slate-400 uppercase tracking-widest leading-none">Reviewer</p>
+                                    <p class="text-[11px] font-bold text-slate-600 break-words mt-1">
+                                        <span th:text="${appr.reviewerName}">John Smith</span>
+                                        <br>
+                                        <span class="text-[9px] text-slate-400 font-black uppercase tracking-widest" th:text="${appr.reviewerCode}">EMP001</span>
+                                    </p>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Empty State -->
+                <div th:if="${#lists.isEmpty(appraisals)}" class="bg-white rounded-[32px] border border-slate-100 shadow-sm p-20 flex flex-col items-center justify-center text-center animate-fade-in">
+                    <div class="w-20 h-20 bg-slate-50 rounded-[28px] flex items-center justify-center mb-6">
+                        <span class="material-symbols-outlined text-slate-300 text-[40px]">search_off</span>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-800">No appraisals found</h3>
+                    <p class="text-sm text-slate-400 mt-2 max-w-xs">Adjust your search or filters to find what you're looking for.</p>
+                </div>
+
+                <!-- Pagination -->
+                <div th:if="${totalPages > 1}" class="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 flex items-center justify-between">
+                    <p class="text-xs text-slate-400 ml-4">Showing page <span class="font-black text-slate-900" th:text="${currentPage + 1}">1</span> of <span class="font-black text-slate-900" th:text="${totalPages}">1</span></p>
+                    <div class="flex items-center gap-1.5 mr-2">
+                        <a th:if="${currentPage > 0}" th:href="@{/hr/performance(page=${currentPage - 1}, search=${search}, departmentId=${departmentId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all"><span class="material-symbols-outlined">chevron_left</span></a>
+                        <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
+                            <span th:if="${i == currentPage}" class="w-10 h-10 flex items-center justify-center text-xs font-black text-white bg-primary rounded-2xl shadow-lg shadow-primary/20" th:text="${i + 1}">1</span>
+                            <a th:if="${i != currentPage}" th:href="@{/hr/performance(page=${i}, search=${search}, departmentId=${departmentId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-xs font-bold text-slate-400 hover:text-slate-800 hover:bg-slate-50 rounded-2xl transition-all" th:text="${i + 1}">2</a>
+                        </th:block>
+                        <a th:if="${currentPage < totalPages - 1}" th:href="@{/hr/performance(page=${currentPage + 1}, search=${search}, departmentId=${departmentId}, reviewYear=${reviewYear}, reviewPeriodType=${reviewPeriodType}, minScore=${minScore}, maxScore=${maxScore})}" class="w-10 h-10 flex items-center justify-center text-slate-400 hover:bg-slate-50 rounded-2xl transition-all"><span class="material-symbols-outlined">chevron_right</span></a>
+                    </div>
+                </div>
             </div>
-        </main>
-    </div>
-
-    <!-- Create Modal Removed -->
-
-    <!-- View Modal -->
-    <div id="viewDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-y-auto custom-scrollbar" onclick="if(event.target === this) closeModals()">
-        <div class="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 animate-scale-in">
-            <div id="detailContent" class="h-full flex flex-col min-h-[500px]"></div>
         </div>
-    </div>
 
-    <script th:inline="javascript">
-        /*<![CDATA[*/
-        const csrfToken = /*[[${_csrf.token}]]*/ '';
-        const csrfHeader = /*[[${_csrf.headerName}]]*/ '';
+        <!-- View Detail Modal -->
+        <div id="viewDetailModal" class="hidden fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 backdrop-blur-md p-4 overflow-y-auto custom-scrollbar" onclick="if(event.target === this) closeModals()">
+            <div class="bg-white rounded-[40px] shadow-2xl w-full max-w-2xl overflow-hidden border border-white/20 animate-scale-in">
+                <div id="detailContent" class="h-full flex flex-col min-h-[500px]"></div>
+            </div>
+        </div>
 
-        function closeModals() {
-            document.querySelectorAll('[id$="Modal"]').forEach(m => m.classList.add('hidden'));
-        }
+        <script th:inline="javascript">
+            /*<![CDATA[*/
+            const csrfToken = [[${_csrf.token}]];
+            const csrfHeader = [[${_csrf.headerName}]];
 
-        function viewReviewDetail(id) {
-            const m = document.getElementById('viewDetailModal');
-            const c = document.getElementById('detailContent');
-            m.classList.remove('hidden');
-            c.innerHTML = '<div class="flex-1 flex items-center justify-center py-20 text-primary/20 animate-spin"><span class="material-symbols-outlined text-4xl">sync</span></div>';
+            function closeModals() {
+                document.getElementById('viewDetailModal').classList.add('hidden');
+                document.body.style.overflow = '';
+            }
 
-            fetch('/hr/performance/' + id, { headers: { [csrfHeader]: csrfToken } })
-            .then(r => r.json()).then(data => {
-                const pe = parseFloat(data.performanceScore || 0);
-                const po = parseFloat(data.potentialScore || 0);
-                const colorClass = pe >= 4 ? 'bg-emerald-500' : pe >= 3 ? 'bg-blue-500' : pe >= 2 ? 'bg-amber-500' : 'bg-rose-500';
+            function viewReviewDetail(id) {
+                const m = document.getElementById('viewDetailModal');
+                const c = document.getElementById('detailContent');
+                m.classList.remove('hidden');
+                document.body.style.overflow = 'hidden';
+                c.innerHTML = '<div class="flex-1 flex items-center justify-center py-20 text-primary/20 animate-spin"><span class="material-symbols-outlined text-4xl">sync</span></div>';
 
-                c.innerHTML = `
-                    <div class="px-10 pt-10 pb-6 flex items-start justify-between bg-slate-50/50 shrink-0">
-                        <div class="flex items-center gap-6">
-                            <div class="w-16 h-16 rounded-[24px] bg-primary flex items-center justify-center text-white font-black text-2xl shadow-lg">${data.employeeName.charAt(0)}</div>
-                            <div>
-                                <h1 class="text-2xl font-black text-slate-900">${data.employeeName}</h1>
-                                <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">${data.employeeCode} • ${data.department}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="flex-1 overflow-y-auto px-10 py-8 space-y-12 custom-scrollbar" style="max-height: calc(90vh - 200px);">
-                        <div class="grid grid-cols-2 gap-8">
-                            <div class="p-8 rounded-[40px] bg-slate-50 border border-slate-100">
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Performance Index</p>
-                                <p class="text-4xl font-black text-slate-900">${pe.toFixed(2)} <span class="text-lg text-slate-300">/ 5.0</span></p>
-                                <div class="mt-6 h-2 bg-white rounded-full overflow-hidden border border-slate-100">
-                                    <div class="h-full ${colorClass} transition-all perf-bar" style="width:0%"></div>
+                fetch('/hr/performance/' + id, { headers: { [csrfHeader]: csrfToken } })
+                .then(r => r.json()).then(data => {
+                    const pe = parseFloat(data.performanceScore || 0);
+                    const po = parseFloat(data.potentialScore || 0);
+                    const colorClass = pe >= 4 ? 'bg-emerald-500' : pe >= 3 ? 'bg-blue-500' : pe >= 2 ? 'bg-amber-500' : 'bg-rose-500';
+
+                    c.innerHTML = `
+                        <div class="px-10 pt-10 pb-6 flex items-start justify-between bg-slate-50/50 shrink-0">
+                            <div class="flex items-center gap-6">
+                                <div class="w-16 h-16 rounded-[24px] overflow-hidden flex items-center justify-center bg-primary shadow-lg">
+                                    ${data.avatarUrl ? `<img src="${data.avatarUrl}" class="w-full h-full object-cover" alt="Avatar">` : `<span class="text-white font-black text-2xl">${data.employeeName.charAt(0)}</span>`}
                                 </div>
-                            </div>
-                            <div class="p-8 rounded-[40px] bg-slate-50 border border-slate-100">
-                                <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Potential Index</p>
-                                <p class="text-4xl font-black text-slate-900">${po.toFixed(2)} <span class="text-lg text-slate-300">/ 5.0</span></p>
-                                <div class="mt-6 h-2 bg-white rounded-full overflow-hidden border border-slate-100">
-                                    <div class="h-full bg-primary transition-all pot-bar" style="width:0%"></div>
+                                <div>
+                                    <h1 class="text-2xl font-black text-slate-900">${data.employeeName}</h1>
+                                    <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-1">${data.employeeCode} • ${data.department}</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="space-y-8">
-                            <section>
-                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Evaluation Evidence</h4>
-                                <div class="bg-white p-8 rounded-[32px] border border-slate-100 text-[14px] text-slate-600 italic">"${data.strengths || 'N/A'}"</div>
-                            </section>
-                            <section>
-                                <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Growth Roadmap</h4>
-                                <div class="bg-white p-8 rounded-[32px] border border-slate-100 text-[14px] text-slate-600 italic">"${data.areasToImprove || 'N/A'}"</div>
-                            </section>
+                        <div class="flex-1 overflow-y-auto px-10 py-8 space-y-12 custom-scrollbar" style="max-height: calc(90vh - 200px);">
+                            <div class="grid grid-cols-2 gap-8">
+                                <div class="p-8 rounded-[40px] bg-slate-50 border border-slate-100">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Performance Index</p>
+                                    <p class="text-4xl font-black text-slate-900">${pe.toFixed(2)} <span class="text-lg text-indigo-600 font-black ml-2">${data.performanceGrade}</span></p>
+                                    <div class="mt-6 h-2 bg-white rounded-full overflow-hidden border border-slate-100">
+                                        <div class="h-full ${colorClass} transition-all perf-bar" style="width:0%"></div>
+                                    </div>
+                                </div>
+                                <div class="p-8 rounded-[40px] bg-slate-50 border border-slate-100">
+                                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Potential Index</p>
+                                    <p class="text-4xl font-black text-slate-900">${po.toFixed(2)} <span class="text-lg text-amber-600 font-black ml-2">${data.potentialGrade}</span></p>
+                                    <div class="mt-6 h-2 bg-white rounded-full overflow-hidden border border-slate-100">
+                                        <div class="h-full bg-primary transition-all pot-bar" style="width:0%"></div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="space-y-8">
+                                <section>
+                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Evaluation Evidence</h4>
+                                    <div class="bg-white p-8 rounded-[32px] border border-slate-100 text-[14px] text-slate-600 italic">"${data.strengths || 'N/A'}"</div>
+                                </section>
+                                <section>
+                                    <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Growth Roadmap</h4>
+                                    <div class="bg-white p-8 rounded-[32px] border border-slate-100 text-[14px] text-slate-600 italic">"${data.areasToImprove || 'N/A'}"</div>
+                                </section>
+                            </div>
                         </div>
-                    </div>
-                    <div class="p-10 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end shrink-0">
-                        <button onclick="closeModals()" class="px-8 py-3 text-slate-400 font-black uppercase tracking-widest text-[11px] hover:text-slate-600">Close</button>
-                    </div>
-                `;
-                
-                // Set widths after injection
-                requestAnimationFrame(() => {
-                    const peBar = c.querySelector('.perf-bar');
-                    if (peBar) peBar.style.width = (pe / 5 * 100) + '%';
-                    const poBar = c.querySelector('.pot-bar');
-                    if (poBar) poBar.style.width = (po / 5 * 100) + '%';
+                        <div class="p-10 bg-slate-50/50 border-t border-slate-100 flex items-center justify-end shrink-0">
+                            <button onclick="closeModals()" class="px-8 py-3 text-slate-400 font-black uppercase tracking-widest text-[11px] hover:text-slate-600">Close</button>
+                        </div>
+                    `;
+                    
+                    setTimeout(() => {
+                        const peBar = c.querySelector('.perf-bar');
+                        if (peBar) peBar.style.width = (pe / 5 * 100) + '%';
+                        const poBar = c.querySelector('.pot-bar');
+                        if (poBar) poBar.style.width = (po / 5 * 100) + '%';
+                    }, 50);
+                }).catch(() => {
+                    c.innerHTML = '<div class="p-20 text-center"><span class="material-symbols-outlined text-rose-500 text-5xl mb-4">error</span><p class="text-slate-500 font-bold">Failed to load report</p></div>';
                 });
-                c.innerHTML = html;
-            }).catch(() => {
-                c.innerHTML = '<div class="p-20 text-center"><span class="material-symbols-outlined text-rose-500 text-5xl mb-4">error</span><p class="text-slate-500 font-bold">Failed to load report</p></div>';
-            });
-        }
-
-        /* Advanced Filter Toggle */
-        function toggleAdvancedFilters() {
-            const p = document.getElementById('advancedFilters');
-            const b = document.getElementById('advToggleBtn');
-            p.classList.toggle('hidden');
-            if (p.classList.contains('hidden')) {
-                b.classList.remove('bg-slate-100', 'text-primary', 'border-primary/20');
-            } else {
-                b.classList.add('bg-slate-100', 'text-primary', 'border-primary/20');
             }
-        }
 
-        /* Dual Range Slider Labels */
-        function updateRangeLabel(currentInput, minName, maxName, labelId) {
-            const minInput = document.querySelector(`input[name="${minName}"]`);
-            const maxInput = document.querySelector(`input[name="${maxName}"]`);
-            let min = parseFloat(minInput.value);
-            let max = parseFloat(maxInput.value);
-
-            if (currentInput.name === minName && min > max) {
-                maxInput.value = min;
-            } else if (currentInput.name === maxName && max < min) {
-                minInput.value = max;
-            }
+            const currentYear = new Date().getFullYear();
             
-            // Re-fetch values after potential adjustment
-            const finalMin = minInput.value;
-            const finalMax = maxInput.value;
-            document.getElementById(labelId).textContent = `${finalMin} - ${finalMax}`;
-        }
+            // Premium Year Grid Picker Initialization
+            flatpickr("#reviewYear", {
+                dateFormat: "Y",
+                minDate: "2025",
+                maxDate: currentYear.toString(),
+                onReady: function(selectedDates, dateStr, instance) {
+                    const cont = instance.calendarContainer;
+                    cont.classList.add('year-only-picker');
+                    
+                    // Create and Inject the Modern Grid
+                    const gridHtml = `
+                        <div class="p-1">
+                            <div class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 ml-2 text-center">Appraisal Year</div>
+                            <div class="year-grid-container" id="hrYearGrid"></div>
+                            <div class="year-current-shortcut" id="hrQuickCurrent">
+                                Current Year
+                            </div>
+                        </div>
+                    `;
+                    cont.innerHTML = gridHtml;
 
-        /* Searchable Select Logic */
-        document.querySelectorAll('.custom-select-parent').forEach(parent => {
-            const input = parent.querySelector('.custom-select-input');
-            const hidden = parent.querySelector('input[type="hidden"]');
-            const optionsDiv = parent.querySelector('.custom-select-options');
-            const options = optionsDiv.querySelectorAll('[data-value]');
+                    const grid = cont.querySelector('#hrYearGrid');
+                    const selectedYear = instance.input.value;
 
-            input.addEventListener('focus', () => {
-                optionsDiv.classList.remove('hidden');
+                    // Populate Grid (2025 to Current)
+                    for (let y = 2025; y <= currentYear; y++) {
+                        const item = document.createElement('div');
+                        item.className = `year-grid-item ${selectedYear == y ? 'active' : ''}`;
+                        item.textContent = y;
+                        item.onclick = () => {
+                            instance.setDate(y.toString(), true);
+                            instance.close();
+                            document.getElementById('filterForm').submit();
+                        };
+                        grid.appendChild(item);
+                    }
+
+                    // Shortcut Handler
+                    cont.querySelector('#hrQuickCurrent').onclick = () => {
+                        instance.setDate(currentYear.toString(), true);
+                        instance.close();
+                        document.getElementById('filterForm').submit();
+                    };
+                }
             });
 
-            input.addEventListener('input', (e) => {
-                const term = e.target.value.toLowerCase();
-                options.forEach(opt => {
-                    const text = opt.textContent.toLowerCase();
-                    opt.style.display = text.includes(term) ? 'block' : 'none';
-                });
-            });
+            function toggleAdvancedFilters() {
+                const p = document.getElementById('advancedFilters');
+                const b = document.getElementById('advToggleBtn');
+                p.classList.toggle('hidden');
+                if (p.classList.contains('hidden')) {
+                    b.classList.remove('bg-slate-100', 'text-primary', 'border-primary/20');
+                } else {
+                    b.classList.add('bg-slate-100', 'text-primary', 'border-primary/20');
+                }
+            }
 
-            options.forEach(opt => {
-                opt.addEventListener('click', () => {
-                    const label = opt.textContent.trim();
-                    input.value = (label === 'All Departments' || label === 'All Reviewers') ? '' : label;
-                    hidden.value = opt.dataset.value;
-                    optionsDiv.classList.add('hidden');
+            function updateRangeLabel(currentInput, minId, maxId, labelId) {
+                const minInput = document.getElementById(minId);
+                const maxInput = document.getElementById(maxId);
+                const progress = document.getElementById(labelId.replace('Label', 'Progress'));
+                
+                let minVal = parseFloat(minInput.value);
+                let maxVal = parseFloat(maxInput.value);
 
-                    // Specific trigger for Modal Department -> Filter Employees
-                    if (hidden.id === 'modalDeptValue' && typeof filterEmployeesByDept === 'function') {
-                        filterEmployeesByDept(hidden.value);
+                if (minVal > maxVal) {
+                    if (currentInput.id === minId) {
+                        minInput.value = maxVal;
+                        minVal = maxVal;
+                    } else {
+                        maxInput.value = minVal;
+                        maxVal = minVal;
+                    }
+                }
+
+                const left = ((minVal - 1) / 4) * 100;
+                const right = ((maxVal - 1) / 4) * 100;
+                
+                if (progress) {
+                    progress.style.left = left + '%';
+                    progress.style.width = (right - left) + '%';
+                }
+                
+                document.getElementById(labelId).textContent = minVal.toFixed(1) + ' - ' + maxVal.toFixed(1);
+            }
+
+            // Dual range slider interactive zone-based jump logic
+            document.querySelectorAll('.dual-range-container').forEach(container => {
+                const minInput = container.querySelector('input[id^="min"]');
+                const maxInput = container.querySelector('input[id^="max"]');
+                const labelId = minInput.id.includes('Score') ? 'perfRangeLabel' : 'potRangeLabel';
+
+                container.addEventListener('click', (e) => {
+                    if (e.target.classList.contains('slider-node')) return;
+
+                    const rect = container.getBoundingClientRect();
+                    const percent = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+                    const val = 1 + (percent * 4);
+                    
+                    // Zone-based logic: Left half targets min handle, Right half targets max handle
+                    if (val < 3.0) {
+                        minInput.value = val.toFixed(1);
+                        updateRangeLabel(minInput, minInput.id, maxInput.id, labelId);
+                    } else {
+                        maxInput.value = val.toFixed(1);
+                        updateRangeLabel(maxInput, minInput.id, maxInput.id, labelId);
                     }
                 });
             });
 
-            document.addEventListener('click', (e) => {
-                if (!parent.contains(e.target)) {
-                    optionsDiv.classList.add('hidden');
-                }
-            });
-        });
+            // Department Search Custom Select
+            document.querySelectorAll('.custom-select-parent').forEach(parent => {
+                const input = parent.querySelector('.custom-select-input');
+                const hidden = parent.querySelector('input[type="hidden"]');
+                const optionsDiv = parent.querySelector('.custom-select-options');
+                const options = optionsDiv.querySelectorAll('[data-value]');
 
-        // Initialize Slider Labels & Metrics
-        updateRangeLabel(document.querySelector('input[name="minScore"]'), 'minScore', 'maxScore', 'perfRangeLabel');
-        updateRangeLabel(document.querySelector('input[name="minPotential"]'), 'minPotential', 'maxPotential', 'potRangeLabel');
-        /*]]>*/
-    </script>
+                input.addEventListener('focus', () => optionsDiv.classList.remove('hidden'));
+
+                input.addEventListener('input', (e) => {
+                    const term = e.target.value.toLowerCase();
+                    options.forEach(opt => opt.style.display = opt.textContent.toLowerCase().includes(term) ? 'block' : 'none');
+                });
+
+                options.forEach(opt => {
+                    opt.addEventListener('click', () => {
+                        const label = opt.textContent.trim();
+                        input.value = label === 'All Departments' ? '' : label;
+                        hidden.value = opt.dataset.value;
+                        optionsDiv.classList.add('hidden');
+                    });
+                });
+
+                document.addEventListener('click', (e) => {
+                    if (!parent.contains(e.target)) optionsDiv.classList.add('hidden');
+                });
+            });
+
+            // Initial sync
+            updateRangeLabel(document.getElementById('minScore'), 'minScore', 'maxScore', 'perfRangeLabel');
+            updateRangeLabel(document.getElementById('minPotential'), 'minPotential', 'maxPotential', 'potRangeLabel');
+            /*]]>*/
+        </script>
+    </div>
 </body>
 </html>
+

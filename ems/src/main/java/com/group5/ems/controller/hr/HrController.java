@@ -8,6 +8,7 @@ import java.util.List;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -29,12 +30,15 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import com.group5.ems.dto.request.BankDetailsFormDTO;
+// import com.group5.ems.dto.request.EmployeeOnboardingCreateDTO;
 import com.group5.ems.dto.response.ApplicationStageDTO;
 import com.group5.ems.dto.response.CandidateCvDTO;
 import com.group5.ems.dto.response.HrDashboardMetricsDTO;
 import com.group5.ems.dto.response.HrEmployeeDTO;
 import com.group5.ems.dto.response.HrEmployeeDetailDTO;
 import com.group5.ems.dto.response.HrLeaveRequestDTO;
+// import com.group5.ems.dto.response.HrOnboardingTaskDTO;
+// import com.group5.ems.dto.response.HrOnboardingTrackerDTO;
 import com.group5.ems.dto.response.HrPerformanceDTO;
 import com.group5.ems.dto.response.HrRecruitmentDTO;
 import com.group5.ems.dto.response.InterviewerDTO;
@@ -50,14 +54,29 @@ import com.group5.ems.repository.UserRepository;
 import com.group5.ems.service.admin.AdminService;
 import com.group5.ems.service.external.VietQrApiClient;
 import com.group5.ems.service.hr.HrAttendanceService;
-import com.group5.ems.service.hr.HrBankDetailsService;
+import com.group5.ems.service.common.BankDetailsService;
 import com.group5.ems.service.hr.HrDashboardService;
 import com.group5.ems.service.hr.HrEmployeeService;
 import com.group5.ems.service.hr.HrLeaveService;
+// import com.group5.ems.service.hr.HrOnboardingService;
 import com.group5.ems.service.hr.HrPayrollService;
 import com.group5.ems.service.hr.HrPerformanceService;
 import com.group5.ems.service.hr.HrRecruitmentService;
 import com.group5.ems.service.hr.HrRequestService;
+import com.group5.ems.service.hr.HrReportService;
+import com.group5.ems.service.common.LogService;
+/*
+import com.group5.ems.service.hr.HrCalendarService;
+import com.group5.ems.dto.request.hr.HrEventCreateDTO;
+import com.group5.ems.dto.request.hr.HrEventUpdateDTO;
+import com.group5.ems.dto.response.hr.HrEventResponseDTO;
+*/
+import com.group5.ems.exception.ReportExportException;
+import com.group5.ems.exception.ValidationException;
+
+import org.thymeleaf.TemplateEngine;
+import org.thymeleaf.context.Context;
+import org.xhtmlrenderer.pdf.ITextRenderer;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -84,8 +103,13 @@ public class HrController {
     private final HrPerformanceService performanceService;
     private final HrRequestService requestService;
     private final AdminService adminService;
-    private final HrBankDetailsService bankDetailsService;
+    private final BankDetailsService bankDetailsService;
     private final VietQrApiClient vietQrApiClient;
+    // private final HrOnboardingService onboardingService;
+    private final HrReportService reportService;
+    private final LogService logService;
+    private final TemplateEngine templateEngine;
+    // private final HrCalendarService calendarService;
 
     @GetMapping({ "", "/", "/dashboard" })
     public String dashboard(Model model) {
@@ -110,10 +134,31 @@ public class HrController {
     @GetMapping("/employees")
     public String employees(Model model,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int onboardingPage,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) String department,
-            @RequestParam(required = false) String status) {
-        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "hireDate:desc") String sort,
+            @RequestParam(required = false) String tab,
+            @RequestParam(required = false) String obSearch,
+            @RequestParam(required = false) Long obDepartmentId) {
+
+        // ── Directory Tab ─────────────────────────────
+        String sortBy = "hireDate";
+        String direction = "desc";
+        if (sort != null && sort.contains(":")) {
+            String[] parts = sort.split(":");
+            sortBy = parts[0];
+            direction = parts[1];
+        }
+
+        String sortField = switch (sortBy) {
+            case "name" -> "user.fullName";
+            default -> "hireDate";
+        };
+        Sort.Direction sortDirection = "asc".equalsIgnoreCase(direction) ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE, Sort.by(sortDirection, sortField));
+        
         Page<HrEmployeeDTO> employeePage = employeeService.searchEmployees(search, department, status, pageable);
 
         model.addAttribute("employees", employeePage.getContent());
@@ -123,9 +168,27 @@ public class HrController {
         model.addAttribute("search", search);
         model.addAttribute("department", department);
         model.addAttribute("status", status);
+        model.addAttribute("sort", sort);
 
-        List<Department> departments = departmentRepository.findAll();
-        model.addAttribute("departments", departments);
+        model.addAttribute("departments", departmentRepository.findAll());
+
+        // ── Onboarding Tracker Tab ────────────────────
+        /*
+        Pageable obPageable = PageRequest.of(onboardingPage, EMPLOYEE_PAGE_SIZE);
+        Page<HrOnboardingTrackerDTO> onboardingTrackerPage = onboardingService.getOnboardingTracker(obSearch, obDepartmentId, obPageable);
+
+        model.addAttribute("onboardingList", onboardingTrackerPage.getContent());
+        model.addAttribute("obCurrentPage", onboardingPage);
+        model.addAttribute("obTotalPages", onboardingTrackerPage.getTotalPages());
+        model.addAttribute("obTotalItems", onboardingTrackerPage.getTotalElements());
+        model.addAttribute("obSearch", obSearch);
+        model.addAttribute("obDepartmentId", obDepartmentId);
+        */
+
+        // ── Wizard Form Data ──────────────────────────
+        // model.addAttribute("onboardingTemplates", onboardingService.getActiveTemplates());
+
+        model.addAttribute("activeTab", tab != null ? tab : "directory");
 
         return "hr/employees";
     }
@@ -147,75 +210,213 @@ public class HrController {
 
     @GetMapping("/attendance")
     public String attendance(Model model,
-                             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
-                             @RequestParam(required = false) String search,
-                             @RequestParam(required = false) String department,
-                             @RequestParam(required = false) String status,
-                             @RequestParam(defaultValue = "0") int page) {
-        
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "checkIn:asc") String sort) {
+
         LocalDate queryDate = (date != null) ? date : LocalDate.now();
-        
+
         model.addAttribute("stats", attendanceService.getAttendanceStats(queryDate));
+
+        String sortBy = "checkIn";
+        String direction = "asc";
+        if (sort != null && sort.contains(":")) {
+            String[] parts = sort.split(":");
+            sortBy = parts[0];
+            direction = parts[1];
+        }
+
+        String sortField = "checkIn";
+        if ("checkOut".equals(sortBy)) {
+            sortField = "checkOut";
+        }
         
-        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
-        org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> attendancePage = attendanceService.getAttendanceRecords(queryDate, search, department, status, pageable);
-        
+        Sort.Direction sortDirection = "desc".equalsIgnoreCase(direction) ? Sort.Direction.DESC : Sort.Direction.ASC;
+        Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE, Sort.by(sortDirection, "a." + sortField));
+
+        org.springframework.data.domain.Page<com.group5.ems.dto.response.HrAttendanceDetailDTO> attendancePage = attendanceService
+                .getAttendanceRecords(queryDate, search, departmentId, status, pageable);
+
         model.addAttribute("attendances", attendancePage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", attendancePage.getTotalPages());
         model.addAttribute("totalItems", attendancePage.getTotalElements());
-        
+
         model.addAttribute("date", queryDate);
         model.addAttribute("search", search);
-        model.addAttribute("department", department);
+        model.addAttribute("departmentId", departmentId);
         model.addAttribute("status", status);
+        model.addAttribute("sort", sort);
         model.addAttribute("departments", departmentRepository.findAll());
-        
+
         return "hr/attendance";
     }
 
+    @GetMapping("/attendance/export")
+    public void exportAttendaceCsv(
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate date,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String status,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        
+        LocalDate queryDate = (date != null) ? date : LocalDate.now();
+        response.setContentType("text/csv");
+
+        String filename = "attendance_export_" + queryDate + ".csv";
+
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        attendanceService.exportAttendanceToCsv(queryDate, search, departmentId, status, response.getWriter());
+    }
+
+    @GetMapping("/attendance/export/{employeeId}")
+    public void exportEmployeeAttendance(
+            @PathVariable Long employeeId,
+            @RequestParam(required = false) java.time.YearMonth month,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) String status,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+
+        java.time.YearMonth targetMonth = month != null ? month : java.time.YearMonth.now();
+
+        if (targetMonth.isAfter(java.time.YearMonth.now())) {
+            throw new IllegalArgumentException("Cannot export attendance for future months.");
+        }
+
+        Employee employee = employeeRepository.findById(employeeId)
+                .orElseThrow(() -> new IllegalArgumentException("Employee not found"));
+
+        response.setContentType("text/csv; charset=UTF-8");
+
+        String filename = "employee_" + employee.getEmployeeCode() + "_attendance_" + targetMonth.toString() + ".csv";
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+
+        java.io.PrintWriter writer = response.getWriter();
+        // Output BOM for Excel UTF-8 support
+        writer.write('\ufeff');
+        
+        attendanceService.exportEmployeeAttendanceToCsv(employeeId, targetMonth, search, status, writer);
+    }
+
     @GetMapping("/leave")
-    public String leave(Model model,
+    public String leave(Model model, jakarta.servlet.http.HttpSession session,
+            @RequestParam(required = false) String tab,
+            @RequestParam(required = false) String clear,
             @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "0") int balancePage,
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long departmentId,
             @RequestParam(required = false) String leaveType,
             @RequestParam(required = false) String search,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
-            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String statsMonth,
+            @RequestParam(required = false) Long viewId) {
 
-        // Pending requests (current tab)
-        model.addAttribute("pendingLeaves", leaveService.getPendingLeaves());
+        model.addAttribute("viewId", viewId);
 
-        // HRM Pending (New tab - read only)
-        model.addAttribute("hrmPendingLeaves", leaveService.getHrmPendingLeaves());
+        if (tab == null) {
+            tab = (String) session.getAttribute("leave_activeTab");
+            if (tab == null) tab = "current";
+        } else {
+            session.setAttribute("leave_activeTab", tab);
+        }
 
-        // Filtered history (server-side — improvement #2)
+        boolean hasFilterParams = (status != null || departmentId != null || leaveType != null || search != null || dateFrom != null || dateTo != null || statsMonth != null);
+
+        if ("true".equals(clear)) {
+            session.removeAttribute("leave_" + tab + "_status");
+            session.removeAttribute("leave_" + tab + "_departmentId");
+            session.removeAttribute("leave_" + tab + "_leaveType");
+            session.removeAttribute("leave_" + tab + "_search");
+            session.removeAttribute("leave_" + tab + "_dateFrom");
+            session.removeAttribute("leave_" + tab + "_dateTo");
+            // DO NOT clear statsMonth here so stats filter persists across search clears
+        } else if (hasFilterParams) {
+            session.setAttribute("leave_" + tab + "_status", status);
+            session.setAttribute("leave_" + tab + "_departmentId", departmentId);
+            session.setAttribute("leave_" + tab + "_leaveType", leaveType);
+            session.setAttribute("leave_" + tab + "_search", search);
+            session.setAttribute("leave_" + tab + "_dateFrom", dateFrom);
+            session.setAttribute("leave_" + tab + "_dateTo", dateTo);
+            session.setAttribute("leave_" + tab + "_statsMonth", statsMonth);
+        }
+
+        // Current tab
+        String curSearch = (String) session.getAttribute("leave_current_search");
+        Long curDept = (Long) session.getAttribute("leave_current_departmentId");
+        String curType = (String) session.getAttribute("leave_current_leaveType");
+        model.addAttribute("pendingLeaves", leaveService.getPendingLeaves(curSearch, curDept, curType));
+        model.addAttribute("currentSearch", curSearch);
+        model.addAttribute("currentDepartmentId", curDept);
+        model.addAttribute("currentLeaveType", curType);
+
+        // HRM tab
+        String hrmSearch = (String) session.getAttribute("leave_hrm_search");
+        Long hrmDept = (Long) session.getAttribute("leave_hrm_departmentId");
+        String hrmType = (String) session.getAttribute("leave_hrm_leaveType");
+        model.addAttribute("hrmPendingLeaves", leaveService.getHrmPendingLeaves(hrmSearch, hrmDept, hrmType));
+        model.addAttribute("hrmSearch", hrmSearch);
+        model.addAttribute("hrmDepartmentId", hrmDept);
+        model.addAttribute("hrmLeaveType", hrmType);
+
+        // History tab
+        String histStatus = (String) session.getAttribute("leave_history_status");
+        String histSearch = (String) session.getAttribute("leave_history_search");
+        Long histDept = (Long) session.getAttribute("leave_history_departmentId");
+        String histType = (String) session.getAttribute("leave_history_leaveType");
+        LocalDate histFrom = (LocalDate) session.getAttribute("leave_history_dateFrom");
+        LocalDate histTo = (LocalDate) session.getAttribute("leave_history_dateTo");
+        
         Pageable pageable = PageRequest.of(page, EMPLOYEE_PAGE_SIZE);
-        Page<HrLeaveRequestDTO> historyPage = leaveService.getLeaveHistoryFiltered(
-                status, departmentId, leaveType, search, dateFrom, dateTo, pageable);
+        Page<HrLeaveRequestDTO> historyPage = leaveService.getLeaveHistoryFiltered(histStatus, histDept, histType, histSearch, histFrom, histTo, pageable);
         model.addAttribute("leaveHistory", historyPage.getContent());
         model.addAttribute("currentPage", page);
         model.addAttribute("totalPages", historyPage.getTotalPages());
         model.addAttribute("totalItems", historyPage.getTotalElements());
+        model.addAttribute("histSearch", histSearch);
+        model.addAttribute("histDepartmentId", histDept);
+        model.addAttribute("histLeaveType", histType);
+        model.addAttribute("histStatus", histStatus);
+        model.addAttribute("histDateFrom", histFrom);
+        model.addAttribute("histDateTo", histTo);
 
-        // Statistics (improvement #6)
-        model.addAttribute("leaveStats", leaveService.getLeaveStats());
+        // Stats tab
+        String sMonth = (String) session.getAttribute("leave_stats_statsMonth");
+        String statsSearch = (String) session.getAttribute("leave_stats_search");
+        Long statsDept = (Long) session.getAttribute("leave_stats_departmentId");
+        model.addAttribute("leaveStats", leaveService.getLeaveStats(sMonth));
+        model.addAttribute("statsSearch", statsSearch);
+        model.addAttribute("statsDepartmentId", statsDept);
+        model.addAttribute("statsMonth", sMonth);
+        
+        boolean isCurrentMonth = true;
+        if (sMonth != null && !sMonth.trim().isEmpty()) {
+            try {
+                java.time.YearMonth requestedMonth = java.time.YearMonth.parse(sMonth);
+                isCurrentMonth = requestedMonth.equals(java.time.YearMonth.now());
+                model.addAttribute("statsMonthStart", requestedMonth.atDay(1));
+                model.addAttribute("statsMonthEnd", requestedMonth.atEndOfMonth());
+            } catch (Exception e) {}
+        }
+        model.addAttribute("isCurrentMonth", isCurrentMonth);
 
-        // Leave balance summary (improvement #1)
+        // Balance Table
+        Pageable balancePageable = PageRequest.of(balancePage, EMPLOYEE_PAGE_SIZE);
+        Page<com.group5.ems.dto.response.HrEmployeeLeaveBalanceDTO> balances = leaveService.getLeaveBalancesFiltered(statsDept, statsSearch, balancePageable);
+        model.addAttribute("leaveBalances", balances.getContent());
+        model.addAttribute("balanceCurrentPage", balancePage);
+        model.addAttribute("balanceTotalPages", balances.getTotalPages());
+        model.addAttribute("balanceTotalItems", balances.getTotalElements());
+
+        // Calendar Tab (filters are handled client-side but we preserve them here if needed, or pass normal variables if they render immediately)
         model.addAttribute("balanceSummary", leaveService.getLeaveBalanceSummary());
-
-        // Rejection categories for the modal dropdown (improvement #4)
         model.addAttribute("rejectionCategories", leaveService.getRejectionCategories());
-
-        // Filter state preservation
-        model.addAttribute("filterStatus", status);
-        model.addAttribute("filterDepartmentId", departmentId);
-        model.addAttribute("filterLeaveType", leaveType);
-        model.addAttribute("filterSearch", search);
-        model.addAttribute("filterDateFrom", dateFrom);
-        model.addAttribute("filterDateTo", dateTo);
         model.addAttribute("departments", departmentRepository.findAll());
+        model.addAttribute("activeTab", tab);
 
         return "hr/leave";
     }
@@ -279,8 +480,11 @@ public class HrController {
     @ResponseBody
     public ResponseEntity<List<com.group5.ems.dto.response.HrLeaveCalendarEventDTO>> leaveCalendarEvents(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate start,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end) {
-        return ResponseEntity.ok(leaveService.getCalendarEvents(start, end));
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate end,
+            @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String leaveType,
+            @RequestParam(required = false) String search) {
+        return ResponseEntity.ok(leaveService.getCalendarEvents(start, end, departmentId, leaveType, search));
     }
 
     // ── CSV export (improvement #7) ──
@@ -289,13 +493,29 @@ public class HrController {
     public void exportLeaveCsv(
             @RequestParam(required = false) String status,
             @RequestParam(required = false) Long departmentId,
+            @RequestParam(required = false) String leaveType,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE) LocalDate endDate,
             jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
         response.setContentType("text/csv");
-        response.setHeader("Content-Disposition",
-                "attachment; filename=\"leave-history-" + LocalDate.now() + ".csv\"");
-        leaveService.exportLeaveHistoryToCsv(status, departmentId, response.getWriter());
+        
+        String filename = "leave-history";
+        if (departmentId != null) {
+            Department d = departmentRepository.findById(departmentId).orElse(null);
+            if (d != null) {
+                filename += "-dept-" + d.getName().replaceAll("[^a-zA-Z0-9-]", "_");
+            } else {
+                filename += "-dept-" + departmentId;
+            }
+        }
+        if (leaveType != null && !leaveType.isEmpty()) filename += "-type-" + leaveType.toLowerCase();
+        if (startDate != null) filename += "-from-" + startDate;
+        if (endDate != null) filename += "-to-" + endDate;
+        filename += ".csv";
+        
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        leaveService.exportLeaveHistoryToCsv(status, departmentId, leaveType, startDate, endDate, response.getWriter());
     }
-
 
     @GetMapping("/performance")
     public String performance(Model model,
@@ -310,6 +530,18 @@ public class HrController {
             @RequestParam(required = false) BigDecimal maxScore,
             @RequestParam(required = false) BigDecimal minPotential,
             @RequestParam(required = false) BigDecimal maxPotential) {
+
+        if (reviewYear != null && !reviewYear.isEmpty()) {
+            try {
+                int year = Integer.parseInt(reviewYear);
+                int currentYear = LocalDate.now().getYear();
+                if (year < 2025 || year > currentYear) {
+                    throw new ValidationException("Review year must be between 2025 and " + currentYear);
+                }
+            } catch (NumberFormatException e) {
+                throw new ValidationException("Invalid year format");
+            }
+        }
 
         if (minScore != null && maxScore != null && minScore.compareTo(maxScore) > 0) {
             BigDecimal temp = minScore;
@@ -397,10 +629,8 @@ public class HrController {
         model.addAttribute("totalItems", historyPage.getTotalElements());
 
         // Tab 3: Create request form data
-        model.addAttribute("requestTypes", requestService.getCreatableRequestTypes());
+        model.addAttribute("requestTypes", requestService.getGroupedRequestTypes());
 
-        // Tab 4: Analytics
-        model.addAttribute("stats", requestService.getRequestStats());
 
         // Rejection modal data
         model.addAttribute("rejectionCategories", requestService.getRejectionCategories());
@@ -447,9 +677,10 @@ public class HrController {
             @RequestParam Long requestTypeId,
             @RequestParam String title,
             @RequestParam String content,
+            @RequestParam(defaultValue = "false") boolean urgent,
             RedirectAttributes redirectAttributes) {
         try {
-            requestService.createRequest(requestTypeId, title, content);
+            requestService.createRequest(requestTypeId, title, content, urgent);
             redirectAttributes.addFlashAttribute("successMessage", "Request created successfully.");
         } catch (Exception e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
@@ -484,7 +715,8 @@ public class HrController {
     }
 
     @GetMapping("/recruitment")
-    public String recruitment(Model model) {
+    public String recruitment(Model model,
+            @AuthenticationPrincipal UserDetails principal) {
         model.addAttribute("activeJobs", recruitmentService.getActiveJobPosts());
         model.addAttribute("totalOpenJobs", recruitmentService.countOpenJobs());
         model.addAttribute("recentApplicants", recruitmentService.getRecentApplications());
@@ -494,6 +726,16 @@ public class HrController {
         model.addAttribute("positions", positionRepository.findAll());
         model.addAttribute("jobPostRequests", recruitmentService.getJobPostRequests());
         model.addAttribute("pendingJobRequests", recruitmentService.countPendingJobRequests());
+
+        // My Interviews tab — lấy theo user đang đăng nhập
+        Long currentUserId = resolveCurrentUserId(principal);
+        model.addAttribute("currentUserId", currentUserId);
+        java.util.List<com.group5.ems.dto.response.InterviewDTO> myInterviews = recruitmentService
+                .getMyInterviews(currentUserId);
+        model.addAttribute("myInterviews", myInterviews);
+        model.addAttribute("myInterviewScheduled",
+                myInterviews.stream().filter(i -> "SCHEDULED".equals(i.getStatus())).count());
+
         return "hr/recruitment";
     }
 
@@ -626,7 +868,7 @@ public class HrController {
                 saved.getFileType(),
                 saved.getUploadedAt() != null
                         ? saved.getUploadedAt()
-                                .format(DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm"))
+                                .format(DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm"))
                         : ""));
     }
 
@@ -705,6 +947,94 @@ public class HrController {
         return "redirect:/hr/recruitment/jobs";
     }
 
+    // ── GET: My Interviews page ────────────────────────────────────────────
+
+    @GetMapping("/recruitment/my-interviews")
+    public String myInterviews(Model model,
+            @AuthenticationPrincipal UserDetails principal) {
+        Long currentUserId = resolveCurrentUserId(principal);
+        model.addAttribute("myInterviews", recruitmentService.getMyInterviews(currentUserId));
+        return "hr/my-interviews";
+    }
+
+    // ── GET: Interviews của 1 application ───────
+
+    @GetMapping("/recruitment/applications/{id}/interviews")
+    @ResponseBody
+    public ResponseEntity<List<com.group5.ems.dto.response.InterviewDTO>> getApplicationInterviews(
+            @PathVariable Long id) {
+        return ResponseEntity.ok(recruitmentService.getInterviewsByApplication(id));
+    }
+
+    // ── POST: Schedule interview ────────────────────────────────────────────
+
+    @PostMapping("/recruitment/interviews/schedule")
+    public String scheduleInterview(
+            @RequestParam Long applicationId,
+            @RequestParam Long interviewerId,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime scheduledAt,
+            @RequestParam(required = false) String location,
+            @RequestParam(required = false, defaultValue = "/hr/recruitment") String returnUrl,
+            RedirectAttributes ra) {
+        try {
+            recruitmentService.scheduleInterview(applicationId, interviewerId, scheduledAt, location);
+            ra.addFlashAttribute("successMessage", "Interview scheduled successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:" + returnUrl;
+    }
+
+    // ── POST: Submit feedback ───────────────────────────────────────────────
+
+    @PostMapping("/recruitment/interviews/{id}/feedback")
+    public String submitFeedback(
+            @PathVariable Long id,
+            @RequestParam String feedback,
+            @RequestParam String status,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            recruitmentService.submitFeedback(id, feedback, status);
+            ra.addFlashAttribute("successMessage", "Feedback submitted successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/recruitment/my-interviews";
+    }
+
+    // Overload: redirect về recruitment nếu HR submit từ candidate modal
+    @PostMapping("/recruitment/interviews/{id}/feedback-hr")
+    public String submitFeedbackFromHr(
+            @PathVariable Long id,
+            @RequestParam String feedback,
+            @RequestParam String status,
+            RedirectAttributes ra) {
+        try {
+            recruitmentService.submitFeedback(id, feedback, status);
+            ra.addFlashAttribute("successMessage", "Feedback updated.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/recruitment";
+    }
+
+    // ── POST: Cancel interview ──────────────────────────────────────────────
+
+    @PostMapping("/recruitment/interviews/{id}/cancel")
+    public String cancelInterview(
+            @PathVariable Long id,
+            @RequestParam(defaultValue = "/hr/recruitment") String returnUrl,
+            RedirectAttributes ra) {
+        try {
+            recruitmentService.cancelInterview(id);
+            ra.addFlashAttribute("successMessage", "Interview cancelled.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:" + returnUrl;
+    }
+
     private Long resolveCurrentUserId(UserDetails principal) {
         if (principal == null)
             return null;
@@ -744,7 +1074,6 @@ public class HrController {
         if (!model.containsAttribute("bankDetailsForm")) {
             model.addAttribute("bankDetailsForm", new BankDetailsFormDTO());
         }
-        
 
         model.addAttribute("currentUser", adminService.getUserDTO().orElse(null));
         return "hr/bank-details";
@@ -796,4 +1125,327 @@ public class HrController {
         return "redirect:/hr/bank-details/" + employeeId;
     }
 
+    // ── Onboarding Endpoints ──────────────────────────────────────────
+
+/*
+    @PostMapping("/employees/onboard")
+    public String createEmployeeOnboard(
+            @Valid @ModelAttribute EmployeeOnboardingCreateDTO form,
+            BindingResult result,
+            RedirectAttributes redirectAttributes,
+            Model model) {
+        if (result.hasErrors()) {
+            StringBuilder errors = new StringBuilder();
+            result.getAllErrors().forEach(e -> errors.append(e.getDefaultMessage()).append(". "));
+            redirectAttributes.addFlashAttribute("errorMessage", errors.toString());
+            return "redirect:/hr/employees?tab=directory";
+        }
+        try {
+            Long empId = onboardingService.createEmployeeAndStartOnboarding(form);
+            redirectAttributes.addFlashAttribute("successMessage",
+                    "Employee created successfully (Code: EMP-" + String.format("%04d", empId) + "). " +
+                    "A preboarding email has been queued for " + form.getEmail() + ".");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/employees?tab=onboarding";
+    }
+
+    @GetMapping("/onboarding/{onboardingId}/tasks")
+    @ResponseBody
+    public ResponseEntity<List<HrOnboardingTaskDTO>> getOnboardingTasks(@PathVariable Long onboardingId) {
+        return ResponseEntity.ok(onboardingService.getOnboardingTasks(onboardingId));
+    }
+
+    @PostMapping("/onboarding/tasks/{taskId}/complete")
+    public String completeOnboardingTask(@PathVariable Long taskId,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes redirectAttributes) {
+        try {
+            onboardingService.completeTask(taskId, resolveCurrentUserId(principal));
+            redirectAttributes.addFlashAttribute("successMessage", "Task status updated.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/employees?tab=onboarding";
+    }
+
+    @PostMapping("/onboarding/tasks/{taskId}/skip")
+    public String skipOnboardingTask(@PathVariable Long taskId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            onboardingService.skipTask(taskId);
+            redirectAttributes.addFlashAttribute("successMessage", "Task skipped.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/employees?tab=onboarding";
+    }
+
+    @PostMapping("/onboarding/{onboardingId}/cancel")
+    public String cancelOnboarding(@PathVariable Long onboardingId,
+            RedirectAttributes redirectAttributes) {
+        try {
+            onboardingService.cancelOnboarding(onboardingId);
+            redirectAttributes.addFlashAttribute("successMessage", "Onboarding cancelled.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+        }
+        return "redirect:/hr/employees?tab=onboarding";
+    }
+
+    @GetMapping("/api/onboarding/templates")
+    @ResponseBody
+    public ResponseEntity<List<com.group5.ems.dto.response.HrOnboardingTemplateDTO>> getTemplatesForDepartment(
+            @RequestParam Long departmentId) {
+        return ResponseEntity.ok(onboardingService.getTemplatesForDepartment(departmentId));
+    }
+*/
+
+    /*
+    // ═══════════════════════════════════════════════════════════════════════════
+    // CALENDAR MANAGEMENT
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/calendar")
+    public String calendar(Model model, 
+            @RequestParam(required = false) Integer month,
+            @RequestParam(required = false) Integer year) {
+        
+        int currentMonth = (month != null) ? month : LocalDate.now().getMonthValue();
+        int currentYear = (year != null) ? year : LocalDate.now().getYear();
+        
+        model.addAttribute("currentMonth", currentMonth);
+        model.addAttribute("currentYear", currentYear);
+        model.addAttribute("departments", departmentRepository.findAll());
+        return "hr/calendar";
+    }
+
+    @GetMapping("/calendar/events")
+    @ResponseBody
+    public ResponseEntity<List<HrEventResponseDTO>> getCalendarEvents(
+            @RequestParam int month,
+            @RequestParam int year) {
+        return ResponseEntity.ok(calendarService.getEventsByMonth(month, year));
+    }
+
+    @PostMapping("/calendar/create")
+    public String createEvent(
+            @ModelAttribute HrEventCreateDTO dto,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.createEvent(dto, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event created successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to create event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
+
+    @PostMapping("/calendar/update")
+    public String updateEvent(
+            @ModelAttribute HrEventUpdateDTO dto,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.updateEvent(dto, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event updated successfully.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to update event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
+
+    @PostMapping("/calendar/delete")
+    public String deleteEvent(
+            @RequestParam Long id,
+            @AuthenticationPrincipal UserDetails principal,
+            RedirectAttributes ra) {
+        try {
+            calendarService.deleteEvent(id, resolveCurrentUserId(principal));
+            ra.addFlashAttribute("successMessage", "Event deleted.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("errorMessage", "Failed to delete event: " + e.getMessage());
+        }
+        return "redirect:/hr/calendar";
+    }
+    */
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // REPORTS & ANALYTICS
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    @GetMapping("/reports")
+    public String reports(Model model,
+            @RequestParam(defaultValue = "overview") String tab,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String reviewPeriod) {
+
+        int reportYear = year != null ? year : LocalDate.now().getYear();
+        model.addAttribute("selectedYear", reportYear);
+        model.addAttribute("activeTab", tab);
+        model.addAttribute("currentYear", LocalDate.now().getYear());
+
+        switch (tab) {
+            case "attendance" -> {
+                LocalDate from = dateFrom != null ? dateFrom : LocalDate.now().minusDays(29);
+                LocalDate to = dateTo != null ? dateTo : LocalDate.now();
+                model.addAttribute("dateFrom", from);
+                model.addAttribute("dateTo", to);
+                model.addAttribute("report", reportService.getAttendanceReport(from, to));
+            }
+            case "leave" -> model.addAttribute("report", reportService.getLeaveReport(reportYear));
+            case "payroll" -> model.addAttribute("report", reportService.getPayrollReport());
+            case "performance" -> model.addAttribute("report", reportService.getPerformanceReport(reviewPeriod));
+            case "saved" -> model.addAttribute("history", reportService.getAllReports());
+            default -> model.addAttribute("report", reportService.getOverviewReport(reportYear));
+        }
+        return "hr/reports";
+    }
+
+    @GetMapping("/reports/export")
+    public ResponseEntity<byte[]> exportReportPdf(
+            @RequestParam(defaultValue = "overview") String tab,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo) {
+
+        int reportYear = year != null ? year : LocalDate.now().getYear();
+
+        // Build model data for PDF
+        Context ctx = new Context();
+        ctx.setVariable("selectedYear", reportYear);
+        ctx.setVariable("activeTab", tab);
+        ctx.setVariable("exportDate", LocalDate.now().format(DateTimeFormatter.ofPattern("dd/MM/yyyy")));
+
+        switch (tab) {
+            case "attendance" -> {
+                LocalDate from = dateFrom != null ? dateFrom : LocalDate.now().minusDays(29);
+                LocalDate to = dateTo != null ? dateTo : LocalDate.now();
+                ctx.setVariable("dateFrom", from);
+                ctx.setVariable("dateTo", to);
+                ctx.setVariable("report", reportService.getAttendanceReport(from, to));
+            }
+            case "leave" -> ctx.setVariable("report", reportService.getLeaveReport(reportYear));
+            case "payroll" -> ctx.setVariable("report", reportService.getPayrollReport());
+            case "performance" -> ctx.setVariable("report", reportService.getPerformanceReport(null));
+            default -> ctx.setVariable("report", reportService.getOverviewReport(reportYear));
+        }
+
+        // Render Thymeleaf template to HTML
+        String html = templateEngine.process("hr/reports-pdf", ctx);
+
+        // Convert HTML to PDF via Flying Saucer
+        try (java.io.ByteArrayOutputStream baos = new java.io.ByteArrayOutputStream()) {
+            ITextRenderer renderer = new ITextRenderer();
+            renderer.setDocumentFromString(html);
+            renderer.layout();
+            renderer.createPDF(baos);
+
+            String filename = "HR_Report_" + tab + "_" + reportYear + ".pdf";
+
+
+
+            return ResponseEntity.ok()
+                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                    .contentType(MediaType.APPLICATION_PDF)
+                    .body(baos.toByteArray());
+        } catch (Exception e) {
+            throw new ReportExportException("Failed to generate PDF report: " + e.getMessage());
+        }
+    }
+
+    @GetMapping("/reports/builder/export")
+    public void exportCustomReport(
+            @RequestParam String dataSource,
+            @RequestParam(required = false) List<String> columns,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+            
+        if (columns == null || columns.isEmpty()) {
+            throw new IllegalArgumentException("At least one column must be selected.");
+        }
+        
+        reportService.exportCustomReport(dataSource, columns, dateFrom, dateTo, response);
+    }
+
+    @PostMapping("/reports/prepare")
+    public String prepareReport(
+            @RequestParam String tab,
+            @RequestParam(required = false) Integer year,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @RequestParam(required = false) String dataSource,
+            @RequestParam(required = false) List<String> columns,
+            @RequestParam String title,
+            @RequestParam String remarks,
+            @AuthenticationPrincipal UserDetails userDetails,
+            RedirectAttributes redirectAttributes) {
+
+        try {
+            com.group5.ems.entity.User user = userRepository.findByUsername(userDetails.getUsername())
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            
+            Long employeeId = (user.getEmployee() != null) ? user.getEmployee().getId() : null;
+            
+            reportService.saveReportDraft(tab, year, dateFrom, dateTo, title, remarks, dataSource, columns, employeeId);
+            redirectAttributes.addFlashAttribute("success", "Report draft saved successfully for professional review.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Failed to prepare report: " + e.getMessage());
+        }
+        
+        return "redirect:/hr/reports?tab=saved";
+    }
+
+    @PostMapping("/reports/{id}/publish")
+    public String publishReport(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            reportService.publishReport(id);
+            redirectAttributes.addFlashAttribute("success", "Report published and HR Manager notified.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Failed to publish report: " + e.getMessage());
+        }
+        return "redirect:/hr/reports?tab=saved";
+    }
+
+    @PostMapping("/reports/{id}/delete")
+    public String deleteReport(@PathVariable Long id, RedirectAttributes redirectAttributes) {
+        try {
+            reportService.deleteReportDraft(id);
+            redirectAttributes.addFlashAttribute("success", "Report draft deleted successfully.");
+        } catch (Exception e) {
+            redirectAttributes.addFlashAttribute("error", "Failed to delete report: " + e.getMessage());
+        }
+        return "redirect:/hr/reports?tab=saved";
+    }
+
+    @GetMapping("/reports/download/{id}")
+    public ResponseEntity<byte[]> downloadSavedReport(@PathVariable Long id) {
+        byte[] bytes = reportService.getReportFileBytes(id);
+        
+        logService.log(com.group5.ems.enums.AuditAction.EXPORT, com.group5.ems.enums.AuditEntityType.HR_REPORTS, id);
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"HR_Report_" + id + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(bytes);
+    }
+
+    @GetMapping("/reports/preview/{id}")
+    public ResponseEntity<byte[]> previewReport(@PathVariable Long id) {
+        byte[] bytes = reportService.getReportFileBytes(id);
+        
+        // Use inline disposition for browser preview
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "inline; filename=\"HR_Report_Preview_" + id + ".pdf\"")
+                .contentType(MediaType.APPLICATION_PDF)
+                .body(bytes);
+    }
+
 }
+
+

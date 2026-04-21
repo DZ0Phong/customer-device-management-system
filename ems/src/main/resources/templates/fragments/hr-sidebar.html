@@ -45,11 +45,7 @@
             <span class="ml-auto text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md" th:text="${pendingLeave ?: 8}">8</span>
         </a>
 
-        <a th:href="@{/hr/payroll-periods}"
-           th:class="${activeMenu == 'payroll-periods'} ? 'nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl' : 'flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group'">
-            <span class="material-symbols-outlined text-[20px]" th:classappend="${activeMenu == 'payroll-periods'} ? 'fill-icon' : 'text-slate-400 group-hover:text-primary transition-colors'">date_range</span>
-            <span class="text-sm" th:classappend="${activeMenu == 'payroll-periods'} ? 'font-semibold' : 'font-medium'">Payroll Periods</span>
-        </a>
+
 
         <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Recruitment & Perf</p>
 
@@ -71,19 +67,37 @@
         <a th:href="@{/hr/requests}"
            th:class="${activeMenu == 'requests'} ? 'nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl' : 'flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group'">
             <span class="material-symbols-outlined text-[20px]" th:classappend="${activeMenu == 'requests'} ? 'fill-icon' : 'text-slate-400 group-hover:text-primary transition-colors'">inventory</span>
-            <span class="text-sm" th:classappend="${activeMenu == 'requests'} ? 'font-semibold' : 'font-medium'">Workflow Requests</span>
+            <span class="text-sm" th:classappend="${activeMenu == 'requests'} ? 'font-semibold' : 'font-medium'">All Requests</span>
             <span class="ml-auto text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md" th:text="${pendingRequests ?: 14}">14</span>
+        </a>
+
+        <p class="px-3 pb-1 pt-4 text-[10px] font-bold text-slate-300 uppercase tracking-widest">Analytics</p>
+
+        <a th:href="@{/hr/reports}"
+           th:class="${activeMenu == 'reports'} ? 'nav-active flex items-center gap-3 px-3 py-2.5 bg-primary-light text-primary rounded-xl' : 'flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:bg-slate-50 rounded-xl transition-all group'">
+            <span class="material-symbols-outlined text-[20px]" th:classappend="${activeMenu == 'reports'} ? 'fill-icon' : 'text-slate-400 group-hover:text-primary transition-colors'">assessment</span>
+            <span class="text-sm" th:classappend="${activeMenu == 'reports'} ? 'font-semibold' : 'font-medium'">Reports & Analytics</span>
         </a>
     </nav>
 
     <!-- User card -->
-    <div class="p-4 border-t border-slate-100 mt-auto">
+    <div class="p-4 border-t border-slate-100 mt-auto shrink-0">
+        <a th:href="@{/employee/dashboard}"
+           class="mb-3 flex items-center justify-between rounded-2xl border border-primary/15 bg-primary/5 px-4 py-3 text-primary transition-colors hover:bg-primary/10">
+            <div>
+                <p class="text-[10px] font-bold uppercase tracking-[0.18em] text-primary/60">Portal Switch</p>
+                <p class="text-sm font-semibold">Employee View</p>
+            </div>
+            <span class="material-symbols-outlined text-[18px]">badge</span>
+        </a>
+
         <div class="bg-slate-50 rounded-2xl p-3 flex items-center gap-3 border border-slate-100">
             <div class="w-9 h-9 rounded-full overflow-hidden bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
-                <img th:if="${currentUser?.avatarUrl != null}" th:src="${currentUser.avatarUrl}"
-                     th:alt="${currentUser.fullName}" class="w-full h-full object-cover"
-                     onerror="this.style.display='none'" />
-                <span th:text="${currentUser?.initials ?: 'HR'}">HR</span>
+                <img th:if="${currentUser?.avatarUrl != null and !currentUser.avatarUrl.isEmpty()}" 
+                     th:src="${currentUser.avatarUrl}"
+                     th:alt="${currentUser.fullName}" class="w-full h-full object-cover">
+                <span th:if="${currentUser?.avatarUrl == null or currentUser.avatarUrl.isEmpty()}" 
+                      th:text="${currentUser?.initials ?: 'HR'}">HR</span>
             </div>
             <div class="flex-1 min-w-0">
                 <a th:href="@{/hr/my-profile/bank-details}" class="block hover:opacity-80 transition-opacity" title="Manage My Bank Details">

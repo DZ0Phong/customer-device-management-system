@@ -7,8 +7,10 @@
     <title>EMS Pro - Leave Requests</title>
     <script src="https://cdn.tailwindcss.com?plugins=forms"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
-    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+<link rel="stylesheet" th:href="@{/css/hr/hr-common.css}">
+    <!-- Flatpickr -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/flatpickr/dist/flatpickr.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/flatpickr"></script>
     <script th:src="@{/js/hr/hr-common.js}"></script>
     <!-- FullCalendar (improvement #3) -->
     <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.11/main.min.css" rel="stylesheet" />
@@ -46,7 +48,59 @@
 
         /* Checkbox styling */
         .leave-check:checked { background-color: #1414b8; border-color: #1414b8; }
+        
+        /* Detail Row Expansion */
+        .detail-row {
+            display: none;
+        }
+        .detail-row.expanded {
+            display: table-row;
+        }
+        .detail-inner {
+            display: grid;
+            grid-template-rows: 0fr;
+            transition: grid-template-rows 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .detail-row.expanded .detail-inner {
+            grid-template-rows: 1fr;
+        }
+        .detail-inner > div {
+            overflow: hidden;
+            background: #ffffff;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .data-row.is-expanded, .data-row.is-selected {
+            background-color: #eef0fd !important;
+            box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            position: relative;
+            z-index: 10;
+        }
+        
+        .data-row.is-expanded > td:first-child, .data-row.is-selected > td:first-child {
+            border-left: 3px solid #1414b8;
+        }
+        
+        .expand-icon {
+            transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+            color: #cbd5e1;
+        }
+        .is-expanded .expand-icon {
+            transform: rotate(180deg);
+            color: #1414b8;
+        }
+
+        @keyframes contentFadeIn {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .detail-row.expanded .detail-content {
+            animation: contentFadeIn 0.4s ease-out 0.05s both;
+        }
+
     </style>
+    <link rel="stylesheet" href="/css/app-icons.css" th:href="@{/css/app-icons.css}" />
+    <script defer src="/js/app-icons.js" th:src="@{/js/app-icons.js}"></script>
 </head>
 
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
@@ -64,12 +118,14 @@
             </div>
             <div class="flex items-center gap-2">
                 <!-- CSV Export (improvement #7) -->
-                <a th:href="@{/hr/leave/export(status=${filterStatus},departmentId=${filterDepartmentId})}"
-                   class="flex items-center gap-1.5 px-3 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-emerald-50 hover:text-emerald-600 hover:border-emerald-200 rounded-xl transition-colors"
+                <!-- CSV Export Modal Trigger -->
+                <button onclick="openExportModal()"
+                   class="flex items-center gap-2 bg-primary text-white px-4 py-1.5 rounded-xl
+                         text-sm font-semibold hover:bg-primary/90 transition-colors shadow-sm shadow-primary/30"
                    title="Export leave history to CSV">
-                    <span class="material-symbols-outlined text-[16px]">download</span>
+                    <span class="material-symbols-outlined text-[18px] ">download</span>
                     Export CSV
-                </a>
+                </button>
             </div>
         </header>
 
@@ -100,23 +156,10 @@
                 Current Requests
                 <span class="text-[10px] font-bold bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded-md" th:text="${pendingLeave ?: 0}">0</span>
             </button>
-            <button onclick="switchLeaveTab('hrmPending')" class="leave-tab py-3 text-sm font-bold flex items-center gap-2" id="ltab-hrmPending">
-                <span class="material-symbols-outlined text-[18px]">visibility</span>
-                HRM Pending Accept
-                <span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md" th:text="${#lists.size(hrmPendingLeaves) ?: 0}">0</span>
-            </button>
             <button onclick="switchLeaveTab('history')" class="leave-tab py-3 text-sm font-bold flex items-center gap-2" id="ltab-history">
                 <span class="material-symbols-outlined text-[18px]">history</span>
                 Leave History
                 <span class="text-[10px] font-bold bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-md" th:text="${totalItems ?: 0}">0</span>
-            </button>
-            <button onclick="switchLeaveTab('calendar')" class="leave-tab py-3 text-sm font-bold flex items-center gap-2" id="ltab-calendar">
-                <span class="material-symbols-outlined text-[18px]">calendar_month</span>
-                Team Calendar
-            </button>
-            <button onclick="switchLeaveTab('stats')" class="leave-tab py-3 text-sm font-bold flex items-center gap-2" id="ltab-stats">
-                <span class="material-symbols-outlined text-[18px]">analytics</span>
-                Analytics
             </button>
         </div>
 
@@ -127,21 +170,28 @@
                 <!-- TAB 1: Current Requests                            -->
                 <!-- ═══════════════════════════════════════════════════ -->
                 <div id="lpanel-current" class="leave-panel active">
-                    <!-- Bulk Action Bar -->
-                    <div id="bulkActionBar" class="hidden mb-4 bg-primary/5 border border-primary/20 rounded-xl p-3 flex items-center justify-between anim anim-1">
-                        <div class="flex items-center gap-2">
-                            <span class="material-symbols-outlined text-primary text-[18px]">checklist</span>
-                            <span class="text-xs font-bold text-primary"><span id="selectedCount">0</span> request(s) selected</span>
+                    <div id="bulkActionBar" class="hidden sticky top-4 z-40 mb-6 bg-white/90 backdrop-blur-md border border-primary/20 rounded-2xl p-4 items-center justify-between shadow-xl shadow-primary/10 anim anim-1 flex ring-4 ring-primary/5">
+
+
+                        <div class="flex items-center gap-3">
+                            <div class="size-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <span class="material-symbols-outlined text-primary text-[22px] font-bold">checklist</span>
+                            </div>
+                            <div>
+                                <p class="text-sm font-black text-slate-800"><span id="selectedCount">0</span> Requests Selected</p>
+                                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Bulk Actions Available</p>
+                            </div>
                         </div>
-                        <div class="flex items-center gap-2">
-                            <button onclick="bulkApprove()" class="px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl transition-colors shadow-sm">
-                                <span class="material-symbols-outlined text-[14px] align-middle mr-1">check_circle</span>Approve Selected
+                        <div class="flex items-center gap-3">
+                            <button onclick="bulkApprove()" class="px-5 py-2.5 text-xs font-black text-white bg-primary hover:bg-primary/90 rounded-xl transition-all shadow-lg shadow-primary/20 flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">check_circle</span>Confirm All
                             </button>
-                            <button onclick="openBulkRejectModal()" class="px-4 py-2 text-xs font-semibold text-rose-600 bg-white border border-rose-200 hover:bg-rose-50 rounded-xl transition-colors">
-                                <span class="material-symbols-outlined text-[14px] align-middle mr-1">cancel</span>Deny Selected
+                            <button onclick="openBulkRejectModal()" class="px-5 py-2.5 text-xs font-black text-rose-600 bg-rose-50 border border-rose-100 hover:bg-rose-100 rounded-xl transition-all flex items-center gap-2">
+                                <span class="material-symbols-outlined text-[18px]">cancel</span>Deny Group
                             </button>
                         </div>
                     </div>
+
 
                     <div class="flex items-center justify-between mb-4 anim anim-1">
                         <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
@@ -149,66 +199,169 @@
                             Requires Approval
                             <span class="bg-amber-100 text-amber-600 text-[10px] font-bold px-2 py-0.5 rounded-full" th:text="${pendingLeave ?: 0}">0</span>
                         </h3>
-                        <!-- Select All (improvement #5) -->
-                        <label th:if="${!#lists.isEmpty(pendingLeaves)}" class="flex items-center gap-2 cursor-pointer text-xs font-medium text-slate-500 hover:text-primary transition-colors">
-                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="leave-check rounded border-slate-300 w-4 h-4 focus:ring-primary">
-                            Select All
-                        </label>
                     </div>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 anim anim-1">
-                        <!-- Leave Request Card -->
-                        <div th:each="leave : ${pendingLeaves}" class="bg-white p-5 rounded-2xl border border-amber-200 shadow-sm relative overflow-hidden group hover:border-primary/30 transition-all">
-                            <div class="absolute top-0 right-0 w-1 rounded-bl-lg bg-amber-400 h-[60px]"></div>
+                    <!-- Filter for Current -->
+                    <form th:action="@{/hr/leave}" method="get" class="flex flex-wrap items-end gap-3 mb-4 anim anim-1 bg-white p-3 rounded-xl border border-slate-100">
+                        <input type="hidden" name="tab" value="current" />
+                        <div class="flex-1 min-w-[180px]">
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Search</label>
+                            <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5">
+                                <span class="material-symbols-outlined text-slate-400 text-sm">search</span>
+                                <input type="text" name="search" th:value="${currentSearch}" placeholder="Name or code..." class="bg-transparent border-none text-xs w-full focus:ring-0 p-0 text-slate-700">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Department</label>
+                            <select name="departmentId" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-8">
+                                <option value="">All Depts</option>
+                                <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${currentDepartmentId == dept.id}"></option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Leave Type</label>
+                            <select name="leaveType" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-8">
+                                <option value="">All Types</option>
+                                <option value="LEAVE_ANNUAL" th:selected="${currentLeaveType == 'LEAVE_ANNUAL'}">Annual Leave</option>
+                                <option value="LEAVE_SICK" th:selected="${currentLeaveType == 'LEAVE_SICK'}">Sick Leave</option>
+                                <option value="LEAVE_UNPAID" th:selected="${currentLeaveType == 'LEAVE_UNPAID'}">Unpaid Leave</option>
+                                <option value="LEAVE_MATERNITY" th:selected="${currentLeaveType == 'LEAVE_MATERNITY'}">Maternity Leave</option>
+                                <option value="LEAVE_PATERNITY" th:selected="${currentLeaveType == 'LEAVE_PATERNITY'}">Paternity Leave</option>
+                                <option value="LEAVE_BEREAVEMENT" th:selected="${currentLeaveType == 'LEAVE_BEREAVEMENT'}">Bereavement Leave</option>
+                                <option value="LEAVE_STUDY" th:selected="${currentLeaveType == 'LEAVE_STUDY'}">Study Leave</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="h-8 px-4 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors shadow-sm">
+                            <span class="material-symbols-outlined text-[14px] align-middle mr-1">filter_list</span>Filter
+                        </button>
+                        <a th:href="@{/hr/leave(tab='current', clear='true')}" class="h-8 px-3 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors flex items-center">
+                            <span class="material-symbols-outlined text-[14px] align-middle mr-1">clear_all</span>Clear
+                        </a>
+                    </form>
 
-                            <!-- Checkbox for bulk select -->
-                            <div class="absolute top-4 right-4">
-                                <input type="checkbox" th:value="${leave.id}" class="leave-item-check leave-check rounded border-slate-300 w-4 h-4 focus:ring-primary" onchange="updateBulkBar()">
-                            </div>
 
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-bold text-sm flex items-center justify-center">
-                                        <span th:text="${leave.initials}">LM</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-800" th:text="${leave.employeeName}">Lucy Morgan</p>
-                                        <p class="text-[11px] text-slate-400"><span th:text="${leave.department}">Sales Dept</span> • <span th:text="${leave.employeeCode}">EMP-0042</span></p>
-                                    </div>
-                                </div>
-                                <span class="text-[10px] font-bold text-amber-600 bg-amber-50 px-2 py-1 rounded-md border border-amber-100">Pending Review</span>
-                            </div>
-                            <div class="bg-slate-50 p-3 rounded-xl mb-4 text-sm border border-slate-100">
-                                <div class="flex items-center gap-4 mb-2">
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Type</p>
-                                        <p class="font-semibold text-slate-700" th:text="${leave.leaveType}">Sick Leave</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Duration</p>
-                                        <p class="font-semibold text-slate-700" th:text="${leave.duration}">2 Days</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Dates</p>
-                                        <p class="font-medium text-slate-600 text-xs mt-0.5" th:text="${leave.dates}">Mar 10 - Mar 11, 2026</p>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-2"><span class="font-semibold">Reason:</span> <span th:text="${leave.reason}">Feeling unwell.</span></p>
-                            </div>
-                            <div class="flex items-center justify-end gap-2">
-                                <!-- Reject — opens modal with rejection reason (improvement #4) -->
-                                <button type="button" class="deny-btn px-4 py-2 text-xs font-semibold text-slate-600 bg-white border border-slate-200 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 rounded-xl transition-colors"
-                                        th:data-id="${leave.id}" th:data-name="${leave.employeeName}">
-                                    Deny
-                                </button>
-                                <!-- Approve Form -->
-                                <form th:action="@{/hr/leave/{id}/approve(id=${leave.id})}" method="post" class="inline">
-                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
-                                    <button type="submit" class="px-4 py-2 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl transition-colors shadow-sm shadow-primary/30">
-                                        Approve
-                                    </button>
-                                </form>
-                            </div>
+                    <div th:if="${!#lists.isEmpty(pendingLeaves)}" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden anim anim-2">
+                        <div class="overflow-x-auto w-full">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-slate-50">
+                                        <th class="px-6 py-3 w-10 border-b border-slate-200">
+                                            <input type="checkbox" id="selectAll" onchange="toggleSelectAll()" class="w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" />
+                                        </th>
+                                        <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Employee</th>
+                                        <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Leave Type</th>
+                                        <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Dates</th>
+                                        <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-right">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody class="divide-y divide-slate-100">
+                                    <th:block th:each="leave : ${pendingLeaves}">
+                                        <tr class="hover:bg-slate-50/80 transition-all data-row cursor-pointer" 
+                                            th:id="'row-' + ${leave.id}"
+                                            th:data-id="${leave.id}"
+                                            th:onclick="'toggleDetail(\'' + ${leave.id} + '\')'">
+                                            <td class="px-6 py-4" onclick="event.stopPropagation()">
+                                                <input type="checkbox" th:value="${leave.id}" 
+                                                       class="leave-item-check leave-check w-4 h-4 rounded border-slate-300 text-primary focus:ring-primary/30 cursor-pointer" 
+                                                       onchange="onRowCheck(this)" />
+                                            </td>
+
+                                            <td class="px-4 py-4">
+                                                <div class="flex items-center gap-3">
+                                                    <div class="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-sm overflow-hidden transition-transform group-hover:scale-105 border border-slate-100">
+                                                        <img th:if="${leave.avatarUrl != null}" th:src="${leave.avatarUrl}" class="w-full h-full object-cover" alt="Avatar">
+                                                        <span th:if="${leave.avatarUrl == null}" th:text="${leave.initials}">LM</span>
+                                                    </div>
+                                                    <div>
+                                                        <p class="text-sm font-bold text-slate-900" th:text="${leave.employeeName}">Lucy Morgan</p>
+                                                        <p class="text-xs text-slate-500"><span th:text="${leave.department}">Sales Dept</span> · <span th:text="${leave.employeeCode}">EMP-0042</span></p>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td class="px-4 py-4">
+                                                <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                                                      th:classappend="${leave.leaveType == 'Annual Leave' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : (leave.leaveType == 'Sick Leave' ? 'bg-rose-50 text-rose-700 border border-rose-200' : (leave.leaveType == 'Unpaid Leave' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'))}"
+                                                      th:text="${leave.leaveType}">Annual Leave</span>
+                                            </td>
+                                            <td class="px-4 py-4">
+                                                <p class="text-sm font-medium text-slate-900 truncate max-w-xs" th:title="${leave.dates}" th:text="${leave.dates}">Oct 12 – Oct 17</p>
+                                            </td>
+                                            <td class="px-4 py-4 text-right" onclick="event.stopPropagation()">
+                                                <div class="flex flex-row justify-end items-center gap-2">
+                                                    <form th:action="@{/hr/leave/{id}/approve(id=${leave.id})}" method="post">
+                                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
+                                                        <button type="submit" class="flex items-center justify-center px-3 py-1.5 rounded-lg border border-emerald-100 bg-emerald-50 text-emerald-600 hover:bg-emerald-100 transition-all gap-1.5">
+                                                            <span class="material-symbols-outlined text-base">check_circle</span>
+                                                            <span class="text-[9px] font-black uppercase">Approve</span>
+                                                        </button>
+                                                    </form>
+                                                    <button type="button" th:data-id="${leave.id}" th:data-name="${leave.employeeName}" th:onclick="'openRejectModal(this.getAttribute(\'data-id\'), this.getAttribute(\'data-name\'))'" 
+                                                            class="flex items-center justify-center px-3 py-1.5 rounded-lg border border-rose-100 bg-rose-50 text-rose-600 hover:bg-rose-100 transition-all gap-1.5">
+                                                        <span class="material-symbols-outlined text-base">cancel</span>
+                                                        <span class="text-[9px] font-black uppercase">Reject</span>
+                                                    </button>
+                                                    <a th:href="@{/hr/leave(tab='history', search=${leave.employeeCode})}" 
+                                                       class="flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all gap-1.5">
+                                                        <span class="material-symbols-outlined text-sm">history</span>
+                                                        <span class="text-[9px] font-black uppercase">History</span>
+                                                    </a>
+                                                    <span class="material-symbols-outlined expand-icon text-xl ml-1">expand_more</span>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        <!-- Detail Row (Pending) -->
+                                        <tr th:id="'detail-' + ${leave.id}" class="detail-row bg-slate-50/60">
+                                            <td colspan="5">
+                                                <div class="detail-inner">
+                                                    <div class="px-8 py-8 border-t border-slate-100 detail-content">
+                                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                                            <!-- Col 1: Request Details -->
+                                                            <div class="space-y-4">
+                                                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                                    <span class="material-symbols-outlined text-primary text-sm">description</span>Request Details
+                                                                </h4>
+                                                                <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-4">
+                                                                    <div>
+                                                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Reason / Notes</p>
+                                                                        <p class="text-sm text-slate-700 font-medium leading-relaxed" th:text="${leave.reason}">Reason content.</p>
+                                                                    </div>
+                                                                    <div class="pt-3 border-t border-slate-50 flex items-center justify-between">
+                                                                        <span class="text-[10px] text-slate-400">Position: <span class="font-bold text-slate-600" th:text="${leave.employeePosition}">Senior Engineer</span></span>
+                                                                        <span class="text-[10px] text-slate-400">ID: <span class="font-bold text-slate-600" th:text="'#' + ${leave.id}">#ID</span></span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            <!-- Col 2: Submission Info -->
+                                                            <div class="space-y-4">
+                                                                <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                                    <span class="material-symbols-outlined text-primary text-sm">schedule</span>Submission Info
+                                                                </h4>
+                                                                <div class="bg-white rounded-xl p-5 border border-slate-100 shadow-sm space-y-4">
+                                                                    <div>
+                                                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Submitted At</p>
+                                                                        <p class="text-sm font-bold text-slate-700" th:text="${leave.submittedAtDisplay}">Mar 28, 14:30</p>
+                                                                    </div>
+                                                                    <div class="pt-3 border-t border-slate-50">
+                                                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Department Manager</p>
+                                                                        <div class="flex items-center gap-1.5">
+                                                                            <p class="text-sm font-medium text-slate-700" th:text="${leave.managerName}">John Doe</p>
+                                                                            <span class="text-sm text-slate-500 font-bold" th:text="|(${leave.managerEmployeeCode})|">(&zwj;EMP-001)</span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div class="pt-3 border-t border-slate-50">
+                                                                        <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Workday Leaving</p>
+                                                                        <p class="text-sm font-medium text-slate-700"><span th:text="${leave.workingDays}">3</span> day(s)</p>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    </th:block>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
 
@@ -217,76 +370,6 @@
                         <span class="material-symbols-outlined text-5xl text-emerald-300 mb-3">check_circle</span>
                         <p class="text-lg font-bold text-slate-500">All caught up!</p>
                         <p class="text-sm text-slate-400 mt-1">No pending leave requests to review</p>
-                    </div>
-                </div>
-
-                <!-- ═══════════════════════════════════════════════════ -->
-                <!-- NEW TAB: HRM Pending (Read Only)                   -->
-                <!-- ═══════════════════════════════════════════════════ -->
-                <div id="lpanel-hrmPending" class="leave-panel">
-                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 flex items-start gap-4 mb-4 anim anim-1">
-                        <div class="p-2 bg-blue-100 rounded-lg">
-                            <span class="material-symbols-outlined text-blue-600">info</span>
-                        </div>
-                        <div>
-                            <h4 class="text-xs font-bold text-blue-900">HRM Review Phase</h4>
-                            <p class="text-[11px] text-blue-700 leading-relaxed mt-0.5">
-                                These leave requests have been approved by HR and are currently waiting for the <strong>HR Manager (HRM)</strong> to finalize. 
-                                These items are <strong>read-only</strong> for tracking purposes.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div th:if="${not #lists.isEmpty(hrmPendingLeaves)}" class="grid grid-cols-1 lg:grid-cols-2 gap-4 anim anim-1">
-                        <div th:each="leave : ${hrmPendingLeaves}" 
-                             class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm relative overflow-hidden opacity-90 hover:opacity-100 transition-all">
-                            <div class="flex justify-between items-start mb-4">
-                                <div class="flex items-center gap-3">
-                                    <div class="w-10 h-10 rounded-full bg-slate-100 text-slate-500 font-bold text-sm flex items-center justify-center">
-                                        <span th:text="${leave.initials}">LM</span>
-                                    </div>
-                                    <div>
-                                        <p class="text-sm font-bold text-slate-800" th:text="${leave.employeeName}">Lucy Morgan</p>
-                                        <p class="text-[11px] text-slate-400"><span th:text="${leave.department}">Sales Dept</span> • <span th:text="${leave.employeeCode}">EMP-0042</span></p>
-                                    </div>
-                                </div>
-                                <div class="flex flex-col items-end gap-1">
-                                    <span class="text-[10px] font-bold text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">Tracking Phase</span>
-                                    <span class="text-[9px] font-black px-2 py-0.5 rounded bg-blue-50 text-blue-600 border border-blue-100 uppercase tracking-tight">Awaiting HRM</span>
-                                </div>
-                            </div>
-                            <div class="bg-slate-50 p-3 rounded-xl mb-4 text-sm border border-slate-100">
-                                <div class="flex items-center gap-4 mb-2">
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Type</p>
-                                        <p class="font-semibold text-slate-700" th:text="${leave.leaveType}">Sick Leave</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Duration</p>
-                                        <p class="font-semibold text-slate-700" th:text="${leave.duration}">2 Days</p>
-                                    </div>
-                                    <div>
-                                        <p class="text-[10px] text-slate-400 uppercase font-bold tracking-wider">Dates</p>
-                                        <p class="font-medium text-slate-600 text-xs mt-0.5" th:text="${leave.dates}">Mar 10 - Mar 11, 2026</p>
-                                    </div>
-                                </div>
-                                <p class="text-xs text-slate-500 mt-2"><span class="font-semibold">Reason:</span> <span th:text="${leave.reason}">Feeling unwell.</span></p>
-                            </div>
-                            <div class="flex items-center justify-between pt-3 border-t border-dashed border-slate-100">
-                                <span class="text-[10px] text-slate-400">
-                                    <span class="material-symbols-outlined text-[12px] align-middle mr-0.5">schedule</span>
-                                    Submitted <span th:text="${leave.submittedAt ?: 'N/A'}">Mar 31, 2026</span>
-                                </span>
-                                <span class="text-[10px] font-bold text-slate-400 italic">Read-Only Tracking</span>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Empty State -->
-                    <div th:if="${#lists.isEmpty(hrmPendingLeaves)}" class="text-center py-16 anim anim-1">
-                        <span class="material-symbols-outlined text-5xl text-slate-200 mb-3">cloud_done</span>
-                        <p class="text-sm font-bold text-slate-500">No leave requests currently with HRM</p>
-                        <p class="text-xs text-slate-400 mt-1">All escalated leave applications have been handled.</p>
                     </div>
                 </div>
 
@@ -301,50 +384,53 @@
                             </div>
                             <!-- Server-side filters (improvement #2) -->
                             <form th:action="@{/hr/leave}" method="get" class="flex flex-wrap items-end gap-3">
+                                <input type="hidden" name="tab" value="history" />
                                 <input type="hidden" name="page" value="0" />
                                 <div class="flex-1 min-w-[180px]">
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Search</label>
                                     <div class="flex items-center gap-2 bg-slate-50 border border-slate-100 rounded-lg px-3 py-1.5">
                                         <span class="material-symbols-outlined text-slate-400 text-sm">search</span>
-                                        <input type="text" name="search" th:value="${filterSearch}" placeholder="Name or code..." class="bg-transparent border-none text-xs w-full focus:ring-0 p-0 text-slate-700">
+                                        <input type="text" name="search" th:value="${histSearch}" placeholder="Name or code..." class="bg-transparent border-none text-xs w-full focus:ring-0 p-0 text-slate-700">
                                     </div>
                                 </div>
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Status</label>
                                     <select name="status" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-8">
                                         <option value="">All</option>
-                                        <option value="APPROVED" th:selected="${filterStatus == 'APPROVED'}">Approved</option>
-                                        <option value="REJECTED" th:selected="${filterStatus == 'REJECTED'}">Rejected</option>
+                                        <option value="APPROVED" th:selected="${histStatus == 'APPROVED'}">Approved</option>
+                                        <option value="REJECTED" th:selected="${histStatus == 'REJECTED'}">Rejected</option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Department</label>
                                     <select name="departmentId" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-8">
                                         <option value="">All Depts</option>
-                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${filterDepartmentId == dept.id}"></option>
+                                        <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${histDepartmentId == dept.id}"></option>
                                     </select>
                                 </div>
                                 <div>
                                     <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Leave Type</label>
                                     <select name="leaveType" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 font-medium h-8">
                                         <option value="">All Types</option>
-                                        <option value="LEAVE_ANNUAL" th:selected="${filterLeaveType == 'LEAVE_ANNUAL'}">Annual Leave</option>
-                                        <option value="LEAVE_SICK" th:selected="${filterLeaveType == 'LEAVE_SICK'}">Sick Leave</option>
-                                        <option value="LEAVE_UNPAID" th:selected="${filterLeaveType == 'LEAVE_UNPAID'}">Unpaid Leave</option>
+                                        <option value="LEAVE_ANNUAL" th:selected="${histLeaveType == 'LEAVE_ANNUAL'}">Annual Leave</option>
+                                        <option value="LEAVE_SICK" th:selected="${histLeaveType == 'LEAVE_SICK'}">Sick Leave</option>
+                                        <option value="LEAVE_UNPAID" th:selected="${histLeaveType == 'LEAVE_UNPAID'}">Unpaid Leave</option>
+                                        <option value="LEAVE_MATERNITY" th:selected="${histLeaveType == 'LEAVE_MATERNITY'}">Maternity Leave</option>
+                                        <option value="LEAVE_PATERNITY" th:selected="${histLeaveType == 'LEAVE_PATERNITY'}">Paternity Leave</option>
+                                        <option value="LEAVE_BEREAVEMENT" th:selected="${histLeaveType == 'LEAVE_BEREAVEMENT'}">Bereavement Leave</option>
+                                        <option value="LEAVE_STUDY" th:selected="${histLeaveType == 'LEAVE_STUDY'}">Study Leave</option>
                                     </select>
                                 </div>
                                 <div>
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">From</label>
-                                    <input type="date" name="dateFrom" th:value="${filterDateFrom}" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 h-8">
-                                </div>
-                                <div>
-                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">To</label>
-                                    <input type="date" name="dateTo" th:value="${filterDateTo}" class="text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-slate-600 h-8">
+                                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Date Range</label>
+                                    <input type="text" class="date-range-combined text-xs border-slate-200 rounded-lg focus:ring-primary focus:border-primary px-2 bg-slate-50 text-primary h-8 min-w-[200px]" placeholder="Select date range...">
+                                    <input type="hidden" name="dateFrom" th:value="${histDateFrom}">
+                                    <input type="hidden" name="dateTo" th:value="${histDateTo}">
                                 </div>
                                 <button type="submit" class="h-8 px-4 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-lg transition-colors shadow-sm">
                                     <span class="material-symbols-outlined text-[14px] align-middle mr-1">filter_list</span>Filter
                                 </button>
-                                <a th:href="@{/hr/leave}" class="h-8 px-3 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors flex items-center">
+                                <a th:href="@{/hr/leave(tab='history', clear='true')}" class="h-8 px-3 text-xs font-medium text-slate-500 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-lg transition-colors flex items-center">
                                     <span class="material-symbols-outlined text-[14px] align-middle mr-1">clear_all</span>Clear
                                 </a>
                             </form>
@@ -352,38 +438,111 @@
                         <div class="flex-1 overflow-auto">
                             <table class="w-full text-left border-collapse">
                                 <thead>
-                                <tr class="bg-slate-50/70">
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Employee</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Leave Type</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Duration</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Dates</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Status</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100">Rejection Reason</th>
-                                    <th class="px-5 py-3 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 text-right">Processed</th>
+                                <tr class="bg-slate-50">
+                                    <th class="px-6 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Employee</th>
+                                    <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Leave Type</th>
+                                    <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Dates</th>
+                                    <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200">Status</th>
+                                    <th class="px-4 py-3 text-xs font-bold text-slate-500 uppercase tracking-wider border-b border-slate-200 text-right">Actions</th>
                                 </tr>
                                 </thead>
-                                <tbody class="divide-y divide-slate-50" id="historyTableBody">
-                                <tr th:each="hist : ${leaveHistory}" class="hover:bg-primary/[2%] transition-colors">
-                                    <td class="px-5 py-4">
-                                        <p class="text-xs font-semibold text-slate-800" th:text="${hist.employeeName}">Jane Doe</p>
-                                        <p class="text-[10px] text-slate-400" th:text="${hist.employeeCode}">EMP-0142</p>
-                                    </td>
-                                    <td class="px-5 py-4"><span class="text-xs text-slate-600 font-medium" th:text="${hist.leaveType}">Annual Leave</span></td>
-                                    <td class="px-5 py-4"><span class="text-xs text-slate-600" th:text="${hist.duration}">3 Days</span></td>
-                                    <td class="px-5 py-4"><span class="text-xs text-slate-500" th:text="${hist.dates}">Mar 01 - Mar 03, 2026</span></td>
-                                    <td class="px-5 py-4">
-                                        <span th:if="${hist.status == 'APPROVED'}" class="text-[10px] font-bold bg-emerald-100 text-emerald-700 px-2.5 py-1 rounded-full">Approved</span>
-                                        <span th:if="${hist.status == 'REJECTED'}" class="text-[10px] font-bold bg-rose-100 text-rose-700 px-2.5 py-1 rounded-full">Rejected</span>
-                                    </td>
-                                    <td class="px-5 py-4 max-w-[200px]">
-                                        <span th:if="${hist.rejectedReason != null}" class="text-xs text-rose-600 truncate block" th:text="${hist.rejectedReason}" th:title="${hist.rejectedReason}"></span>
-                                        <span th:if="${hist.rejectedReason == null && hist.status == 'APPROVED'}" class="text-xs text-slate-400">—</span>
-                                    </td>
-                                    <td class="px-5 py-4 text-right">
-                                        <p class="text-xs text-slate-600 font-medium" th:text="${hist.approverName}">HR</p>
-                                        <p th:if="${hist.processedAt}" class="text-[10px] text-slate-400" th:text="${hist.processedAt}"></p>
-                                    </td>
-                                </tr>
+                                <tbody class="divide-y divide-slate-100" id="historyTableBody">
+                                <th:block th:each="hist : ${leaveHistory}">
+                                    <tr class="hover:bg-slate-50/80 transition-all data-row cursor-pointer" 
+                                        th:id="'row-h-' + ${hist.id}"
+                                        th:data-id="'h-' + ${hist.id}"
+                                        th:onclick="'toggleDetail(\'h-' + ${hist.id} + '\')'">
+
+                                        <td class="px-6 py-4">
+                                            <div class="flex items-center gap-3">
+                                                <div class="w-9 h-9 rounded-full bg-slate-100 flex-shrink-0 flex items-center justify-center font-bold text-slate-500 text-sm overflow-hidden transition-transform group-hover:scale-105 border border-slate-100">
+                                                    <img th:if="${hist.avatarUrl != null}" th:src="${hist.avatarUrl}" class="w-full h-full object-cover" alt="Avatar">
+                                                    <span th:if="${hist.avatarUrl == null}" th:text="${hist.initials}">AB</span>
+                                                </div>
+                                                <div>
+                                                    <p class="text-sm font-bold text-slate-900" th:text="${hist.employeeName}">Jane Doe</p>
+                                                    <p class="text-xs text-slate-500" th:text="${hist.employeeCode}">EMP-0142</p>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold"
+                                                  th:classappend="${hist.leaveType == 'Annual Leave' ? 'bg-indigo-50 text-indigo-700 border border-indigo-200' : (hist.leaveType == 'Sick Leave' ? 'bg-rose-50 text-rose-700 border border-rose-200' : (hist.leaveType == 'Unpaid Leave' ? 'bg-amber-50 text-amber-700 border border-amber-200' : 'bg-slate-100 text-slate-700 border border-slate-200'))}"
+                                                  th:text="${hist.leaveType}">Annual Leave</span>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <p class="text-sm font-medium text-slate-900 truncate max-w-xs" th:title="${hist.dates}" th:text="${hist.dates}">Mar 01 - Mar 03</p>
+                                        </td>
+                                        <td class="px-4 py-4">
+                                            <div class="flex flex-col items-start gap-1">
+                                                <span th:class="'text-[10px] tracking-widest font-bold uppercase px-2 py-1 rounded-lg border ' + ${hist.statusClass}" 
+                                                      th:text="${hist.statusDisplay}">Processed</span>
+                                            </div>
+                                        </td>
+                                        <td class="px-4 py-4 text-right" onclick="event.stopPropagation()">
+                                            <div class="flex flex-row justify-end items-center gap-2">
+                                                <a th:href="@{'/hr/leave?search=' + ${hist.employeeCode}+'&tab=history'}"
+                                                   class="flex items-center justify-center px-3 py-1.5 rounded-lg border border-slate-100 bg-slate-50 text-slate-600 hover:bg-slate-100 transition-all gap-1.5">
+                                                    <span class="material-symbols-outlined text-sm">history</span>
+                                                    <span class="text-[9px] font-black uppercase">History</span>
+                                                </a>
+                                                <span class="material-symbols-outlined expand-icon text-xl ml-1">expand_more</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr th:id="'detail-h-' + ${hist.id}" class="detail-row bg-slate-50/60">
+                                        <td colspan="5">
+
+                                            <div class="detail-inner">
+                                                <div class="px-8 py-8 grid grid-cols-1 md:grid-cols-2 gap-8 border-t border-slate-100 text-left detail-content">
+                                                    <!-- Col 1: History Details -->
+                                                    <div class="space-y-4">
+                                                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                            <span class="material-symbols-outlined text-primary text-sm">description</span>Historical Record
+                                                        </h4>
+                                                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                                                            <div>
+                                                                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Reason</p>
+                                                                <p class="text-sm font-medium text-slate-700 italic leading-relaxed" th:text="'&quot;' + ${hist.reason} + '&quot;'">Reason content</p>
+                                                            </div>
+                                                            <div class="pt-3 border-t border-slate-50 flex items-center justify-between">
+                                                                <span class="text-[10px] text-slate-400">Position: <span class="font-bold text-slate-600" th:text="${hist.employeePosition}">N/A</span></span>
+                                                                <span class="text-[10px] text-slate-400">ID: <span class="font-bold text-slate-600" th:text="'#' + ${hist.id}">#ID</span></span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+
+                                                    <!-- Col 2: Decision Trace -->
+                                                    <div class="space-y-4">
+                                                        <h4 class="text-[10px] font-black text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                                                            <span class="material-symbols-outlined text-primary text-sm">verified</span>Decision Trace
+                                                        </h4>
+                                                        <div class="bg-white p-5 rounded-xl border border-slate-100 shadow-sm space-y-4">
+                                                            <div>
+                                                                <p class="text-[10px] font-bold text-slate-400 uppercase mb-1.5">Processed By</p>
+                                                                <div class="flex items-center gap-1.5">
+                                                                    <p class="text-sm font-bold text-slate-700" th:text="${hist.approverName}">HR</p>
+                                                                    <span class="text-sm text-slate-500 font-bold" 
+                                                                          th:text="'(' + ${hist.approverEmployeeCode} + ')'">(EMP-CODE)</span>
+
+                                                                </div>
+
+                                                                <p class="text-sm text-slate-500 mt-1.5 font-medium" th:text="${hist.processedAt}">Date</p>
+
+                                                            </div>
+
+                                                            <div th:if="${hist.rejectedReason != null}" class="pt-3 border-t border-slate-50">
+                                                                <p class="text-[10px] font-bold text-rose-400 uppercase mb-1.5">Rejection Reason</p>
+                                                                <p class="text-sm font-medium text-rose-600" th:text="${hist.rejectedReason}">Detailed reason here...</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </th:block>
                                 </tbody>
                             </table>
                             <!-- Empty History -->
@@ -401,18 +560,18 @@
                             </p>
                             <div class="flex items-center gap-1">
                                 <a th:if="${currentPage > 0}"
-                                   th:href="@{/hr/leave(page=${currentPage - 1}, status=${filterStatus}, departmentId=${filterDepartmentId}, leaveType=${filterLeaveType}, search=${filterSearch}, dateFrom=${filterDateFrom}, dateTo=${filterDateTo})}"
+                                   th:href="@{/hr/leave(tab='history', page=${currentPage - 1})}"
                                    class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-primary hover:text-white hover:border-primary transition-colors">
                                     <span class="material-symbols-outlined text-sm align-middle">chevron_left</span> Prev
                                 </a>
                                 <th:block th:each="i : ${#numbers.sequence(0, totalPages - 1)}">
-                                    <a th:href="@{/hr/leave(page=${i}, status=${filterStatus}, departmentId=${filterDepartmentId}, leaveType=${filterLeaveType}, search=${filterSearch}, dateFrom=${filterDateFrom}, dateTo=${filterDateTo})}"
+                                    <a th:href="@{/hr/leave(tab='history', page=${i})}"
                                        th:text="${i + 1}"
                                        th:classappend="${i == currentPage} ? 'bg-primary text-white border-primary' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'"
                                        class="px-3 py-1.5 text-xs font-bold border rounded-lg transition-colors">1</a>
                                 </th:block>
                                 <a th:if="${currentPage < totalPages - 1}"
-                                   th:href="@{/hr/leave(page=${currentPage + 1}, status=${filterStatus}, departmentId=${filterDepartmentId}, leaveType=${filterLeaveType}, search=${filterSearch}, dateFrom=${filterDateFrom}, dateTo=${filterDateTo})}"
+                                   th:href="@{/hr/leave(tab='history', page=${currentPage + 1})}"
                                    class="px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-50 border border-slate-200 rounded-lg hover:bg-primary hover:text-white hover:border-primary transition-colors">
                                     Next <span class="material-symbols-outlined text-sm align-middle">chevron_right</span>
                                 </a>
@@ -420,121 +579,13 @@
                         </div>
                     </div>
                 </div>
-
-                <!-- ═══════════════════════════════════════════════════ -->
-                <!-- TAB 3: Team Calendar (improvement #3)              -->
-                <!-- ═══════════════════════════════════════════════════ -->
-                <div id="lpanel-calendar" class="leave-panel">
-                    <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-6 anim anim-1">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-sm font-black text-slate-800 flex items-center gap-2">
-                                <span class="material-symbols-outlined text-primary text-[20px]">calendar_month</span>
-                                Team Leave Calendar
-                            </h3>
-                            <div class="flex items-center gap-3 text-[10px] font-bold">
-                                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Approved</span>
-                                <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-amber-500 inline-block"></span> Pending</span>
-                            </div>
-                        </div>
-                        <div id="leaveCalendar" style="min-height: 500px;"></div>
                     </div>
                 </div>
-
-                <!-- ═══════════════════════════════════════════════════ -->
-                <!-- TAB 4: Analytics (improvement #1 + #6)             -->
-                <!-- ═══════════════════════════════════════════════════ -->
-                <div id="lpanel-stats" class="leave-panel">
-                    <!-- Leave Balance Summary Cards (improvement #1) -->
-                    <div class="mb-6">
-                        <h3 class="text-sm font-black text-slate-800 flex items-center gap-2 mb-4 anim anim-1">
-                            <span class="material-symbols-outlined text-primary text-[20px]">account_balance_wallet</span>
-                            Leave Balance Overview
-                        </h3>
-                        <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 anim anim-1">
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Total Allocated</p>
-                                <p class="text-2xl font-black text-primary mt-1" th:text="${balanceSummary?.totalDaysAllocated() ?: 0}">0</p>
-                                <p class="text-[10px] text-slate-400 mt-1">days across <span th:text="${balanceSummary?.employeesWithBalance() ?: 0}">0</span> employees</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Days Used</p>
-                                <p class="text-2xl font-black text-rose-600 mt-1" th:text="${balanceSummary?.totalDaysUsed() ?: 0}">0</p>
-                                <p class="text-[10px] text-slate-400 mt-1" th:text="|Utilization: ${#numbers.formatDecimal(balanceSummary?.avgUtilizationPercent() ?: 0, 1, 1)}%|">Utilization: 0%</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Days Pending</p>
-                                <p class="text-2xl font-black text-amber-600 mt-1" th:text="${balanceSummary?.totalDaysPending() ?: 0}">0</p>
-                                <p class="text-[10px] text-slate-400 mt-1">awaiting approval</p>
-                            </div>
-                            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm">
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Days Remaining</p>
-                                <p class="text-2xl font-black text-emerald-600 mt-1" th:text="${balanceSummary?.totalDaysRemaining() ?: 0}">0</p>
-                                <p class="text-[10px] text-slate-400 mt-1">available to be used</p>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Leave Statistics (improvement #6) -->
-                    <h3 class="text-sm font-black text-slate-800 flex items-center gap-2 mb-4 anim anim-2">
-                        <span class="material-symbols-outlined text-primary text-[20px]">analytics</span>
-                        Monthly Statistics
-                    </h3>
-                    <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 anim anim-2">
-                        <div class="bg-white p-4 rounded-2xl border border-amber-200 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-amber-500 text-[18px]">pending_actions</span>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Pending</p>
-                            </div>
-                            <p class="text-3xl font-black text-amber-600" th:text="${leaveStats?.totalPending() ?: 0}">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-2xl border border-emerald-200 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-emerald-500 text-[18px]">check_circle</span>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Approved (Month)</p>
-                            </div>
-                            <p class="text-3xl font-black text-emerald-600" th:text="${leaveStats?.approvedThisMonth() ?: 0}">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-2xl border border-rose-200 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-rose-500 text-[18px]">cancel</span>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">Rejected (Month)</p>
-                            </div>
-                            <p class="text-3xl font-black text-rose-600" th:text="${leaveStats?.rejectedThisMonth() ?: 0}">0</p>
-                        </div>
-                        <div class="bg-white p-4 rounded-2xl border border-sky-200 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-sky-500 text-[18px]">beach_access</span>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase">On Leave Today</p>
-                            </div>
-                            <p class="text-3xl font-black text-sky-600" th:text="${leaveStats?.onLeaveToday() ?: 0}">0</p>
-                        </div>
-                    </div>
-
-                    <!-- Processing speed + top type -->
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mt-4 anim anim-3">
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-primary text-[18px]">speed</span>
-                                <p class="text-xs font-bold text-slate-700">Avg. Processing Time</p>
-                            </div>
-                            <p class="text-2xl font-black text-primary" th:text="|${#numbers.formatDecimal(leaveStats?.avgProcessingHours() ?: 0, 1, 1)} hrs|">0 hrs</p>
-                            <p class="text-[10px] text-slate-400 mt-1">Average time to approve/reject this month</p>
-                        </div>
-                        <div class="bg-white p-5 rounded-2xl border border-slate-100 shadow-sm">
-                            <div class="flex items-center gap-2 mb-2">
-                                <span class="material-symbols-outlined text-primary text-[18px]">trending_up</span>
-                                <p class="text-xs font-bold text-slate-700">Most Common Leave Type</p>
-                            </div>
-                            <p class="text-2xl font-black text-primary" th:text="${leaveStats?.topLeaveType() ?: 'N/A'}">N/A</p>
-                            <p class="text-[10px] text-slate-400 mt-1"><span th:text="${leaveStats?.topLeaveTypeCount() ?: 0}">0</span> requests total</p>
-                        </div>
-                    </div>
-                </div>
-
             </div>
         </div>
     </main>
 </div>
+
 
 <!-- ═══════════════════════════════════════════════════════════════ -->
 <!-- REJECTION MODAL (improvement #4)                               -->
@@ -630,23 +681,90 @@
     </div>
 </div>
 
+<!-- Export CSV Modal -->
+<div id="exportModal" class="fixed inset-0 z-50 hidden items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-opacity">
+    <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+        <div class="p-5 border-b border-slate-100 flex items-center justify-between">
+            <div>
+                <h3 class="text-sm font-black text-slate-800">Export CSV</h3>
+                <p class="text-xs text-slate-400 mt-1">Download leave records spreadsheet</p>
+            </div>
+        </div>
+        <form id="exportCsvForm" th:action="@{/hr/leave/export}" method="get" class="p-5 space-y-4">
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Department Filter</label>
+                <select name="departmentId" class="w-full text-xs border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-2.5 bg-slate-50 text-slate-600 font-medium h-[42px]">
+                    <option value="">All Departments</option>
+                    <option th:each="dept : ${departments}" th:value="${dept.id}" th:text="${dept.name}" th:selected="${histDepartmentId == dept.id}"></option>
+                </select>
+            </div>
+            <div class="flex gap-3">
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Status Filter</label>
+                    <select name="status" class="w-full text-xs border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-2.5 bg-slate-50 text-slate-600 font-medium h-[42px]">
+                        <option value="">All Statuses</option>
+                        <option value="APPROVED" th:selected="${histStatus == 'APPROVED'}">Approved</option>
+                        <option value="REJECTED" th:selected="${histStatus == 'REJECTED'}">Rejected</option>
+                    </select>
+                </div>
+                <div class="flex-1">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Leave Type</label>
+                    <select name="leaveType" class="w-full text-xs border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-2.5 bg-slate-50 text-slate-600 font-medium h-[42px]">
+                        <option value="">All Types</option>
+                        <option value="LEAVE_ANNUAL" th:selected="${histLeaveType == 'LEAVE_ANNUAL'}">Annual Leave</option>
+                        <option value="LEAVE_SICK" th:selected="${histLeaveType == 'LEAVE_SICK'}">Sick Leave</option>
+                        <option value="LEAVE_UNPAID" th:selected="${histLeaveType == 'LEAVE_UNPAID'}">Unpaid Leave</option>
+                        <option value="LEAVE_MATERNITY" th:selected="${histLeaveType == 'LEAVE_MATERNITY'}">Maternity Leave</option>
+                        <option value="LEAVE_PATERNITY" th:selected="${histLeaveType == 'LEAVE_PATERNITY'}">Paternity Leave</option>
+                        <option value="LEAVE_BEREAVEMENT" th:selected="${histLeaveType == 'LEAVE_BEREAVEMENT'}">Bereavement Leave</option>
+                        <option value="LEAVE_STUDY" th:selected="${histLeaveType == 'LEAVE_STUDY'}">Study Leave</option>
+                    </select>
+                </div>
+            </div>
+            <div>
+                <label class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1.5">Date Range</label>
+                <input type="text" class="date-range-combined w-full text-xs border-slate-200 rounded-xl focus:ring-primary focus:border-primary px-3 py-2.5 bg-slate-50 text-primary h-[42px]" placeholder="Select start and end date...">
+                <input type="hidden" name="startDate">
+                <input type="hidden" name="endDate">
+            </div>
+            <div class="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 mt-5 pt-4">
+                <button type="button" onclick="closeExportModal()"
+                        class="px-4 py-2.5 text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 hover:bg-slate-100 rounded-xl transition-colors">
+                    Cancel
+                </button>
+                <button type="submit" onclick="closeExportModal()" class="px-5 py-2.5 text-xs font-semibold text-white bg-primary hover:bg-primary/90 rounded-xl transition-colors shadow-sm">
+                    <span class="material-symbols-outlined text-[14px] align-middle mr-1">download</span>Download
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <!-- BULK APPROVE FORM (hidden) -->
 <form id="bulkApproveForm" th:action="@{/hr/leave/bulk-approve}" method="post" class="hidden">
     <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}" />
     <div id="bulkApproveIdsContainer"></div>
 </form>
 
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
 <script>
     // ── Tab Switching ──
     function switchLeaveTab(tab) {
+        if (window.history && window.history.pushState) {
+            const url = new URL(window.location);
+            url.searchParams.set('tab', tab);
+            window.history.pushState({}, '', url);
+        }
         document.querySelectorAll('.leave-tab').forEach(t => t.classList.remove('active'));
         document.querySelectorAll('.leave-panel').forEach(p => { p.classList.remove('active'); p.style.display = 'none'; });
-        document.getElementById('ltab-' + tab).classList.add('active');
+        const tabBtn = document.getElementById('ltab-' + tab);
+        if(tabBtn) tabBtn.classList.add('active');
         const panel = document.getElementById('lpanel-' + tab);
-        panel.classList.add('active');
-        panel.style.display = 'block';
+        if(panel) {
+            panel.classList.add('active');
+            panel.style.display = 'block';
+        }
 
-        // Init calendar on first open
         if (tab === 'calendar' && !window._calendarInitialized) {
             initCalendar();
             window._calendarInitialized = true;
@@ -655,16 +773,51 @@
     // Initialize first tab
     document.addEventListener('DOMContentLoaded', () => {
         document.querySelectorAll('.leave-panel').forEach(p => p.style.display = 'none');
-        const first = document.getElementById('lpanel-current');
-        first.style.display = 'block';
-        first.classList.add('active');
+        let activeTab = '[[${activeTab}]]';
+        if (!activeTab || activeTab === 'null' || activeTab.trim() === '') activeTab = 'current';
+        
+        const tabBtn = document.getElementById('ltab-' + activeTab);
+        if (!tabBtn) activeTab = 'current';
 
-        // Deny button delegation (uses data-* attributes for Thymeleaf 3.1+ XSS safety)
-        document.querySelectorAll('.deny-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                openRejectModal(this.dataset.id, this.dataset.name);
+        switchLeaveTab(activeTab);
+
+        // Initialize combined date range pickers
+        document.querySelectorAll('.date-range-combined').forEach(input => {
+            const form = input.closest('form');
+            const hiddenFrom = form.querySelector('input[name="dateFrom"], input[name="startDate"]');
+            const hiddenTo = form.querySelector('input[name="dateTo"], input[name="endDate"]');
+            
+            let defaultDates = [];
+            if (hiddenFrom && hiddenFrom.value) defaultDates.push(hiddenFrom.value);
+            if (hiddenTo && hiddenTo.value) defaultDates.push(hiddenTo.value);
+
+            flatpickr(input, {
+                mode: "range",
+                dateFormat: "Y-m-d",
+                altInput: true,
+                altFormat: "d/m/Y",
+                defaultDate: defaultDates.length > 0 ? defaultDates : null,
+                onChange: function(selectedDates, dateStr, instance) {
+                    if (selectedDates.length === 2) {
+                        if (hiddenFrom) hiddenFrom.value = instance.formatDate(selectedDates[0], "Y-m-d");
+                        if (hiddenTo) hiddenTo.value = instance.formatDate(selectedDates[1], "Y-m-d");
+                    } else if (selectedDates.length === 0 || selectedDates.length === 1) {
+                        if (hiddenFrom) hiddenFrom.value = "";
+                        if (hiddenTo) hiddenTo.value = "";
+                    }
+                }
             });
         });
+
+        // Auto-expand if viewId is present
+        const vid = '[[${viewId}]]';
+        if (vid && vid !== 'null' && vid.trim() !== '') {
+            setTimeout(() => {
+                toggleDetail(vid);
+                const row = document.getElementById('row-' + vid);
+                if (row) row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }, 500);
+        }
     });
 
     // ── Reject Modal ──
@@ -696,61 +849,65 @@
         document.getElementById('rejectCharCount').className = len >= 10 ? 'text-emerald-500' : '';
     });
 
-    // ── Bulk Actions (improvement #5) ──
-    function toggleSelectAll() {
-        const checked = document.getElementById('selectAll').checked;
-        document.querySelectorAll('.leave-item-check').forEach(cb => { cb.checked = checked; });
-        updateBulkBar();
-    }
-    function updateBulkBar() {
-        const checks = document.querySelectorAll('.leave-item-check:checked');
-        const bar = document.getElementById('bulkActionBar');
-        if (checks.length > 0) {
-            bar.classList.remove('hidden');
-            document.getElementById('selectedCount').textContent = checks.length;
-        } else {
-            bar.classList.add('hidden');
+    // ── Export CSV Modal ──
+    function openExportModal() {
+        const modal = document.getElementById('exportModal');
+        const modalForm = document.getElementById('exportCsvForm');
+        
+        // Smart Defaults: Detect active tab and populate filters
+        let activeTab = 'current';
+        document.querySelectorAll('.leave-tab').forEach(t => {
+            if (t.classList.contains('active')) {
+                activeTab = t.id.replace('ltab-', '');
+            }
+        });
+
+        const activeForm = document.querySelector('#lpanel-' + activeTab + ' form');
+        if (activeForm && modalForm) {
+            const formData = new FormData(activeForm);
+            
+            const modalDept = modalForm.querySelector('select[name="departmentId"]');
+            if (modalDept && formData.has('departmentId')) {
+                modalDept.value = formData.get('departmentId');
+            }
+            
+            const modalStatus = modalForm.querySelector('select[name="status"]');
+            if (modalStatus && formData.has('status')) {
+                modalStatus.value = formData.get('status');
+            }
+
+            const modalType = modalForm.querySelector('select[name="leaveType"]');
+            if (modalType && formData.has('leaveType')) {
+                modalType.value = formData.get('leaveType');
+            }
+
+            const modalStart = modalForm.querySelector('input[name="startDate"]');
+            if (modalStart && formData.has('dateFrom')) {
+                if (modalStart._flatpickr) modalStart._flatpickr.setDate(formData.get('dateFrom'));
+                else modalStart.value = formData.get('dateFrom');
+            }
+
+            const modalEnd = modalForm.querySelector('input[name="endDate"]');
+            if (modalEnd && formData.has('dateTo')) {
+                if (modalEnd._flatpickr) modalEnd._flatpickr.setDate(formData.get('dateTo'));
+                else modalEnd.value = formData.get('dateTo');
+            }
         }
-    }
-    function bulkApprove() {
-        const ids = getSelectedIds();
-        if (ids.length === 0) return;
-        if (!confirm('Approve ' + ids.length + ' leave request(s)?')) return;
-        const container = document.getElementById('bulkApproveIdsContainer');
-        container.innerHTML = '';
-        ids.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'ids'; input.value = id;
-            container.appendChild(input);
-        });
-        document.getElementById('bulkApproveForm').submit();
-    }
-    function openBulkRejectModal() {
-        const ids = getSelectedIds();
-        if (ids.length === 0) return;
-        document.getElementById('bulkRejectCount').textContent = ids.length;
-        const container = document.getElementById('bulkRejectIdsContainer');
-        container.innerHTML = '';
-        ids.forEach(id => {
-            const input = document.createElement('input');
-            input.type = 'hidden'; input.name = 'ids'; input.value = id;
-            container.appendChild(input);
-        });
-        const modal = document.getElementById('bulkRejectModal');
+
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     }
-    function closeBulkRejectModal() {
-        const modal = document.getElementById('bulkRejectModal');
+    function closeExportModal() {
+        const modal = document.getElementById('exportModal');
         modal.classList.add('hidden');
         modal.classList.remove('flex');
     }
-    document.getElementById('bulkRejectModal').addEventListener('click', function(e) {
-        if (e.target === this) closeBulkRejectModal();
+    document.getElementById('exportModal').addEventListener('click', function(e) {
+        if (e.target === this) closeExportModal();
     });
-    function getSelectedIds() {
-        return Array.from(document.querySelectorAll('.leave-item-check:checked')).map(cb => cb.value);
-    }
+
+    // ── Bulk Actions (Implementation at bottom) ──
+
 
     // ── Calendar (improvement #3) ──
     function initCalendar() {
@@ -762,10 +919,39 @@
                 center: 'title',
                 right: 'dayGridMonth,dayGridWeek'
             },
+            datesSet: function(info) {
+                const currentDate = info.view.currentStart;
+                const jumpInput = document.getElementById('calendarMonthJump');
+                if (jumpInput) {
+                    if (info.view.type === 'dayGridWeek') {
+                        jumpInput.type = 'week';
+                        const d = new Date(currentDate);
+                        d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay()||7));
+                        const yearStart = new Date(Date.UTC(d.getUTCFullYear(),0,1));
+                        const weekNo = Math.ceil(( ( (d - yearStart) / 86400000) + 1)/7);
+                        jumpInput.value = d.getUTCFullYear() + '-W' + String(weekNo).padStart(2, '0');
+                    } else {
+                        jumpInput.type = 'month';
+                        const year = currentDate.getFullYear();
+                        const month = String(currentDate.getMonth() + 1).padStart(2, '0');
+                        jumpInput.value = `${year}-${month}`;
+                    }
+                }
+            },
             events: function(info, successCallback, failureCallback) {
                 const start = info.startStr.split('T')[0];
                 const end = info.endStr.split('T')[0];
-                fetch('/hr/leave/calendar?start=' + start + '&end=' + end)
+                
+                const searchInput = document.getElementById('calFilterSearch');
+                const deptInput = document.getElementById('calFilterDept');
+                const typeInput = document.getElementById('calFilterType');
+                
+                let url = '/hr/leave/calendar?start=' + start + '&end=' + end;
+                if(searchInput && searchInput.value) url += '&search=' + encodeURIComponent(searchInput.value);
+                if(deptInput && deptInput.value) url += '&departmentId=' + encodeURIComponent(deptInput.value);
+                if(typeInput && typeInput.value) url += '&leaveType=' + encodeURIComponent(typeInput.value);
+
+                fetch(url)
                     .then(r => r.json())
                     .then(data => successCallback(data))
                     .catch(err => { console.error('Calendar fetch error:', err); failureCallback(err); });
@@ -778,7 +964,211 @@
             eventDisplay: 'block'
         });
         calendar.render();
+        window.leaveFullCalendar = calendar;
+        // Form a unified click area over the center title
+        const centerChunk = document.querySelector('.fc-toolbar-chunk:nth-child(2)');
+        if (centerChunk) {
+            centerChunk.classList.add('flex', 'items-center', 'justify-center', 'gap-2', 'relative', 'cursor-pointer', 'px-4', 'py-1', 'hover:bg-slate-50', 'rounded-xl', 'transition-colors');
+            
+            // 1. Ensure the icon exists right of the title
+            let iconEl = document.getElementById('calTitleIcon');
+            if (!iconEl) {
+                iconEl = document.createElement('span');
+                iconEl.id = 'calTitleIcon';
+                iconEl.className = 'material-symbols-outlined text-primary text-[26px]';
+                iconEl.innerText = 'calendar_month';
+                centerChunk.appendChild(iconEl);
+            }
+
+            // 2. Add an invisible month input safely tucked away
+            let jumpInput = document.getElementById('calendarMonthJump');
+            if (!jumpInput) {
+                jumpInput = document.createElement('input');
+                jumpInput.type = 'month';
+                jumpInput.id = 'calendarMonthJump';
+                // Completely hidden from view, relies on programmatic invocation
+                jumpInput.className = 'opacity-0 w-[1px] h-[1px] p-0 m-0 absolute -z-10 pointer-events-none';
+                jumpInput.onchange = function() { jumpCalendarMonth(this.value); };
+                centerChunk.appendChild(jumpInput);
+                
+                // Add click event to trigger picker programmatically
+                centerChunk.addEventListener('click', function(e) {
+                    try {
+                        const picker = document.getElementById('calendarMonthJump');
+                        if (picker && picker.showPicker) {
+                            picker.showPicker();
+                        } else {
+                            // Fallback if showPicker is unsupported
+                            picker.focus();
+                            picker.click();
+                        }
+                    } catch (err) {
+                        console.error('Cannot open picker:', err);
+                    }
+                });
+            }
+            
+            // Set initial value correctly
+            const d = calendar.getDate();
+            const initVal = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+            jumpInput.value = initVal;
+            
+            // Ensure native title is visible again in case we hid it previously
+            const nativeTitle = centerChunk.querySelector('.fc-toolbar-title');
+            if (nativeTitle) {
+                nativeTitle.style.display = '';
+            }
+        }
     }
+    
+    function jumpCalendarMonth(dateStr) {
+        if (!dateStr || !window.leaveFullCalendar) return;
+        
+        const jumpInput = document.getElementById('calendarMonthJump');
+        if (jumpInput && jumpInput.type === 'week') {
+            const parts = dateStr.split('-W');
+            if (parts.length === 2) {
+                const y = parseInt(parts[0], 10);
+                const w = parseInt(parts[1], 10);
+                const d = new Date(y, 0, 4);
+                const day = d.getDay() || 7;
+                d.setDate(d.getDate() - day + 1 + (w - 1) * 7);
+                window.leaveFullCalendar.gotoDate(d);
+            }
+        } else {
+            window.leaveFullCalendar.gotoDate(dateStr + '-01');
+        }
+    }
+
+    function clearCalendarFilters() {
+        document.getElementById('calFilterSearch').value = '';
+        document.getElementById('calFilterDept').value = '';
+        document.getElementById('calFilterType').value = '';
+        if (window.leaveFullCalendar) {
+            window.leaveFullCalendar.refetchEvents();
+        }
+    }
+    function toggleDetail(id) {
+        const detailRow = document.getElementById('detail-' + id);
+        const masterRow = document.getElementById('row-' + id);
+        
+        if (!detailRow || !masterRow) return;
+
+        if (detailRow.classList.contains('expanded')) {
+            detailRow.classList.remove('expanded');
+            masterRow.classList.remove('is-expanded');
+        } else {
+            // Collapse all others
+            document.querySelectorAll('.detail-row.expanded').forEach(row => {
+                row.classList.remove('expanded');
+                const otherId = row.id.replace('detail-', '');
+                const otherMaster = document.getElementById('row-' + otherId);
+                if (otherMaster) otherMaster.classList.remove('is-expanded');
+            });
+            
+            detailRow.classList.add('expanded');
+            masterRow.classList.add('is-expanded');
+        }
+    }
+
+    // ── Bulk Selection Logic ──
+    let selectedIds = [];
+
+    function onRowCheck(checkbox) {
+        const id = checkbox.value;
+        const row = document.getElementById('row-' + id);
+        
+        if (checkbox.checked) {
+            if (!selectedIds.includes(id)) selectedIds.push(id);
+            if (row) row.classList.add('is-selected');
+        } else {
+            selectedIds = selectedIds.filter(item => item !== id);
+            if (row) row.classList.remove('is-selected');
+            document.getElementById('selectAll').checked = false;
+        }
+        updateBulkBar();
+    }
+
+    function toggleSelectAll() {
+        const selectAll = document.getElementById('selectAll');
+        const checkboxes = document.querySelectorAll('.leave-item-check');
+        
+        selectedIds = [];
+        checkboxes.forEach(cb => {
+            cb.checked = selectAll.checked;
+            const id = cb.value;
+            const row = document.getElementById('row-' + id);
+            
+            if (selectAll.checked) {
+                selectedIds.push(id);
+                if (row) row.classList.add('is-selected');
+            } else {
+                if (row) row.classList.remove('is-selected');
+            }
+        });
+        updateBulkBar();
+    }
+
+    function updateBulkBar() {
+        const bar = document.getElementById('bulkActionBar');
+        const countSpan = document.getElementById('selectedCount');
+        
+        if (selectedIds.length > 0) {
+            countSpan.textContent = selectedIds.length;
+            bar.classList.remove('hidden');
+            bar.classList.add('flex');
+        } else {
+            bar.classList.add('hidden');
+            bar.classList.remove('flex');
+        }
+    }
+
+    function bulkApprove() {
+        if (selectedIds.length === 0) return;
+        if (!confirm(`Are you sure you want to approve ${selectedIds.length} selected request(s)?`)) return;
+
+        const form = document.getElementById('bulkApproveForm');
+        const container = document.getElementById('bulkApproveIdsContainer');
+        container.innerHTML = '';
+        
+        selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = id;
+            container.appendChild(input);
+        });
+        
+        form.submit();
+    }
+
+    function openBulkRejectModal() {
+        if (selectedIds.length === 0) return;
+        
+        const modal = document.getElementById('bulkRejectModal');
+        document.getElementById('bulkRejectCount').textContent = selectedIds.length;
+        
+        const container = document.getElementById('bulkRejectIdsContainer');
+        container.innerHTML = '';
+        selectedIds.forEach(id => {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = 'ids';
+            input.value = id;
+            container.appendChild(input);
+        });
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    }
+
+    function closeBulkRejectModal() {
+        const modal = document.getElementById('bulkRejectModal');
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+    }
+
 </script>
 </body>
 </html>
+

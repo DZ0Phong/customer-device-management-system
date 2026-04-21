@@ -1,23 +1,22 @@
 package com.group5.ems.service.hr;
 
-import com.group5.ems.dto.response.HrPerformanceDTO;
-import com.group5.ems.entity.PerformanceReview;
-import com.group5.ems.repository.PerformanceReviewRepository;
-import lombok.RequiredArgsConstructor;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.math.BigDecimal;
-import java.util.List;
-import java.util.Optional;
-import java.util.stream.Collectors;
-
-import com.group5.ems.enums.AuditAction;
-import com.group5.ems.enums.AuditEntityType;
+import com.group5.ems.dto.response.HrPerformanceDTO;
+import com.group5.ems.entity.PerformanceReview;
+import com.group5.ems.repository.PerformanceReviewRepository;
 import com.group5.ems.service.common.LogService;
+
+import lombok.RequiredArgsConstructor;
 
 @Service
 @RequiredArgsConstructor
@@ -73,6 +72,9 @@ public class HrPerformanceService {
         String employeeCode = "N/A";
         String departmentName = "N/A";
         String reviewerName = "N/A";
+        String reviewerCode = "N/A";
+        String performanceGrade = "N/A";
+        String potentialGrade = "N/A";
 
         if (r.getEmployee() != null) {
             if (r.getEmployee().getUser() != null && r.getEmployee().getUser().getFullName() != null) {
@@ -83,26 +85,31 @@ public class HrPerformanceService {
             }
             employeeCode = r.getEmployee().getEmployeeCode();
         }
-        if (r.getReviewer() != null && r.getReviewer().getUser() != null
-                && r.getReviewer().getUser().getFullName() != null) {
-            reviewerName = r.getReviewer().getUser().getFullName();
+        if (r.getReviewer() != null) {
+            if (r.getReviewer().getUser() != null && r.getReviewer().getUser().getFullName() != null) {
+                reviewerName = r.getReviewer().getUser().getFullName();
+            }
+            reviewerCode = r.getReviewer().getEmployeeCode();
         }
 
-        // Map numeric performance score to letter grade for display
-        String letterScore = mapToLetterGrade(r.getPerformanceScore());
+        // Map numeric scores to letter grades for display
+        performanceGrade = mapToLetterGrade(r.getPerformanceScore());
+        potentialGrade = mapToLetterGrade(r.getPotentialScore());
 
         return HrPerformanceDTO.builder()
                 .id(r.getId())
                 .employeeName(employeeName)
                 .employeeCode(employeeCode)
+                .avatarUrl(r.getEmployee() != null && r.getEmployee().getUser() != null ? r.getEmployee().getUser().getAvatarUrl() : null)
                 .department(departmentName)
                 .reviewerName(reviewerName)
+                .reviewerCode(reviewerCode)
                 .status(r.getStatus())
-                .score(letterScore)
+                .performanceGrade(performanceGrade)
+                .potentialGrade(potentialGrade)
                 .reviewPeriod(r.getReviewPeriod())
                 .performanceScore(r.getPerformanceScore())
                 .potentialScore(r.getPotentialScore())
-                .talentMatrix(r.getTalentMatrix())
                 .strengths(r.getStrengths())
                 .areasToImprove(r.getAreasToImprove())
                 .createdAt(r.getCreatedAt())
@@ -117,5 +124,18 @@ public class HrPerformanceService {
         if (val >= 2.5) return "C";
         if (val >= 1.5) return "D";
         return "F";
+    }
+
+    private String computeTalentMatrix(BigDecimal performanceScore, BigDecimal potentialScore) {
+        if (performanceScore == null || potentialScore == null) return "N/A";
+        if (performanceScore.compareTo(BigDecimal.valueOf(4.0)) >= 0 && potentialScore.compareTo(BigDecimal.valueOf(4.0)) >= 0) return "Star";
+        if (performanceScore.compareTo(BigDecimal.valueOf(4.0)) >= 0 && potentialScore.compareTo(BigDecimal.valueOf(2.5)) >= 0) return "High Performer";
+        if (performanceScore.compareTo(BigDecimal.valueOf(4.0)) >= 0) return "Workhorse";
+        if (performanceScore.compareTo(BigDecimal.valueOf(2.5)) >= 0 && potentialScore.compareTo(BigDecimal.valueOf(4.0)) >= 0) return "High Potential";
+        if (performanceScore.compareTo(BigDecimal.valueOf(2.5)) >= 0 && potentialScore.compareTo(BigDecimal.valueOf(2.5)) >= 0) return "Core Employee";
+        if (performanceScore.compareTo(BigDecimal.valueOf(2.5)) >= 0) return "Effective";
+        if (potentialScore.compareTo(BigDecimal.valueOf(4.0)) >= 0) return "Problem Child";
+        if (potentialScore.compareTo(BigDecimal.valueOf(2.5)) >= 0) return "Inconsistent";
+        return "Underperformer";
     }
 }

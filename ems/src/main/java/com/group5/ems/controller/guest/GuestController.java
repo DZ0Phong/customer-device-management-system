@@ -61,6 +61,10 @@ public class GuestController {
                 var news = companyService.getPublicCompanyInfo()
                                 .stream()
                                 .filter(c -> !specialKeys.contains(c.getInfoKey()))
+                                .sorted(java.util.Comparator.comparing(
+                                                c -> c.getUpdatedAt() != null ? c.getUpdatedAt()
+                                                                : java.time.LocalDateTime.MIN,
+                                                java.util.Comparator.reverseOrder()))
                                 .limit(6)
                                 .toList();
 
@@ -103,9 +107,15 @@ public class GuestController {
 
         @GetMapping("/jobs/department/{id}")
         public String jobsByDepartment(@PathVariable Long id, Model model) {
+                List<Department> departments = departmentService.getAllDepartments();
+                Map<Long, Long> deptCounts = new HashMap<>();
+                for (Department d : departments) {
+                        deptCounts.put(d.getId(), jobPostService.countJobsByDepartment(d.getId()));
+                }
 
                 model.addAttribute("jobs", jobPostService.getJobsByDepartment(id));
-                model.addAttribute("departments", departmentService.getAllDepartments());
+                model.addAttribute("departments", departments);
+                model.addAttribute("deptCounts", deptCounts);
                 model.addAttribute("openCount", jobPostService.getOpenJobs().size());
 
                 return "home/jobs";
@@ -117,13 +127,19 @@ public class GuestController {
 
         @GetMapping("/jobs/{id}")
         public String jobDetail(@PathVariable Long id, Model model) {
-
                 JobPost job = jobPostService.getJobDetail(id);
                 if (job == null)
                         return "redirect:/home/jobs";
 
+                List<Department> departments = departmentService.getAllDepartments();
+                Map<Long, Long> deptCounts = new HashMap<>();
+                for (Department d : departments) {
+                        deptCounts.put(d.getId(), jobPostService.countJobsByDepartment(d.getId()));
+                }
+
                 model.addAttribute("jobs", jobPostService.getOpenJobs());
-                model.addAttribute("departments", departmentService.getAllDepartments());
+                model.addAttribute("departments", departments);
+                model.addAttribute("deptCounts", deptCounts);
                 model.addAttribute("openCount", jobPostService.getOpenJobs().size());
                 model.addAttribute("openJobId", id);
 
@@ -136,7 +152,22 @@ public class GuestController {
 
         @GetMapping("/about")
         public String about(Model model) {
-                model.addAttribute("companyInfoList", companyService.getPublicCompanyInfo());
+                List<String> specialKeys = List.of(
+                                "hero_title", "hero_subtitle",
+                                "stats_employees", "stats_offices", "stats_founded", "stats_rating",
+                                "cta_title", "cta_subtitle");
+
+                var filtered = companyService.getPublicCompanyInfo()
+                                .stream()
+                                .filter(c -> !specialKeys.contains(c.getInfoKey()))
+                                .sorted(java.util.Comparator.comparing(
+                                                c -> c.getUpdatedAt() != null ? c.getUpdatedAt()
+                                                                : java.time.LocalDateTime.MIN,
+                                                java.util.Comparator.reverseOrder()))
+                                .limit(3)
+                                .toList();
+
+                model.addAttribute("companyInfoList", filtered);
                 return "home/about";
         }
 

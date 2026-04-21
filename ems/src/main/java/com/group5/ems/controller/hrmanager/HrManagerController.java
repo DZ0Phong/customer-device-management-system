@@ -20,6 +20,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -32,6 +33,12 @@ public class HrManagerController {
     private final LeaveApprovalService leaveApprovalService;
     private final PayrollApprovalService payrollApprovalService;
     private final CalendarService calendarService;
+    private final com.group5.ems.service.common.EmailNotificationService emailNotificationService;
+    private final com.group5.ems.repository.DepartmentRepository departmentRepository;
+    private final com.group5.ems.repository.PositionRepository positionRepository;
+
+    private final com.group5.ems.repository.UserRepository userRepository;
+    private final com.group5.ems.repository.EmployeeRepository employeeRepository;
 
     // ── Dashboard ─────────────────────────────────────────────────────────────
     @GetMapping({"", "/", "/dashboard"})
@@ -42,9 +49,14 @@ public class HrManagerController {
         model.addAttribute("hiringData",         dashboardService.getHiringData());
         model.addAttribute("attritionData",      dashboardService.getAttritionData());
         model.addAttribute("upcomingEvents",     dashboardService.getUpcomingEvents());
-        model.addAttribute("recentActivities",   dashboardService.getRecentActivities(activityFilter));
+        
+        // Get pending non-attendance requests for HRM (same as request_approval)
+        model.addAttribute("recentActivities",   leaveApprovalService.getLeaveRequests("current", 1));
+        model.addAttribute("stats",              leaveApprovalService.getStats());
+        
         model.addAttribute("activityCategories", dashboardService.getActivityCategories());
         model.addAttribute("activityFilter",     activityFilter);
+        model.addAttribute("positions",          positionRepository.findAll());
         model.addAttribute("activePage",         "dashboard");
         return "hrmanager/dashboard";
     }
@@ -96,11 +108,11 @@ public class HrManagerController {
             java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> activities;
             
             switch (type.toLowerCase()) {
-                case "leave":
-                    activities = dashboardService.getLeaveActivities(since);
+                case "request":
+                    activities = dashboardService.getRequestActivities(since);
                     // Apply sub-filter if needed
                     if (!"all".equals(filter)) {
-                        activities = filterLeaveActivities(activities, filter);
+                        activities = filterRequestActivities(activities, filter);
                     }
                     break;
                     
@@ -120,11 +132,19 @@ public class HrManagerController {
                     }
                     break;
                     
-                case "hr":
-                    activities = dashboardService.getHRRequestActivities(since);
+                case "staffing":
+                    activities = dashboardService.getStaffingRequestActivities(since);
                     // Apply sub-filter if needed
                     if (!"all".equals(filter)) {
-                        activities = filterHRActivities(activities, filter);
+                        activities = filterStaffingActivities(activities, filter);
+                    }
+                    break;
+                    
+                case "history":
+                    activities = dashboardService.getHistoryActivities(since);
+                    // Apply sub-filter if needed
+                    if (!"all".equals(filter)) {
+                        activities = filterHistoryActivities(activities, filter);
                     }
                     break;
                     
@@ -197,6 +217,32 @@ public class HrManagerController {
 
     // ── Helper methods for filtering activities ──────────────────────────────
 
+    private java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> filterRequestActivities(
+            java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> activities, 
+            String filter) {
+        
+        return activities.stream()
+                .filter(a -> {
+                    switch (filter.toLowerCase()) {
+                        case "pending":
+                            return "PENDING".equals(a.getStatus());
+                        case "completed":
+                            return "COMPLETED".equals(a.getStatus()) || "APPROVED".equals(a.getStatus());
+                        case "contract":
+                            return a.getActionLabel() != null && a.getActionLabel().toLowerCase().contains("contract");
+                        case "benefits":
+                            return a.getActionLabel() != null && a.getActionLabel().toLowerCase().contains("benefit");
+                        case "documents":
+                            return a.getActionLabel() != null && 
+                                   (a.getActionLabel().toLowerCase().contains("document") ||
+                                    a.getActionLabel().toLowerCase().contains("letter"));
+                        default:
+                            return true;
+                    }
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     private java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> filterLeaveActivities(
             java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> activities, 
             String filter) {
@@ -260,9 +306,6 @@ public class HrManagerController {
                             return "Promotion".equalsIgnoreCase(a.getBadge());
                         case "transfer":
                             return "Transfer".equalsIgnoreCase(a.getBadge());
-                        case "onleave":
-                        case "on_leave":
-                            return a.getDetails() != null && a.getDetails().toLowerCase().contains("on leave");
                         default:
                             return true;
                     }
@@ -296,34 +339,91 @@ public class HrManagerController {
                 .collect(java.util.stream.Collectors.toList());
     }
 
+    private java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> filterStaffingActivities(
+            java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> activities, 
+            String filter) {
+        
+        return activities.stream()
+                .filter(a -> {
+                    switch (filter.toLowerCase()) {
+                        case "pending":
+                            return "PENDING".equals(a.getStatus());
+                        case "approved":
+                            return "APPROVED".equals(a.getStatus());
+                        case "recruitment":
+                            return a.getActionLabel() != null && a.getActionLabel().toLowerCase().contains("recruitment");
+                        case "transfer":
+                            return a.getActionLabel() != null && a.getActionLabel().toLowerCase().contains("transfer");
+                        default:
+                            return true;
+                    }
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    private java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> filterHistoryActivities(
+            java.util.List<com.group5.ems.dto.response.hrmanager.RecentActivityDTO> activities, 
+            String filter) {
+        
+        return activities.stream()
+                .filter(a -> {
+                    switch (filter.toLowerCase()) {
+                        case "approved":
+                            return "APPROVED".equals(a.getStatus());
+                        case "rejected":
+                            return "REJECTED".equals(a.getStatus());
+                        default:
+                            return true;
+                    }
+                })
+                .collect(java.util.stream.Collectors.toList());
+    }
+
     // ══════════════════════════════════════════════════════════════════════════
     // END ACTIVITY CENTER ENDPOINTS
     // ══════════════════════════════════════════════════════════════════════════
 
-    // ── Request Management (renamed from Leave Approval) ─────────────────────
-    @GetMapping({"/leave-approval", "/request-management"})
-    public String requestManagement(Model model,
-                                @RequestParam(defaultValue = "pending") String tab,
+    // ── Request Approval ──────────────────────────────────────────────────────
+    @GetMapping("/request-approval")
+    public String requestApproval(Model model,
+                                @RequestParam(defaultValue = "current") String tab,
                                 @RequestParam(defaultValue = "all") String category,
-                                @RequestParam(defaultValue = "1") int page) {
+                                @RequestParam(defaultValue = "1") int page,
+                                @RequestParam(required = false) Long requestId) {
+        // Map "pending" to "current" for backward compatibility
+        if ("pending".equals(tab)) {
+            tab = "current";
+        }
+        
         model.addAttribute("stats",         leaveApprovalService.getStats());
         model.addAttribute("leaveRequests", leaveApprovalService.getLeaveRequests(tab, page));
         model.addAttribute("pagination",    leaveApprovalService.getPagination(tab, page));
         model.addAttribute("activeTab",     tab);
         model.addAttribute("activeCategory", category);
-        model.addAttribute("activePage",    "leave");
-        return "hrmanager/leave_approval";
+        model.addAttribute("positions",     positionRepository.findAll());
+        model.addAttribute("activePage",    "request");
+        model.addAttribute("requestId",     requestId); // For auto-expand
+        return "hrmanager/request_approval";
     }
-
-    // ── Payroll Approval ──────────────────────────────────────────────────────
-    @GetMapping("/payroll-approval")
-    public String payrollApproval(Model model,
-                                  @RequestParam(defaultValue = "1") int page) {
-        model.addAttribute("summary",     payrollApprovalService.getSummary());
-        model.addAttribute("payrollRuns", payrollApprovalService.getPayrollRuns(page));
-        model.addAttribute("pagination",  payrollApprovalService.getPagination(page));
-        model.addAttribute("activePage",  "payroll");
-        return "hrmanager/payroll_approval";
+    
+    // ── Notify Critical Items (Email Notification) ───────────────────────────
+    @PostMapping("/request-approval/notify-critical")
+    @ResponseBody
+    public Map<String, Object> notifyCriticalItems(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Integer count = (Integer) payload.get("count");
+            
+            // Send email notification to current HR Manager
+            emailNotificationService.sendCriticalRequestsNotification(getCurrentUserId(), count);
+            
+            response.put("success", true);
+            response.put("message", "Notification sent");
+        } catch (Exception e) {
+            response.put("success", false);
+            response.put("message", "Failed to send notification: " + e.getMessage());
+        }
+        return response;
     }
 
     // ── HR Analytics ──────────────────────────────────────────────────────────
@@ -335,6 +435,7 @@ public class HrManagerController {
         model.addAttribute("diversityData",   analyticsService.getDiversityData());
         model.addAttribute("trainingCourses", analyticsService.getTrainingCourses());
         model.addAttribute("policyReviews",   analyticsService.getPolicyReviews());
+        model.addAttribute("positions",       positionRepository.findAll());
         model.addAttribute("activePage",      "analytics");
         return "hrmanager/hr_analytics";
     }
@@ -349,10 +450,27 @@ public class HrManagerController {
         int currentYear  = year  != null ? year  : now.getYear();
 
         model.addAttribute("events",       calendarService.getEventsByMonth(currentMonth, currentYear));
+        model.addAttribute("departments",  departmentRepository.findAll());
+        model.addAttribute("positions",    positionRepository.findAll());
         model.addAttribute("currentMonth", currentMonth);
         model.addAttribute("currentYear",  currentYear);
         model.addAttribute("activePage",   "calendar");
         return "hrmanager/calendar";
+    }
+
+    // ── Calendar API: Get Departments ─────────────────────────────────────────
+    @GetMapping("/calendar/departments")
+    @ResponseBody
+    public List<Map<String, Object>> getDepartments() {
+        return departmentRepository.findAll().stream()
+                .map(dept -> {
+                    Map<String, Object> map = new HashMap<>();
+                    map.put("id", dept.getId());
+                    map.put("name", dept.getName());
+                    map.put("code", dept.getCode());
+                    return map;
+                })
+                .collect(java.util.stream.Collectors.toList());
     }
 
     // ── Calendar Create ───────────────────────────────────────────────────────
@@ -400,12 +518,12 @@ public class HrManagerController {
         return "redirect:/hrmanager/calendar";
     }
 
-    // ── Request Management Actions (renamed from Leave Approval Actions) ─────
-    @PostMapping({"/leave-approval/approve", "/request-management/approve"})
+    // ── Request Approval Actions ──────────────────────────────────────────────
+    @PostMapping("/request-approval/approve")
     public String approveRequest(@RequestParam Long requestId,
-                                      @RequestParam Long approverId,
                                       RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.approveLeaveRequest(requestId, approverId);
             redirectAttributes.addFlashAttribute("flashMessage", "Request approved successfully!");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -413,15 +531,15 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to approve: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/leave-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
     }
 
-    @PostMapping({"/leave-approval/reject", "/request-management/reject"})
+    @PostMapping("/request-approval/reject")
     public String rejectRequest(@RequestParam Long requestId,
-                                     @RequestParam Long approverId,
                                      @RequestParam String rejectedReason,
                                      RedirectAttributes redirectAttributes) {
         try {
+            Long approverId = getCurrentUserId();
             leaveApprovalService.rejectLeaveRequest(requestId, approverId, rejectedReason);
             redirectAttributes.addFlashAttribute("flashMessage", "Request rejected.");
             redirectAttributes.addFlashAttribute("flashType", "success");
@@ -429,11 +547,59 @@ public class HrManagerController {
             redirectAttributes.addFlashAttribute("flashMessage", "Failed to reject: " + e.getMessage());
             redirectAttributes.addFlashAttribute("flashType", "error");
         }
-        return "redirect:/hrmanager/leave-approval?tab=pending";
+        return "redirect:/hrmanager/request-approval?tab=current";
+    }
+    
+    // ── Bulk Actions ──────────────────────────────────────────────────────────
+    @PostMapping("/request-approval/bulk-approve")
+    @ResponseBody
+    public Map<String, Object> bulkApprove(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> requestIdsInt = (List<Integer>) payload.get("requestIds");
+            List<Long> requestIds = requestIdsInt.stream()
+                    .map(Integer::longValue)
+                    .collect(java.util.stream.Collectors.toList());
+            Long approverId = getCurrentUserId();
+            
+            Map<String, Object> result = leaveApprovalService.bulkApprove(requestIds, approverId);
+            // Don't overwrite 'success' field from service - it contains the count
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", 0);
+            error.put("failed", 0);
+            error.put("message", "Bulk approve failed: " + e.getMessage());
+            return error;
+        }
+    }
+    
+    @PostMapping("/request-approval/bulk-reject")
+    @ResponseBody
+    public Map<String, Object> bulkReject(@org.springframework.web.bind.annotation.RequestBody Map<String, Object> payload) {
+        try {
+            @SuppressWarnings("unchecked")
+            List<Integer> requestIdsInt = (List<Integer>) payload.get("requestIds");
+            List<Long> requestIds = requestIdsInt.stream()
+                    .map(Integer::longValue)
+                    .collect(java.util.stream.Collectors.toList());
+            Long approverId = getCurrentUserId();
+            String reason = (String) payload.getOrDefault("reason", "Bulk rejection");
+            
+            Map<String, Object> result = leaveApprovalService.bulkReject(requestIds, approverId, reason);
+            // Don't overwrite 'success' field from service - it contains the count
+            return result;
+        } catch (Exception e) {
+            Map<String, Object> error = new HashMap<>();
+            error.put("success", 0);
+            error.put("failed", 0);
+            error.put("message", "Bulk reject failed: " + e.getMessage());
+            return error;
+        }
     }
 
-    // ── Revert Request (24h window) - Phase 3 ────────────────────────────────
-    @PostMapping({"/leave-approval/revert", "/request-management/revert"})
+    // ── Revert Request (24h window) ───────────────────────────────────────────
+    @PostMapping("/request-approval/revert")
     public String revertRequest(@RequestParam Long requestId,
                                 @RequestParam(required = false) String reason,
                                 RedirectAttributes redirectAttributes) {
@@ -454,40 +620,19 @@ public class HrManagerController {
         return "redirect:/hrmanager/leave-approval";
     }
 
-    // ── Payroll Approve by Department ─────────────────────────────────────────
-    @PostMapping("/payroll-approval/approve")
-    public String approvePayroll(@RequestParam Long deptId,
-                                 RedirectAttributes redirectAttributes) {
-        try {
-            payrollApprovalService.approveByDepartment(deptId, getCurrentUserId());
-            redirectAttributes.addFlashAttribute("flashMessage", "Payroll approved successfully!");
-            redirectAttributes.addFlashAttribute("flashType", "success");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("flashMessage", e.getMessage());
-            redirectAttributes.addFlashAttribute("flashType", "error");
-        }
-        return "redirect:/hrmanager/payroll-approval";
-    }
-
-    @PostMapping("/payroll-approval/reject")
-    public String rejectPayroll(@RequestParam Long deptId,
-                                @RequestParam(required = false) String note,
-                                RedirectAttributes redirectAttributes) {
-        try {
-            payrollApprovalService.rejectByDepartment(deptId, getCurrentUserId(), note);
-            redirectAttributes.addFlashAttribute("flashMessage", "Payroll rejected.");
-            redirectAttributes.addFlashAttribute("flashType", "success");
-        } catch (Exception e) {
-            redirectAttributes.addFlashAttribute("flashMessage", e.getMessage());
-            redirectAttributes.addFlashAttribute("flashType", "error");
-        }
-        return "redirect:/hrmanager/payroll-approval";
-    }
-
     // ── Helper ────────────────────────────────────────────────────────────────
     private Long getCurrentUserId() {
-        // TODO: thay bằng SecurityContext sau khi có Authentication
-        return 1L;
+        org.springframework.security.core.Authentication authentication = 
+            org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        
+        if (authentication == null || !authentication.isAuthenticated()) {
+            throw new RuntimeException("User not authenticated");
+        }
+        
+        String username = authentication.getName();
+        return userRepository.findByUsername(username)
+                .map(user -> user.getId())
+                .orElseThrow(() -> new RuntimeException("User not found: " + username));
     }
     
     // ========================================================================

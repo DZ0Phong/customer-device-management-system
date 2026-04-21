@@ -14,9 +14,11 @@ import com.group5.ems.exception.LeaveRequestNotFoundException;
 import com.group5.ems.exception.WorkflowException;
 import com.group5.ems.repository.EmployeeLeaveBalanceRepository;
 import com.group5.ems.repository.RequestRepository;
+import com.group5.ems.repository.RequestTypeRepository;
 import com.group5.ems.repository.UserRepository;
 import com.group5.ems.service.common.ApprovalWorkflowService;
 import com.group5.ems.service.common.LogService;
+import com.group5.ems.util.WorkingDayUtils;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -44,14 +46,16 @@ import java.util.stream.Collectors;
 public class HrLeaveService {
 
     private final RequestRepository requestRepository;
+    private final RequestTypeRepository requestTypeRepository;
     private final EmployeeLeaveBalanceRepository leaveBalanceRepository;
     private final UserRepository userRepository;
     private final ApprovalWorkflowService workflowService;
     private final LogService logService;
 
     private static final int MIN_REJECTION_REASON_LENGTH = 10;
-    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("MMM dd, yyyy");
-    private static final DateTimeFormatter DTF_FULL = DateTimeFormatter.ofPattern("MMM dd, yyyy HH:mm");
+    private static final DateTimeFormatter DTF = DateTimeFormatter.ofPattern("dd/MM/yyyy");
+    private static final DateTimeFormatter DTF_FULL = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
 
     // ── Rejection reason categories ──
     private static final Map<String, String> REJECTION_CATEGORIES = new HashMap<>();
@@ -76,14 +80,18 @@ public class HrLeaveService {
     // PENDING LEAVES (always full list, small count)
     // ══════════════════════════════════════════════════════════════════
 
-    public List<HrLeaveRequestDTO> getPendingLeaves() {
-        return requestRepository.findPendingLeaveRequests().stream()
+    public List<HrLeaveRequestDTO> getPendingLeaves(String search, Long departmentId, String leaveType) {
+        search = normalizeBlank(search);
+        leaveType = normalizeBlank(leaveType);
+        return requestRepository.findPendingLeaveRequests(departmentId, leaveType, search).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
 
-    public List<HrLeaveRequestDTO> getHrmPendingLeaves() {
-        return requestRepository.findHrmPendingLeaveRequests().stream()
+    public List<HrLeaveRequestDTO> getHrmPendingLeaves(String search, Long departmentId, String leaveType) {
+        search = normalizeBlank(search);
+        leaveType = normalizeBlank(leaveType);
+        return requestRepository.findHrmPendingLeaveRequests(departmentId, leaveType, search).stream()
                 .map(this::mapToDTO)
                 .collect(Collectors.toList());
     }
@@ -206,18 +214,29 @@ public class HrLeaveService {
     // STATISTICS (improvement #6)
     // ══════════════════════════════════════════════════════════════════
 
-    public HrLeaveStatsDTO getLeaveStats() {
+    public HrLeaveStatsDTO getLeaveStats(String statsMonth) {
         LocalDateTime monthStart = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        LocalDateTime monthEnd = LocalDate.now().with(java.time.temporal.TemporalAdjusters.lastDayOfMonth()).atTime(23, 59, 59);
+        
+        if (statsMonth != null && !statsMonth.isBlank()) {
+            try {
+                java.time.YearMonth ym = java.time.YearMonth.parse(statsMonth);
+                monthStart = ym.atDay(1).atStartOfDay();
+                monthEnd = ym.atEndOfMonth().atTime(23, 59, 59);
+            } catch (Exception e) {
+                // Ignore parse error and fallback to current month
+            }
+        }
 
         long totalPending = requestRepository.countByStatusAndStepWaitingHRAndRequestTypeCodeIn(
                 "PENDING",
                 List.of("LEAVE_ANNUAL", "LEAVE_SICK", "LEAVE_UNPAID", "LV_ANNUAL", "LV_SICK"));
 
-        long approvedThisMonth = requestRepository.countLeaveByStatusSince("APPROVED", monthStart);
-        long rejectedThisMonth = requestRepository.countLeaveByStatusSince("REJECTED", monthStart);
+        long approvedThisMonth = requestRepository.countLeaveByStatusBetween("APPROVED", monthStart, monthEnd);
+        long rejectedThisMonth = requestRepository.countLeaveByStatusBetween("REJECTED", monthStart, monthEnd);
         long onLeaveToday = requestRepository.countOnLeaveToday();
 
-        Double avgHours = requestRepository.avgProcessingHoursSince(monthStart);
+        Double avgHours = requestRepository.avgProcessingHoursBetween(monthStart, monthEnd);
         double avgProcessingHours = avgHours != null ? avgHours : 0.0;
 
         // Top leave type
@@ -227,7 +246,9 @@ public class HrLeaveService {
         if (!topTypes.isEmpty()) {
             Object[] top = topTypes.get(0);
             String code = (String) top[0];
-            topLeaveType = REJECTION_CATEGORIES.getOrDefault(code, formatLeaveTypeCode(code));
+            topLeaveType = requestTypeRepository.findByCode(code)
+                                 .map(com.group5.ems.entity.RequestType::getName)
+                                 .orElse(formatLeaveTypeCode(code));
             topLeaveTypeCount = ((Number) top[1]).longValue();
         }
 
@@ -249,11 +270,21 @@ public class HrLeaveService {
     public HrLeaveBalanceSummaryDTO getLeaveBalanceSummary() {
         int currentYear = LocalDate.now().getYear();
 
-        BigDecimal totalAllocated = leaveBalanceRepository.sumTotalDaysByYear(currentYear);
-        BigDecimal totalUsed = leaveBalanceRepository.sumUsedDaysByYear(currentYear);
-        BigDecimal totalPending = leaveBalanceRepository.sumPendingDaysByYear(currentYear);
-        BigDecimal totalRemaining = leaveBalanceRepository.sumRemainingDaysByYear(currentYear);
-        long employeeCount = leaveBalanceRepository.countByYear(currentYear);
+        long employeeCount = 0;
+        BigDecimal totalAllocated = BigDecimal.ZERO;
+        BigDecimal totalUsed = BigDecimal.ZERO;
+        BigDecimal totalPending = BigDecimal.ZERO;
+        BigDecimal totalRemaining = BigDecimal.ZERO;
+
+        List<Object[]> aggResults = leaveBalanceRepository.getAggregatedBalancesByYear(currentYear);
+        if (!aggResults.isEmpty() && aggResults.get(0) != null) {
+            Object[] row = aggResults.get(0);
+            employeeCount = row[0] != null ? ((Number) row[0]).longValue() : 0;
+            totalAllocated = row[1] != null ? (BigDecimal) row[1] : BigDecimal.ZERO;
+            totalUsed = row[2] != null ? (BigDecimal) row[2] : BigDecimal.ZERO;
+            totalPending = row[3] != null ? (BigDecimal) row[3] : BigDecimal.ZERO;
+            totalRemaining = row[4] != null ? (BigDecimal) row[4] : BigDecimal.ZERO;
+        }
 
         double avgUtilization = 0.0;
         if (totalAllocated.compareTo(BigDecimal.ZERO) > 0) {
@@ -272,12 +303,42 @@ public class HrLeaveService {
                 .build();
     }
 
+    public Page<com.group5.ems.dto.response.HrEmployeeLeaveBalanceDTO> getLeaveBalancesFiltered(
+            Long departmentId, String search, Pageable pageable) {
+        int currentYear = LocalDate.now().getYear();
+        search = normalizeBlank(search);
+        
+        Page<com.group5.ems.entity.EmployeeLeaveBalance> page = leaveBalanceRepository.findBalancesFiltered(
+                currentYear, departmentId, search, pageable);
+                
+        List<com.group5.ems.dto.response.HrEmployeeLeaveBalanceDTO> dtos = page.getContent().stream()
+                .map(elb -> {
+                    String employeeName = elb.getEmployee().getUser() != null ? elb.getEmployee().getUser().getFullName() : "Unknown";
+                    String departmentName = elb.getEmployee().getDepartment() != null ? elb.getEmployee().getDepartment().getName() : "N/A";
+                    return com.group5.ems.dto.response.HrEmployeeLeaveBalanceDTO.builder()
+                            .employeeId(elb.getEmployee().getId())
+                            .employeeName(employeeName)
+                            .employeeCode(elb.getEmployee().getEmployeeCode())
+                            .departmentName(departmentName)
+                            .year(elb.getYear())
+                            .totalDays(elb.getTotalDays())
+                            .usedDays(elb.getUsedDays())
+                            .pendingDays(elb.getPendingDays())
+                            .remainingDays(elb.getRemainingDays())
+                            .build();
+                })
+                .collect(Collectors.toList());
+        return new PageImpl<>(dtos, pageable, page.getTotalElements());
+    }
+
     // ══════════════════════════════════════════════════════════════════
     // CALENDAR EVENTS (improvement #3)
     // ══════════════════════════════════════════════════════════════════
 
-    public List<HrLeaveCalendarEventDTO> getCalendarEvents(LocalDate start, LocalDate end) {
-        return requestRepository.findCalendarEvents(start, end).stream()
+    public List<HrLeaveCalendarEventDTO> getCalendarEvents(LocalDate start, LocalDate end, Long departmentId, String leaveType, String search) {
+        search = normalizeBlank(search);
+        leaveType = normalizeBlank(leaveType);
+        return requestRepository.findCalendarEvents(start, end, departmentId, leaveType, search).stream()
                 .map(this::mapToCalendarEvent)
                 .collect(Collectors.toList());
     }
@@ -286,10 +347,14 @@ public class HrLeaveService {
     // CSV EXPORT (improvement #7)
     // ══════════════════════════════════════════════════════════════════
 
-    public void exportLeaveHistoryToCsv(String status, Long departmentId, PrintWriter writer) {
+    public void exportLeaveHistoryToCsv(String status, Long departmentId, String leaveType, java.time.LocalDate startDate, java.time.LocalDate endDate, PrintWriter writer) {
         status = normalizeBlank(status);
+        leaveType = normalizeBlank(leaveType);
+        
+        java.time.LocalDateTime start = (startDate != null) ? startDate.atStartOfDay() : null;
+        java.time.LocalDateTime end = (endDate != null) ? endDate.atTime(23, 59, 59) : null;
 
-        List<Request> requests = requestRepository.findLeaveHistoryForExport(status, departmentId);
+        List<Request> requests = requestRepository.findLeaveHistoryForExport(status, departmentId, leaveType, start, end);
 
         // CSV header
         writer.println("Employee Name,Employee Code,Department,Leave Type,From,To,Duration,Status,Rejection Reason,Processed At");
@@ -318,6 +383,7 @@ public class HrLeaveService {
     private HrLeaveRequestDTO mapToDTO(Request request) {
         String initials = "";
         String fullName = "Unknown";
+        String avatarUrl = null;
         String departmentName = "N/A";
         String employeeCode = "N/A";
         Long departmentId = null;
@@ -325,6 +391,7 @@ public class HrLeaveService {
         if (request.getEmployee() != null) {
             if (request.getEmployee().getUser() != null) {
                 fullName = request.getEmployee().getUser().getFullName();
+                avatarUrl = request.getEmployee().getUser().getAvatarUrl();
                 if (fullName != null && !fullName.trim().isEmpty()) {
                     String[] names = fullName.trim().split("\\s+");
                     initials += names[0].charAt(0);
@@ -356,10 +423,17 @@ public class HrLeaveService {
 
         String reason = request.getContent() != null ? request.getContent() : "No reason provided";
 
-        // Approver name (improvement #8)
+        // Approver name & code
         String approverName = "HR";
-        if (request.getApprovedByUser() != null && request.getApprovedByUser().getFullName() != null) {
-            approverName = request.getApprovedByUser().getFullName();
+        String approverEmployeeCode = "N/A";
+        if (request.getApprovedByUser() != null) {
+            if (request.getApprovedByUser().getFullName() != null) {
+                approverName = request.getApprovedByUser().getFullName();
+            }
+            if (request.getApprovedByUser().getEmployee() != null && 
+                request.getApprovedByUser().getEmployee().getEmployeeCode() != null) {
+                approverEmployeeCode = request.getApprovedByUser().getEmployee().getEmployeeCode();
+            }
         }
 
         // Processed timestamp
@@ -368,23 +442,116 @@ public class HrLeaveService {
             processedAt = request.getApprovedAt().format(DTF_FULL);
         }
 
+
+        // UI Status Mapping
+        String statusLabel = request.getStatus();
+        String currentStep = request.getStep();
+        String statusClass = "bg-slate-100 dark:bg-slate-800 text-slate-600 border-slate-200";
+        String statusDisplay = statusLabel;
+        String stepDisplay = workflowService.getStepDisplayName(currentStep);
+
+        if ("APPROVED".equalsIgnoreCase(statusLabel)) {
+            statusClass = "bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200";
+            statusDisplay = "Approved";
+        } else if ("REJECTED".equalsIgnoreCase(statusLabel)) {
+            statusClass = "bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200";
+            statusDisplay = "Rejected";
+        } else if (WorkflowConstants.STEP_WAITING_HR.equals(currentStep)) {
+            statusClass = "bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-400 border-amber-200";
+            statusDisplay = "Pending Your Action";
+        } else if (WorkflowConstants.STEP_WAITING_HRM.equals(currentStep)) {
+            statusClass = "bg-sky-100 dark:bg-sky-900/30 text-sky-700 dark:text-sky-400 border-sky-200";
+            statusDisplay = "Sent to HRM";
+        } else if (WorkflowConstants.STEP_WAITING_DM.equals(currentStep)) {
+            statusClass = "bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border-slate-200";
+            statusDisplay = "Waiting for DM";
+        }
+
+        // Leave Balance
+        BigDecimal balanceRemaining = BigDecimal.ZERO;
+        BigDecimal balanceTotal = BigDecimal.ZERO;
+        Integer balancePercentage = 0;
+        
+        if (request.getEmployee() != null) {
+            int currentYear = LocalDate.now().getYear();
+            var balanceOpt = leaveBalanceRepository.findByEmployeeIdAndYear(request.getEmployeeId(), currentYear);
+            if (balanceOpt.isPresent()) {
+                var balance = balanceOpt.get();
+                balanceRemaining = balance.getRemainingDays();
+                balanceTotal = balance.getTotalDays();
+                if (balanceTotal.compareTo(BigDecimal.ZERO) > 0) {
+                    balancePercentage = balanceRemaining.multiply(new BigDecimal(100))
+                            .divide(balanceTotal, 0, java.math.RoundingMode.HALF_UP).intValue();
+                }
+            }
+        }
+
+        // Overlap Count
+        Integer overlapCount = 0;
+        if (request.getLeaveFrom() != null && request.getLeaveTo() != null) {
+            var overlaps = requestRepository.findOverlappingLeaveRequests("APPROVED", request.getLeaveFrom(), request.getLeaveTo());
+            overlapCount = (int) overlaps.stream()
+                    .filter(r -> !r.getId().equals(request.getId()))
+                    .count();
+        }
+
+        String employeePosition = "Employee";
+        if (request.getEmployee() != null && request.getEmployee().getPosition() != null) {
+            employeePosition = request.getEmployee().getPosition().getName();
+        }
+
+        // Department Manager
+        String managerName = "N/A";
+        String managerEmployeeCode = "N/A";
+        if (request.getEmployee() != null && request.getEmployee().getDepartment() != null
+                && request.getEmployee().getDepartment().getManager() != null) {
+            var mgr = request.getEmployee().getDepartment().getManager();
+            if (mgr.getUser() != null) {
+                managerName = mgr.getUser().getFullName();
+            }
+            if (mgr.getEmployeeCode() != null) {
+                managerEmployeeCode = mgr.getEmployeeCode();
+            }
+        }
+
+        // Working Days calculation (excludes weekends)
+        long workingDays = 0;
+        if (request.getLeaveFrom() != null && request.getLeaveTo() != null) {
+            workingDays = WorkingDayUtils.countWorkingDays(request.getLeaveFrom(), request.getLeaveTo());
+        }
+
         return HrLeaveRequestDTO.builder()
                 .id(request.getId())
                 .employeeName(fullName)
                 .initials(initials.toUpperCase())
+                .avatarUrl(avatarUrl)
                 .department(departmentName)
                 .departmentId(departmentId)
                 .employeeCode(employeeCode)
+                .employeePosition(employeePosition)
                 .leaveType(request.getRequestType() != null ? request.getRequestType().getName() : "N/A")
                 .duration(duration)
                 .dates(dates)
                 .reason(reason)
                 .leave_from(request.getLeaveFrom())
                 .leave_to(request.getLeaveTo())
-                .status(request.getStatus())
+                .status(statusLabel)
+                .statusClass(statusClass)
+                .statusDisplay(statusDisplay)
+                .stepDisplay(stepDisplay)
                 .rejectedReason(request.getRejectedReason())
+                .submittedAtDisplay(request.getCreatedAt() != null ? request.getCreatedAt().format(DTF_FULL) : "N/A")
                 .processedAt(processedAt)
                 .approverName(approverName)
+                .approverEmployeeCode(approverEmployeeCode)
+                .leaveBalanceRemaining(balanceRemaining)
+
+                .leaveBalanceTotal(balanceTotal)
+                .leaveBalancePercentage(balancePercentage)
+                .overlapCount(overlapCount)
+                .managerName(managerName)
+                .managerEmployeeCode(managerEmployeeCode)
+                .workingDays(workingDays)
                 .build();
     }
 
