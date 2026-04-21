@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="en" xmlns:th="http://www.thymeleaf.org">
 
 <head>
@@ -32,19 +32,19 @@
 
 <body class="bg-bg-light font-display text-slate-900 min-h-screen">
 <div class="flex h-screen overflow-hidden">
-
-    <!-- ════════ SIDEBAR ════════ -->
+    <!-- Sidebar -->
+    <!-- â•â•â•â•â•â•â•â• SIDEBAR â•â•â•â•â•â•â•â• -->
     <div th:replace="~{fragments/hr-sidebar :: sidebar('dashboard')}"></div>
-
-    <!-- ════════ MAIN ════════ -->
+    <!-- Main -->
+    <!-- â•â•â•â•â•â•â•â• MAIN â•â•â•â•â•â•â•â• -->
     <main class="flex-1 flex flex-col min-w-0 overflow-hidden">
 
         <!-- Topbar -->
         <header class="h-16 bg-white border-b border-slate-100 flex items-center justify-between px-8 shrink-0">
             <div>
                 <h2 class="text-base font-black text-slate-900 leading-tight"
-                    th:text="${currentUser != null ? 'Good morning, ' + currentUser.firstName + ' 👋' : 'Good morning 👋'}">
-                    Good morning 👋
+                    th:text="${currentUser != null ? 'Good morning, ' + currentUser.firstName : 'Good morning'}">
+                    Good morning
                 </h2>
                 <p class="text-xs text-slate-400"
                    th:text="${#dates.format(#dates.createNow(), 'dd/MM/yyyy')}">
@@ -72,7 +72,7 @@
         <div class="flex-1 overflow-y-auto p-8 dot-grid">
             <div class="max-w-7xl mx-auto space-y-6">
 
-                <!-- ── Row 1: Key Metrics ── -->
+                <!-- â”€â”€ Row 1: Key Metrics â”€â”€ -->
                 <div class="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
                     <!-- Headcount (Active) -->
@@ -166,7 +166,7 @@
                     </div>
                 </div>
 
-                <!-- ── Row 2: Secondary Content ── -->
+                <!-- â”€â”€ Row 2: Secondary Content â”€â”€ -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     <!-- Recruitment Pipeline (Doughnut) -->
@@ -242,7 +242,7 @@
                     </div>
                 </div>
 
-                <!-- Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Third Row: Actions & Events Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ -->
+                <!-- Third Row: Actions & Events -->
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
                     <!-- Pending Leave Requests -->
@@ -361,7 +361,7 @@
         </div><!-- /scrollable -->
 
         <script th:inline="javascript">
-            // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Recruitment Pipeline Chart (Doughnut) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+            // Recruitment Pipeline Chart (Doughnut)
             const pApplied = /*[[${dashMetrics?.pipelineApplied() ?: 0}]]*/ 0;
             const pReviewing = /*[[${dashMetrics?.pipelineReviewing() ?: 0}]]*/ 0;
             const pInterviewing = /*[[${dashMetrics?.pipelineInterviewing() ?: 0}]]*/ 0;
@@ -396,7 +396,7 @@
                 },
             });
 
-            // Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬ Attendance Overview (Stacked Bar) Ã¢â€â‚¬Ã¢â€â‚¬Ã¢â€â‚¬
+            // Attendance Overview (Stacked Bar)
             const attCtx = document.getElementById('attendanceChart').getContext('2d');
             const attLabels = /*[[${dashMetrics?.attendanceLabels()}]]*/ [];
             const attPresent = /*[[${dashMetrics?.attendancePresent()}]]*/ [];

@@ -31,8 +31,7 @@ import com.group5.ems.entity.CandidateCv;
 import com.group5.ems.entity.Interview;
 import com.group5.ems.entity.InterviewAssignment;
 import com.group5.ems.entity.JobPost;
-import com.group5.ems.entity.Request;
-import com.group5.ems.entity.RequestApprovalHistory;
+import com.group5.ems.entity.StaffingRequest;
 import com.group5.ems.entity.User;
 import com.group5.ems.enums.AuditAction;
 import com.group5.ems.enums.AuditEntityType;
@@ -46,6 +45,7 @@ import com.group5.ems.repository.InterviewRepository;
 import com.group5.ems.repository.JobPostRepository;
 import com.group5.ems.repository.RequestApprovalHistoryRepository;
 import com.group5.ems.repository.RequestRepository;
+import com.group5.ems.repository.StaffingRequestRepository;
 import com.group5.ems.repository.UserRepository;
 import com.group5.ems.service.common.LogService;
 
@@ -66,6 +66,7 @@ public class HrRecruitmentService {
     private static final String TPL_APPLICATION_HIRED = "APPLICATION_HIRED";
     private static final String TPL_APPLICATION_REJECT = "APPLICATION_REJECTED";
     private static final String TPL_NEW_EMPLOYEE_REQ = "NEW_EMPLOYEE_REQUEST";
+    private static final String TPL_INTERVIEW_SCHEDULED = "INTERVIEW_SCHEDULED";
 
     private final JobPostRepository jobPostRepository;
     private final ApplicationRepository applicationRepository;
@@ -76,6 +77,7 @@ public class HrRecruitmentService {
     private final RequestRepository requestRepository;
     private final RequestApprovalHistoryRepository requestApprovalHistoryRepository;
     private final InterviewRepository interviewRepository;
+    private final StaffingRequestRepository staffingRequestRepository;
     private final UserRepository userRepository;
     private final HrEmailService emailService;
     private final LogService logService;
@@ -298,52 +300,61 @@ public class HrRecruitmentService {
         interviewAssignmentRepository.saveAll(toSave);
         logService.log(AuditAction.UPDATE, AuditEntityType.CANDIDATE, applicationId);
         sendInterviewAssignedEmails(app, interviewerIds);
-
-        // ── Gửi email thông báo cho từng interviewer được assign ──────────────
-        sendInterviewAssignedEmails(app, interviewerIds);
     }
 
     // ══════════════════════════════════════════════════════════════════════════
     // 6. JOB POST REQUESTS
     // ══════════════════════════════════════════════════════════════════════════
 
+    // SAU
     public List<HrJobRequestDTO> getJobPostRequests() {
-        return requestRepository
-                .findByRequestType_CodeInOrderByCreatedAtDesc(List.of("RECRUITMENT", "HR_RECRUIT"))
+        return staffingRequestRepository
+                .findByRequestTypeInOrderByCreatedAtDesc(List.of("RECRUITMENT", "TRANSFER"))
                 .stream()
                 .map(this::mapToJobRequestDTO)
                 .collect(Collectors.toList());
     }
 
     public long countPendingJobRequests() {
-        return requestRepository
-                .countByRequestType_CodeInAndStatus(List.of("RECRUITMENT", "HR_RECRUIT"), "PENDING");
+        return staffingRequestRepository
+                .countByRequestTypeInAndStatus(List.of("RECRUITMENT", "TRANSFER"), "PENDING");
     }
 
-    private HrJobRequestDTO mapToJobRequestDTO(Request req) {
+    private HrJobRequestDTO mapToJobRequestDTO(StaffingRequest req) {
         String submitter = "";
         String department = "";
-        if (req.getEmployee() != null) {
-            var emp = req.getEmployee();
+
+        // StaffingRequest liên kết employee qua requested_by_employee_id
+        if (req.getRequestedByEmployee() != null) {
+            var emp = req.getRequestedByEmployee();
             if (emp.getUser() != null && emp.getUser().getFullName() != null) {
                 submitter = emp.getUser().getFullName();
             } else {
                 submitter = emp.getEmployeeCode();
             }
-            if (emp.getDepartment() != null) {
+            // StaffingRequest có department_id riêng, ưu tiên dùng nó
+            if (req.getDepartment() != null) {
+                department = req.getDepartment().getName();
+            } else if (emp.getDepartment() != null) {
                 department = emp.getDepartment().getName();
             }
         }
+
         return HrJobRequestDTO.builder()
                 .id(req.getId())
-                .title(req.getTitle())
-                .content(req.getContent())
+                // staffing_request không có title riêng — dùng role_requested làm title
+                .title(req.getRoleRequested())
+                // description thay cho content
+                .content(req.getDescription())
                 .status(req.getStatus())
-                .step(req.getStep())
-                .urgent(req.isUrgent())
-                .employeeId(req.getEmployeeId())
+                // staffing_request không có step — để null hoặc rỗng
+                .step(null)
+                // staffing_request không có urgent flag — mặc định false
+                .urgent(false)
+                .employeeId(req.getRequestedByEmployeeId())
                 .requestedByName(submitter)
                 .departmentName(department)
+                // staffing_request không có rejected_reason — để null
                 .rejectedReason(req.getRejectedReason())
                 .submittedAtFormatted(req.getCreatedAt() != null ? req.getCreatedAt().format(DATETIME_FMT) : "")
                 .updatedAtFormatted(req.getUpdatedAt() != null ? req.getUpdatedAt().format(DATETIME_FMT) : "")
@@ -351,40 +362,26 @@ public class HrRecruitmentService {
     }
 
     @Transactional
-    public void approveJobRequest(Long requestId, Long approverId) {
-        Request req = requestRepository.findById(requestId)
-                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + requestId));
+    public void approveJobRequest(Long staffingRequestId, Long approverId) {
+        StaffingRequest req = staffingRequestRepository.findById(staffingRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("Staffing request not found: " + staffingRequestId));
         req.setStatus("APPROVED");
-        req.setStep("DONE");
-        req.setApprovedBy(approverId);
-        req.setApprovedAt(LocalDateTime.now());
-        requestRepository.save(req);
-
-        RequestApprovalHistory hist = new RequestApprovalHistory();
-        hist.setRequestId(requestId);
-        hist.setApproverId(approverId);
-        hist.setAction("APPROVED");
-        hist.setComment("Approved by HR");
-        requestApprovalHistoryRepository.save(hist);
-        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, requestId);
+        req.setProcessedByUserId(approverId);
+        req.setProcessedAt(LocalDateTime.now());
+        staffingRequestRepository.save(req);
+        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, staffingRequestId);
     }
 
     @Transactional
-    public void rejectJobRequest(Long requestId, String reason, Long approverId) {
-        Request req = requestRepository.findById(requestId)
-                .orElseThrow(() -> new IllegalArgumentException("Request not found: " + requestId));
+    public void rejectJobRequest(Long staffingRequestId, String reason, Long approverId) {
+        StaffingRequest req = staffingRequestRepository.findById(staffingRequestId)
+                .orElseThrow(() -> new IllegalArgumentException("Staffing request not found: " + staffingRequestId));
         req.setStatus("REJECTED");
-        req.setStep("DONE");
+        req.setProcessedByUserId(approverId != null ? approverId : 0L);
+        req.setProcessedAt(LocalDateTime.now());
         req.setRejectedReason(reason);
-        requestRepository.save(req);
-
-        RequestApprovalHistory hist = new RequestApprovalHistory();
-        hist.setRequestId(requestId);
-        hist.setApproverId(approverId != null ? approverId : 0L);
-        hist.setAction("REJECTED");
-        hist.setComment(reason);
-        requestApprovalHistoryRepository.save(hist);
-        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, requestId);
+        staffingRequestRepository.save(req);
+        logService.log(AuditAction.UPDATE, AuditEntityType.REQUEST, staffingRequestId);
     }
 
     public List<HrRecruitmentDTO> getAllJobPosts() {
@@ -436,7 +433,7 @@ public class HrRecruitmentService {
             Long interviewerId,
             LocalDateTime scheduledAt,
             String location) {
-        applicationRepository.findById(applicationId)
+        Application app = applicationRepository.findById(applicationId)
                 .orElseThrow(() -> new IllegalArgumentException("Application not found: " + applicationId));
 
         Interview iv = interviewRepository
@@ -449,7 +446,9 @@ public class HrRecruitmentService {
         iv.setLocation(location);
         iv.setStatus("SCHEDULED");
         interviewRepository.save(iv);
+        Interview saved = interviewRepository.save(iv);
         logService.log(AuditAction.CREATE, AuditEntityType.CANDIDATE, applicationId);
+        sendInterviewScheduledEmail(app, saved);
     }
 
     public List<InterviewDTO> getMyInterviews(Long interviewerUserId) {
@@ -596,6 +595,34 @@ public class HrRecruitmentService {
                 emailService.sendFromTemplate(user.getEmail(), TPL_INTERVIEW_ASSIGNED, vars);
             });
         }
+    }
+
+    /**
+     * Gửi email INTERVIEW_SCHEDULED đến email của candidate.
+     * Variables: {{candidateName}}, {{jobTitle}}, {{companyName}},
+     * {{scheduledAt}}, {{location}}
+     */
+    private void sendInterviewScheduledEmail(Application app, Interview iv) {
+        if (app.getCandidate() == null)
+            return;
+        String email = app.getCandidate().getEmail();
+        if (email == null || email.isBlank())
+            return;
+
+        String scheduledAt = iv.getScheduledAt() != null
+                ? iv.getScheduledAt().format(DATETIME_FMT)
+                : "TBD";
+        String location = iv.getLocation() != null && !iv.getLocation().isBlank()
+                ? iv.getLocation()
+                : "To be confirmed";
+
+        Map<String, String> vars = Map.of(
+                "candidateName", resolveCandidateName(app),
+                "jobTitle", resolveJobTitle(app),
+                "companyName", "ERM Pro",
+                "scheduledAt", scheduledAt,
+                "location", location);
+        emailService.sendFromTemplate(email, TPL_INTERVIEW_SCHEDULED, vars);
     }
 
     /**

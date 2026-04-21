@@ -169,7 +169,13 @@ public interface EmployeeRepository extends JpaRepository<Employee, Long>, JpaSp
 
     /**
      * Find employees without department assignment (unassigned employees)
+     * Eager load user and position for display purposes
      */
+    @Query("SELECT DISTINCT e FROM Employee e " +
+           "LEFT JOIN FETCH e.user u " +
+           "LEFT JOIN FETCH e.position p " +
+           "WHERE e.departmentId IS NULL " +
+           "ORDER BY e.hireDate DESC")
     List<Employee> findByDepartmentIdIsNull();
 
 }

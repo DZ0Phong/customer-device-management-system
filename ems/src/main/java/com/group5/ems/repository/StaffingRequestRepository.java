@@ -1,13 +1,12 @@
 package com.group5.ems.repository;
 
-import com.group5.ems.entity.StaffingRequest;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
-import org.springframework.data.jpa.repository.QueryHints;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
-import jakarta.persistence.QueryHint;
-import java.util.List;
+import com.group5.ems.entity.StaffingRequest;
 
 @Repository
 public interface StaffingRequestRepository extends JpaRepository<StaffingRequest, Long> {
@@ -29,4 +28,9 @@ public interface StaffingRequestRepository extends JpaRepository<StaffingRequest
 
     @Query("SELECT sr FROM StaffingRequest sr WHERE sr.status = 'PENDING' ORDER BY sr.createdAt DESC")
     List<StaffingRequest> findAllPendingRequests();
+
+    List<StaffingRequest> findByRequestTypeInOrderByCreatedAtDesc(List<String> requestTypes);
+
+    long countByRequestTypeInAndStatus(List<String> requestTypes, String status);
+
 }

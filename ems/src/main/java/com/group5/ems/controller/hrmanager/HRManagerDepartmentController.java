@@ -38,8 +38,9 @@ public class HRManagerDepartmentController {
     @PostMapping("/staffing-requests/{requestId}/assign")
     public String assignEmployee(@PathVariable Long requestId,
                                  @RequestParam Long employeeId,
+                                 @RequestParam Long positionId,
                                  RedirectAttributes ra) {
-        boolean success = departmentService.assignEmployeeToDepartment(requestId, employeeId);
+        boolean success = departmentService.assignEmployeeToDepartment(requestId, employeeId, positionId);
         if (success) {
             ra.addFlashAttribute("successMsg", "Employee assigned successfully");
         } else {

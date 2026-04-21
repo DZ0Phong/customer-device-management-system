@@ -88,11 +88,11 @@ public class CompanyInfoController {
             Long actorId = resolveUserId(principal);
             companyService.createCompanyInfo(
                     infoKey.trim(), title.trim(), content.trim(), isPublic, image, actorId);
-            ra.addFlashAttribute("successMsg", "Da tao muc \"" + title + "\" thanh cong.");
+            ra.addFlashAttribute("successMsg", "Successfully created \"" + title + "\".");
         } catch (IllegalArgumentException e) {
             ra.addFlashAttribute("errorMsg", e.getMessage());
         } catch (Exception e) {
-            ra.addFlashAttribute("errorMsg", "Loi he thong: " + e.getMessage());
+            ra.addFlashAttribute("errorMsg", "Error: " + e.getMessage());
         }
         return "redirect:/admin/company-info";
     }
@@ -113,9 +113,9 @@ public class CompanyInfoController {
             Long actorId = resolveUserId(principal);
             companyService.updateCompanyInfo(
                     id, title.trim(), content.trim(), isPublic, image, removeImage, actorId);
-            ra.addFlashAttribute("successMsg", "Da cap nhat muc \"" + title + "\".");
+            ra.addFlashAttribute("successMsg", "Updated \"" + title + "\".");
         } catch (Exception e) {
-            ra.addFlashAttribute("errorMsg", "Loi: " + e.getMessage());
+            ra.addFlashAttribute("errorMsg", "Error: " + e.getMessage());
         }
         return "redirect:/admin/company-info";
     }
@@ -125,7 +125,7 @@ public class CompanyInfoController {
     public String delete(@PathVariable Long id, RedirectAttributes ra) {
         try {
             companyService.deleteCompanyInfo(id);
-            ra.addFlashAttribute("successMsg", "Da xoa muc thanh cong.");
+            ra.addFlashAttribute("successMsg", "Successfully deleted");
         } catch (Exception e) {
             ra.addFlashAttribute("errorMsg", "Khong the xoa: " + e.getMessage());
         }
