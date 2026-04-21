@@ -827,7 +827,7 @@
                                             th:data-job-benefits="${job.benefits ?: ''}"
                                             onclick="openJobDetail(this.dataset)"
                                             class="text-[11px] font-semibold text-primary hover:underline">
-                                            View Details â†’
+                                            View Details →
                                         </button>
                                     </div>
                                 </div>
@@ -2182,7 +2182,7 @@
             document.getElementById('editSalaryMin').value = parseFloat(d.jobSalaryMin) > 0 ? d.jobSalaryMin : '';
             document.getElementById('editSalaryMax').value = parseFloat(d.jobSalaryMax) > 0 ? d.jobSalaryMax : '';
 
-            // Dates: convert "dd/MM/yyyy" â†’ "yyyy-MM-dd" for date inputs
+            // Dates: convert "dd/MM/yyyy" -> "yyyy-MM-dd" for date inputs
             const parseDate = (str) => {
             if (!str || str === '—' || str.trim() === '') return '';
                 try {
