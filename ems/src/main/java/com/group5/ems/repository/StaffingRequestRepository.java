@@ -26,7 +26,7 @@ public interface StaffingRequestRepository extends JpaRepository<StaffingRequest
             """)
     List<StaffingRequest> findRecentByDepartmentId(Long departmentId);
 
-    @Query("SELECT sr FROM StaffingRequest sr WHERE sr.status = 'PENDING' ORDER BY sr.createdAt DESC")
+    @Query("SELECT sr FROM StaffingRequest sr WHERE sr.status IN ('PENDING', 'APPROVED') ORDER BY sr.createdAt DESC")
     List<StaffingRequest> findAllPendingRequests();
 
     List<StaffingRequest> findByRequestTypeInOrderByCreatedAtDesc(List<String> requestTypes);
